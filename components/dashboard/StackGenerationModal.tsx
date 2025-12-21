@@ -1,0 +1,248 @@
+'use client';
+
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import { X, Loader2, Sparkles, MessageSquare } from 'lucide-react';
+import { SUPPORTED_LANGUAGES, STACK_SIZES, CEFR_LEVELS } from '@/lib/constants';
+import { checkContentAppropriateness } from '@/lib/content-filter';
+
+interface StackGenerationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  userId: string;
+}
+
+export default function StackGenerationModal({ isOpen, onClose, userId }: StackGenerationModalProps) {
+  const [scenario, setScenario] = useState('');
+  const [selectedLanguage, setSelectedLanguage] = useState('es');
+  const [selectedDifficulty, setSelectedDifficulty] = useState('B1');
+  const [selectedSize, setSelectedSize] = useState(15);
+  const [conversationalMode, setConversationalMode] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
+  const supabase = createClient();
+
+  const handleGenerate = async () => {
+    if (!scenario.trim()) {
+      setError('Please enter a scenario');
+      return;
+    }
+
+    const contentCheck = checkContentAppropriateness(scenario);
+    if (!contentCheck.isAppropriate) {
+      setError(contentCheck.reason || 'This content is not appropriate for language learning.');
+      return;
+    }
+
+    setGenerating(true);
+    setError('');
+
+    try {
+      const response = await fetch('/api/generate-stack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenario: scenario.trim(),
+          targetLanguage: SUPPORTED_LANGUAGES.find((l) => l.code === selectedLanguage)?.name,
+          nativeLanguage: 'English',
+          stackSize: selectedSize,
+          difficulty: selectedDifficulty,
+          conversationalMode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.error) {
+        setError(data.error);
+        setGenerating(false);
+        return;
+      }
+
+      if (data.stackId) {
+        router.push(`/stack/${data.stackId}`);
+        router.refresh();
+      }
+    } catch (err) {
+      setError('Failed to generate stack. Please try again.');
+      setGenerating(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl"
+        >
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white/60 hover:text-white"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center gap-3 mb-4">
+              <Sparkles className="h-8 w-8 text-blue-500" />
+              <h2 className="text-3xl font-light">Generate New Stack</h2>
+            </div>
+            <p className="text-white/60 font-light">
+              Create a custom flashcard stack for any scenario
+            </p>
+          </div>
+
+          <div className="space-y-6">
+            <div>
+              <label className="text-white/80 text-sm font-light mb-2 block">
+                What real-world topic or scenario do you want to master?
+              </label>
+              <Input
+                value={scenario}
+                onChange={(e) => setScenario(e.target.value)}
+                placeholder="e.g., Ordering coffee in Paris, Negotiating a salary, Handling small talk at a party, Travel emergencies"
+                className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              />
+              <p className="text-white/50 text-xs font-light mt-2">
+                We'll generate a story-based flashcard stack tailored to your topic with authentic phrases and context.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-white/80 text-sm font-light mb-3 block">Target Language</label>
+              <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2">
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <Button
+                    key={lang.code}
+                    onClick={() => setSelectedLanguage(lang.code)}
+                    variant="outline"
+                    className={`rounded-xl font-light ${
+                      selectedLanguage === lang.code
+                        ? 'bg-blue-500 border-blue-500 text-white'
+                        : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    {lang.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-white/80 text-sm font-light mb-3 block">Difficulty Level (CEFR)</label>
+              <div className="grid grid-cols-3 gap-2">
+                {CEFR_LEVELS.map((level) => (
+                  <Button
+                    key={level.code}
+                    onClick={() => setSelectedDifficulty(level.code)}
+                    variant="outline"
+                    className={`rounded-xl font-light ${
+                      selectedDifficulty === level.code
+                        ? 'bg-blue-500 border-blue-500 text-white'
+                        : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center">
+                      <span className="font-semibold">{level.code}</span>
+                    </div>
+                  </Button>
+                ))}
+              </div>
+              <p className="text-white/50 text-xs mt-2 font-light">
+                {CEFR_LEVELS.find((l) => l.code === selectedDifficulty)?.description}
+              </p>
+            </div>
+
+            <div>
+              <label className="text-white/80 text-sm font-light mb-3 block">Stack Size</label>
+              <div className="grid grid-cols-5 gap-3">
+                {STACK_SIZES.map((size) => (
+                  <Card
+                    key={size.value}
+                    onClick={() => setSelectedSize(size.value)}
+                    className={`cursor-pointer transition-all ${
+                      selectedSize === size.value
+                        ? 'bg-blue-500/20 border-blue-500'
+                        : 'bg-white/5 border-white/10 hover:bg-white/8'
+                    }`}
+                  >
+                    <CardContent className="p-4 text-center">
+                      <p className="text-2xl font-light mb-1">{size.value}</p>
+                      <p className="text-xs text-white/60 font-light">{size.description}</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
+              <div className="flex items-start gap-3">
+                <MessageSquare className="h-5 w-5 text-blue-500 mt-0.5" />
+                <div>
+                  <label className="text-white/80 text-sm font-light block">Conversational Mode</label>
+                  <p className="text-white/50 text-xs font-light mt-1">
+                    Present cards in sequential order, like a back-and-forth dialogue
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={conversationalMode}
+                onCheckedChange={setConversationalMode}
+              />
+            </div>
+
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-red-500/20 border border-red-500/30 rounded-xl"
+              >
+                <p className="text-red-400 text-sm font-light">{error}</p>
+              </motion.div>
+            )}
+
+            <Button
+              onClick={handleGenerate}
+              disabled={generating || !scenario.trim()}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 text-base font-light"
+            >
+              {generating ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Generating your stack...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  Generate Stack
+                </>
+              )}
+            </Button>
+          </div>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
