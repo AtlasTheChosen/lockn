@@ -50,118 +50,11 @@ interface DashboardMainProps {
   userName?: string;
 }
 
-const MOCK_STACKS: Stack[] = [
-  {
-    id: '1',
-    title: 'Ordering at a Restaurant',
-    scenario: 'Restaurant conversation',
-    language: 'Spanish',
-    total_cards: 25,
-    mastered_count: 18,
-    created_at: '2024-01-15',
-    is_completed: false,
-    last_reviewed: '2024-01-20',
-    cefr_level: 'B1'
-  },
-  {
-    id: '2',
-    title: 'Airport Check-in',
-    scenario: 'Travel scenario',
-    language: 'French',
-    total_cards: 30,
-    mastered_count: 12,
-    created_at: '2024-01-10',
-    is_completed: false,
-    last_reviewed: '2024-01-18',
-    cefr_level: 'B2'
-  },
-  {
-    id: '7',
-    title: 'Business Meeting',
-    scenario: 'Professional conversation',
-    language: 'German',
-    total_cards: 28,
-    mastered_count: 8,
-    created_at: '2024-01-22',
-    is_completed: false,
-    last_reviewed: '2024-01-23',
-    cefr_level: 'C1'
-  },
-  {
-    id: '8',
-    title: 'Coffee Shop Order',
-    scenario: 'Casual conversation',
-    language: 'Italian',
-    total_cards: 18,
-    mastered_count: 15,
-    created_at: '2024-01-21',
-    is_completed: false,
-    last_reviewed: '2024-01-24',
-    cefr_level: 'A2'
-  },
-  {
-    id: '3',
-    title: 'Shopping for Groceries',
-    scenario: 'Market conversation',
-    language: 'Spanish',
-    total_cards: 20,
-    mastered_count: 20,
-    created_at: '2024-01-05',
-    is_completed: true,
-    completion_date: '2024-01-12',
-    cefr_level: 'A2'
-  },
-  {
-    id: '4',
-    title: 'Doctor Appointment',
-    scenario: 'Medical consultation',
-    language: 'German',
-    total_cards: 28,
-    mastered_count: 25,
-    created_at: '2024-01-01',
-    is_completed: true,
-    completion_date: '2024-01-10',
-    cefr_level: 'B2'
-  },
-  {
-    id: '5',
-    title: 'Job Interview',
-    scenario: 'Professional setting',
-    language: 'French',
-    total_cards: 35,
-    mastered_count: 35,
-    created_at: '2023-12-20',
-    is_completed: true,
-    completion_date: '2024-01-08',
-    cefr_level: 'C1'
-  },
-  {
-    id: '6',
-    title: 'Booking a Hotel',
-    scenario: 'Accommodation',
-    language: 'Italian',
-    total_cards: 22,
-    mastered_count: 20,
-    created_at: '2023-12-15',
-    is_completed: true,
-    completion_date: '2024-01-05',
-    cefr_level: 'B1'
-  }
-];
-
-const MOCK_STATS: Stats = {
-  total_cards_reviewed: 156,
-  current_streak: 7,
-  longest_streak: 14,
-  total_mastered: 110
-};
-
 export default function DashboardMain({ stacks, stats, userName }: DashboardMainProps) {
   const router = useRouter();
-  const [isDebugMode] = useState(stacks.length === 0);
 
-  const displayStacks = isDebugMode ? MOCK_STACKS : stacks;
-  const displayStats = isDebugMode ? MOCK_STATS : stats;
+  const displayStacks = stacks;
+  const displayStats = stats;
 
   const completedStacks = displayStacks.filter(s => s.is_completed);
   const uncompletedStacks = displayStacks.filter(s => !s.is_completed);
@@ -179,11 +72,6 @@ export default function DashboardMain({ stacks, stats, userName }: DashboardMain
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      {isDebugMode && (
-        <div className="bg-yellow-500 text-black px-4 py-2 text-center font-bold text-sm sticky top-0 z-50">
-          DEBUG MODE: Showing Mock Data - Auth Disabled
-        </div>
-      )}
 
       <nav className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

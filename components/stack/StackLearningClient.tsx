@@ -29,32 +29,6 @@ const RATING_OPTIONS = [
   { value: CARD_RATINGS.REALLY_KNOW, label: 'Really Know', color: 'bg-blue-500' },
 ];
 
-const MOCK_MISTAKES = [
-  {
-    card_id: '1',
-    target_phrase: '¿Cuánto cuesta?',
-    user_answer: 'Cuanto cuesta',
-    correct_answer: '¿Cuánto cuesta?',
-    timestamp: new Date(Date.now() - 86400000).toISOString(),
-    mistake_type: 'accent',
-  },
-  {
-    card_id: '2',
-    target_phrase: 'Me gustaría una mesa para dos',
-    user_answer: 'Me gustaria mesa para dos',
-    correct_answer: 'Me gustaría una mesa para dos',
-    timestamp: new Date(Date.now() - 172800000).toISOString(),
-    mistake_type: 'article',
-  },
-  {
-    card_id: '3',
-    target_phrase: 'La cuenta, por favor',
-    user_answer: 'El cuenta, por favor',
-    correct_answer: 'La cuenta, por favor',
-    timestamp: new Date(Date.now() - 259200000).toISOString(),
-    mistake_type: 'article',
-  },
-];
 
 export default function StackLearningClient({ stack: initialStack, cards: initialCards }: Props) {
   const [stack, setStack] = useState(initialStack);
@@ -105,8 +79,6 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
 
       if (stackData?.user_mistakes && Array.isArray(stackData.user_mistakes)) {
         setMistakes(stackData.user_mistakes);
-      } else if (stack.is_completed) {
-        setMistakes(MOCK_MISTAKES);
       }
     }
 
