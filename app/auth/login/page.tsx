@@ -36,7 +36,8 @@ export default function LoginPage() {
         setError(signInError.message);
         setLoading(false);
       } else if (data.session) {
-        window.location.href = '/dashboard';
+        router.push('/dashboard');
+        router.refresh();
       } else {
         setError('Sign-in succeeded but no session was created. Please try again.');
         setLoading(false);
