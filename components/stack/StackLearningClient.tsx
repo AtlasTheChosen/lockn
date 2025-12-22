@@ -8,7 +8,18 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Volume2, Trophy, Sparkles, ChevronRight, Brain, Loader2, ArrowLeftRight, MessageSquare } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { ArrowLeft, Volume2, Trophy, Sparkles, ChevronRight, Brain, Loader2, ArrowLeftRight, MessageSquare, Trash2 } from 'lucide-react';
 import type { CardStack, Flashcard } from '@/lib/types';
 import Confetti from 'react-confetti';
 import { CARD_RATINGS } from '@/lib/constants';
@@ -45,6 +56,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [conversationalMode, setConversationalMode] = useState(initialStack.conversational_mode || false);
   const [wordTranslations, setWordTranslations] = useState<Record<string, any>>({});
   const [mistakes, setMistakes] = useState<any[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -218,6 +230,19 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     return codes[language] || 'en-US';
   };
 
+  const handleDeleteStack = async () => {
+    setIsDeleting(true);
+    try {
+      await supabase.from('flashcards').delete().eq('stack_id', stack.id);
+      await supabase.from('card_stacks').delete().eq('id', stack.id);
+      router.push('/dashboard');
+      router.refresh();
+    } catch (error) {
+      console.error('Error deleting stack:', error);
+      setIsDeleting(false);
+    }
+  };
+
   if (!currentCard) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black text-white">
@@ -248,12 +273,49 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       </div>
 
       <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center">
-        <Link href="/dashboard">
-          <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="sm" className="text-white/60 hover:text-white">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+          </Link>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-red-400 hover:text-red-300 hover:bg-red-500/10">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent className="bg-slate-900 border-white/10">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-white">Permanently delete this stack?</AlertDialogTitle>
+                <AlertDialogDescription className="text-white/60">
+                  This action cannot be undone. All cards and progress in this stack will be permanently removed.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10">
+                  Cancel
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteStack}
+                  disabled={isDeleting}
+                  className="bg-red-600 hover:bg-red-700 text-white"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
         <div className="flex items-center gap-3">
           <Button
             onClick={async () => {

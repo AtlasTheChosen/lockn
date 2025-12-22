@@ -68,10 +68,15 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
         throw new Error(data.error || 'Generation failed');
       }
 
-      setOpen(false);
-      setScenario('');
-      setTargetLanguage('');
-      router.refresh();
+      if (data.stackId) {
+        router.push(`/stack/${data.stackId}`);
+        router.refresh();
+      } else {
+        setOpen(false);
+        setScenario('');
+        setTargetLanguage('');
+        router.refresh();
+      }
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -95,12 +100,6 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
             </Link>
             <div className="flex items-center gap-3">
               <ThemeSelector userId={user.id} />
-              <Link href="/leaderboard">
-                <Button variant="ghost" size="sm">
-                  <Trophy className="h-4 w-4 mr-2" />
-                  Leaderboard
-                </Button>
-              </Link>
               {!profile?.is_premium && (
                 <Link href="/pricing">
                   <Button size="sm" variant="outline" className="gap-2">
