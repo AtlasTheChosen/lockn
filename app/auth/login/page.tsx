@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [showResetForm, setShowResetForm] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -33,7 +35,11 @@ export default function LoginPage() {
       });
 
       if (signInError) {
-        setError(signInError.message);
+        if (signInError.message.includes('Invalid login credentials')) {
+          setError('Incorrect email or password. Please try again or reset your password.');
+        } else {
+          setError(signInError.message);
+        }
         setLoading(false);
       } else if (data.session) {
         router.push('/dashboard');
@@ -48,6 +54,57 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const supabase = createClient();
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+      });
+
+      if (resetError) {
+        setError(resetError.message);
+      } else {
+        setResetSent(true);
+      }
+    } catch (err) {
+      console.error('Error sending reset email:', err);
+      setError('Failed to send reset email. Please try again.');
+    }
+    setLoading(false);
+  };
+
+  if (resetSent) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md text-center"
+        >
+          <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-8">
+            <h2 className="text-2xl font-light mb-4">Check your email</h2>
+            <p className="text-white/60 font-light mb-6">
+              We sent a password reset link to <span className="text-white">{email}</span>
+            </p>
+            <Button
+              onClick={() => {
+                setResetSent(false);
+                setShowResetForm(false);
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              Back to login
+            </Button>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white px-6">
@@ -73,7 +130,7 @@ export default function LoginPage() {
             transition={{ delay: 0.4 }}
             className="text-2xl font-light mb-2"
           >
-            Welcome back
+            {showResetForm ? 'Reset your password' : 'Welcome back'}
           </motion.h2>
           <motion.p
             initial={{ opacity: 0 }}
@@ -81,7 +138,7 @@ export default function LoginPage() {
             transition={{ delay: 0.5 }}
             className="text-white/60 font-light"
           >
-            Continue your language journey
+            {showResetForm ? 'Enter your email to receive a reset link' : 'Continue your language journey'}
           </motion.p>
         </div>
 
@@ -90,51 +147,106 @@ export default function LoginPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
         >
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <Input
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <Input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              />
-            </div>
-            {error && (
-              <motion.p
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-red-400 text-sm font-light"
-              >
-                {error}
-              </motion.p>
-            )}
-            <Button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 text-base font-light"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign in'
+          {showResetForm ? (
+            <form onSubmit={handlePasswordReset} className="space-y-6">
+              <div>
+                <Input
+                  type="email"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-red-400 text-sm font-light"
+                >
+                  {error}
+                </motion.p>
               )}
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 text-base font-light"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Sending reset link...
+                  </>
+                ) : (
+                  'Send reset link'
+                )}
+              </Button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowResetForm(false);
+                  setError('');
+                }}
+                className="w-full text-white/60 hover:text-white text-sm font-light transition-colors"
+              >
+                Back to login
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div>
+                <Input
+                  type="email"
+                  placeholder="Email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                />
+              </div>
+              {error && (
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="text-red-400 text-sm font-light"
+                >
+                  {error}
+                </motion.p>
+              )}
+              <Button
+                type="submit"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 text-base font-light"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign in'
+                )}
+              </Button>
+              <button
+                type="button"
+                onClick={() => setShowResetForm(true)}
+                className="w-full text-white/60 hover:text-white text-sm font-light transition-colors"
+              >
+                Forgot password?
+              </button>
+            </form>
+          )}
 
           <p className="text-center text-white/60 text-sm font-light mt-8">
             Don&apos;t have an account?{' '}
