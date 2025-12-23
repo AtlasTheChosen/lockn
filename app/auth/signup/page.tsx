@@ -64,19 +64,18 @@ export default function SignupPage() {
         .maybeSingle();
 
       if (!existingProfile) {
-        await supabase.from('user_profiles').insert({
-          id: data.user.id,
-          email: data.user.email,
-          full_name: data.user.user_metadata?.full_name || null,
-        });
+        try {
+          await supabase.from('user_profiles').insert({
+            id: data.user.id,
+            email: data.user.email,
+          });
+        } catch {}
 
-        await supabase.from('user_stats').insert({
-          user_id: data.user.id,
-          total_cards_studied: 0,
-          total_study_time: 0,
-          current_streak: 0,
-          longest_streak: 0,
-        });
+        try {
+          await supabase.from('user_stats').insert({
+            user_id: data.user.id,
+          });
+        } catch {}
       }
 
       router.push('/dashboard');

@@ -41,7 +41,28 @@ export default function LoginPage() {
           setError(signInError.message);
         }
         setLoading(false);
-      } else if (data.session) {
+      } else if (data.session && data.user) {
+        const { data: existingProfile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          try {
+            await supabase.from('user_profiles').insert({
+              id: data.user.id,
+              email: data.user.email,
+            });
+          } catch {}
+
+          try {
+            await supabase.from('user_stats').insert({
+              user_id: data.user.id,
+            });
+          } catch {}
+        }
+
         router.push('/dashboard');
         router.refresh();
       } else {

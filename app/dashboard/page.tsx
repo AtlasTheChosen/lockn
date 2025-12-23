@@ -46,6 +46,27 @@ export default function DashboardPage() {
 
       if (profileError) throw profileError;
 
+      if (!profile) {
+        try {
+          await supabase.from('user_profiles').insert({
+            id: user.id,
+            email: user.email,
+          });
+        } catch (insertError: any) {
+          if (!insertError?.message?.includes('duplicate key')) {
+            throw insertError;
+          }
+        }
+
+        try {
+          await supabase.from('user_stats').insert({
+            user_id: user.id,
+          });
+        } catch {}
+
+        return loadData();
+      }
+
       const { data: stacks, error: stacksError } = await supabase
         .from('card_stacks')
         .select('*')

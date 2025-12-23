@@ -21,19 +21,18 @@ export async function GET(request: Request) {
           .maybeSingle();
 
         if (!existingProfile) {
-          await supabase.from('user_profiles').insert({
-            id: user.id,
-            email: user.email,
-            full_name: user.user_metadata?.full_name || null,
-          });
+          try {
+            await supabase.from('user_profiles').insert({
+              id: user.id,
+              email: user.email,
+            });
+          } catch {}
 
-          await supabase.from('user_stats').insert({
-            user_id: user.id,
-            total_cards_studied: 0,
-            total_study_time: 0,
-            current_streak: 0,
-            longest_streak: 0,
-          });
+          try {
+            await supabase.from('user_stats').insert({
+              user_id: user.id,
+            });
+          } catch {}
         }
       }
 
