@@ -84,7 +84,7 @@ export default function LibraryPage() {
       // Fetch profiles
       const { data: profilesData } = await supabase
         .from('user_profiles')
-        .select('id, display_name, avatar_url')
+        .select('id, email, display_name, avatar_url')
         .in('id', userIds);
 
       const stackMap = new Map(stacksData?.map(s => [s.id, s]) || []);
