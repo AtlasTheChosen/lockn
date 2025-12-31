@@ -70,6 +70,11 @@ export interface ContentFilterResult {
   reason?: string;
 }
 
+// Simple boolean check for inappropriate content (for display names, etc.)
+export function containsInappropriateContent(text: string): boolean {
+  return containsBannedWord(text);
+}
+
 export function checkContentAppropriateness(text: string): ContentFilterResult {
   // Check for banned words with leetspeak detection
   if (containsBannedWord(text)) {
