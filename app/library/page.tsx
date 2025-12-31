@@ -72,8 +72,8 @@ export default function LibraryPage() {
       }
 
       // Get stack IDs and user IDs
-      const stackIds = [...new Set(sharesData.map(s => s.stack_id))];
-      const userIds = [...new Set(sharesData.map(s => s.shared_by))];
+      const stackIds = Array.from(new Set(sharesData.map(s => s.stack_id)));
+      const userIds = Array.from(new Set(sharesData.map(s => s.shared_by)));
 
       // Fetch stacks
       const { data: stacksData } = await supabase

@@ -126,7 +126,7 @@ export default function DashboardPage() {
         );
 
         if (newOverdueStacks.length > 0 || (overdueStackIds.length > 0 && !stats.streak_frozen)) {
-          const updatedFrozenStacks = [...new Set([...currentFrozenStacks, ...overdueStackIds])];
+          const updatedFrozenStacks = Array.from(new Set([...currentFrozenStacks, ...overdueStackIds]));
           
           const { error: freezeError } = await supabase
             .from('user_stats')

@@ -112,7 +112,7 @@ export default function ActivityFeed({
       }
 
       // Fetch user profiles for activities
-      const userIds = [...new Set(activitiesData.map(a => a.user_id))];
+      const userIds = Array.from(new Set(activitiesData.map(a => a.user_id)));
       const { data: profilesData } = await supabase
         .from('user_profiles')
         .select('id, display_name, avatar_url')
