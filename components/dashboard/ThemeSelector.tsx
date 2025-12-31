@@ -32,7 +32,7 @@ export const THEMES: Theme[] = [
 ];
 
 interface ThemeSelectorProps {
-  userId: string;
+  userId?: string;
 }
 
 export default function ThemeSelector({ userId }: ThemeSelectorProps) {
@@ -49,12 +49,32 @@ export default function ThemeSelector({ userId }: ThemeSelectorProps) {
   }, [currentTheme]);
 
   const loadThemePreference = async () => {
+    // If no userId, just load from localStorage
+    if (!userId) {
+      const savedTheme = localStorage.getItem('talka-theme');
+      if (savedTheme) {
+        setCurrentTheme(savedTheme);
+      }
+      return;
+    }
+
     try {
-      const { data } = await supabase
+      // Check if user_preferences table exists, if not fall back to localStorage
+      const { data, error: queryError } = await supabase
         .from('user_preferences')
         .select('theme_id')
         .eq('user_id', userId)
         .maybeSingle();
+
+      if (queryError) {
+        // Table doesn't exist or query failed - use localStorage
+        console.warn('Theme: user_preferences query failed, using localStorage:', queryError.message);
+        const savedTheme = localStorage.getItem('talka-theme');
+        if (savedTheme) {
+          setCurrentTheme(savedTheme);
+        }
+        return;
+      }
 
       if (data?.theme_id) {
         setCurrentTheme(data.theme_id);
@@ -86,29 +106,42 @@ export default function ThemeSelector({ userId }: ThemeSelectorProps) {
     setIsLoading(true);
     setCurrentTheme(themeId);
 
-    try {
-      const { data: existingPref } = await supabase
-        .from('user_preferences')
-        .select('user_id')
-        .eq('user_id', userId)
-        .maybeSingle();
+    // Always save to localStorage
+    localStorage.setItem('talka-theme', themeId);
 
-      if (existingPref) {
-        await supabase
+    // Only save to database if userId is provided
+    if (userId) {
+      try {
+        const { data: existingPref, error: queryError } = await supabase
           .from('user_preferences')
-          .update({ theme_id: themeId, updated_at: new Date().toISOString() })
-          .eq('user_id', userId);
-      } else {
-        await supabase.from('user_preferences').insert({
-          user_id: userId,
-          theme_id: themeId,
-        });
+          .select('user_id')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (queryError) {
+          // Table doesn't exist - just use localStorage (already saved above)
+          console.warn('Theme: user_preferences table not available, using localStorage only:', queryError.message);
+          return;
+        }
+
+        if (existingPref) {
+          await supabase
+            .from('user_preferences')
+            .update({ theme_id: themeId, updated_at: new Date().toISOString() })
+            .eq('user_id', userId);
+        } else {
+          await supabase.from('user_preferences').insert({
+            user_id: userId,
+            theme_id: themeId,
+          });
+        }
+      } catch (error) {
+        // Silent fail - theme is already saved to localStorage
+        console.warn('Theme: Error saving to database, using localStorage only:', error);
       }
-    } catch (error) {
-      console.error('Error saving theme:', error);
-    } finally {
-      setIsLoading(false);
     }
+    
+    setIsLoading(false);
   };
 
   const selectedTheme = THEMES.find((t) => t.id === currentTheme) || THEMES[5];

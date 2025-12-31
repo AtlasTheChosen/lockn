@@ -1,0 +1,71 @@
+// Streak tracking utilities
+
+// Minimum cards needed per day to maintain streak
+export const STREAK_DAILY_REQUIREMENT = 10;
+
+// Grace period days based on stack size
+export function getGracePeriodDays(cardCount: number): number {
+  if (cardCount >= 50) return 10;  // ~1 week for large stacks
+  if (cardCount >= 25) return 5;   // 5 days for medium stacks
+  return 2;                         // 2 days for small stacks (10 cards)
+}
+
+// Check if user has met daily requirement (10+ cards learned today)
+export function hasMetDailyRequirement(dailyCardsLearned: number): boolean {
+  return dailyCardsLearned >= STREAK_DAILY_REQUIREMENT;
+}
+
+// Calculate test deadline from mastery date
+export function calculateTestDeadline(masteryDate: Date, cardCount: number): Date {
+  const graceDays = getGracePeriodDays(cardCount);
+  const deadline = new Date(masteryDate);
+  deadline.setDate(deadline.getDate() + graceDays);
+  return deadline;
+}
+
+// Get days remaining until deadline (0 if passed)
+export function getDaysRemaining(deadline: string | Date | null): number {
+  if (!deadline) return 0;
+  const deadlineDate = new Date(deadline);
+  const now = new Date();
+  const diffMs = deadlineDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+}
+
+// Check if deadline has passed
+export function isDeadlinePassed(deadline: string | Date | null): boolean {
+  if (!deadline) return false;
+  return new Date(deadline) < new Date();
+}
+
+// Check if it's a new day (for resetting daily counter)
+export function isNewDay(lastDate: string | null): boolean {
+  if (!lastDate) return true;
+  
+  const today = new Date().toISOString().split('T')[0];
+  const lastDateStr = new Date(lastDate).toISOString().split('T')[0];
+  
+  return today !== lastDateStr;
+}
+
+// Get today's date as ISO string (date only)
+export function getTodayDate(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+// Format deadline for display ("2 Days Left" or "Overdue!")
+export function formatDeadlineDisplay(deadline: string | Date | null): string {
+  if (!deadline) return '';
+  
+  const days = getDaysRemaining(deadline);
+  
+  if (days === 0) {
+    if (isDeadlinePassed(deadline)) {
+      return 'Overdue!';
+    }
+    return 'Due Today!';
+  }
+  
+  return `${days} Day${days === 1 ? '' : 's'} Left`;
+}
+

@@ -1,16 +1,52 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Upload, Loader2, Check, AlertCircle } from 'lucide-react';
-import type { UserProfile } from '@/lib/types';
+import AchievementBadges from '@/components/social/AchievementBadges';
+import { 
+  Loader2, 
+  Check, 
+  AlertCircle, 
+  Globe, 
+  X, 
+  Eye,
+  EyeOff,
+  Trophy,
+  User
+} from 'lucide-react';
+import type { UserProfile, Badge as BadgeType } from '@/lib/types';
+import Link from 'next/link';
+
+const AVAILABLE_LANGUAGES = [
+  { code: 'es', name: 'Spanish', emoji: '🇪🇸' },
+  { code: 'fr', name: 'French', emoji: '🇫🇷' },
+  { code: 'de', name: 'German', emoji: '🇩🇪' },
+  { code: 'it', name: 'Italian', emoji: '🇮🇹' },
+  { code: 'pt', name: 'Portuguese', emoji: '🇧🇷' },
+  { code: 'ja', name: 'Japanese', emoji: '🇯🇵' },
+  { code: 'ko', name: 'Korean', emoji: '🇰🇷' },
+  { code: 'zh', name: 'Chinese', emoji: '🇨🇳' },
+  { code: 'ru', name: 'Russian', emoji: '🇷🇺' },
+  { code: 'ar', name: 'Arabic', emoji: '🇸🇦' },
+  { code: 'hi', name: 'Hindi', emoji: '🇮🇳' },
+  { code: 'nl', name: 'Dutch', emoji: '🇳🇱' },
+  { code: 'sv', name: 'Swedish', emoji: '🇸🇪' },
+  { code: 'pl', name: 'Polish', emoji: '🇵🇱' },
+  { code: 'tr', name: 'Turkish', emoji: '🇹🇷' },
+  { code: 'vi', name: 'Vietnamese', emoji: '🇻🇳' },
+  { code: 'th', name: 'Thai', emoji: '🇹🇭' },
+  { code: 'he', name: 'Hebrew', emoji: '🇮🇱' },
+  { code: 'el', name: 'Greek', emoji: '🇬🇷' },
+  { code: 'cs', name: 'Czech', emoji: '🇨🇿' },
+];
+
+const MAX_BIO_LENGTH = 500;
 
 interface Props {
   profile: UserProfile;
@@ -19,6 +55,9 @@ interface Props {
 
 export default function ProfileSettings({ profile, onUpdate }: Props) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
+  const [bio, setBio] = useState(profile.bio || '');
+  const [profilePublic, setProfilePublic] = useState(profile.profile_public ?? true);
+  const [languagesLearning, setLanguagesLearning] = useState<string[]>(profile.languages_learning || []);
   const [theme, setTheme] = useState(profile.theme_preference || 'system');
   const [notificationPrefs, setNotificationPrefs] = useState(
     profile.notification_prefs || {
@@ -28,55 +67,28 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
       streak_reminders: true,
     }
   );
-  const [uploading, setUploading] = useState(false);
+  const [badges, setBadges] = useState<BadgeType[]>(profile.badges || []);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('');
 
   const supabase = createClient();
 
-  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploading(true);
-      setMessage(null);
-
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      if (file.size > 2 * 1024 * 1024) {
-        setMessage({ type: 'error', text: 'File size must be less than 2MB' });
-        return;
-      }
-
-      if (!file.type.startsWith('image/')) {
-        setMessage({ type: 'error', text: 'File must be an image' });
-        return;
-      }
-
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${profile.id}/avatar.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-      const { error: updateError } = await supabase
-        .from('user_profiles')
-        .update({ avatar_url: urlData.publicUrl })
-        .eq('id', profile.id);
-
-      if (updateError) throw updateError;
-
-      setMessage({ type: 'success', text: 'Avatar updated successfully!' });
-      onUpdate();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setUploading(false);
+  useEffect(() => {
+    if (profile.badges) {
+      setBadges(profile.badges);
     }
+  }, [profile.badges]);
+
+  const handleAddLanguage = () => {
+    if (selectedLanguage && !languagesLearning.includes(selectedLanguage)) {
+      setLanguagesLearning([...languagesLearning, selectedLanguage]);
+      setSelectedLanguage('');
+    }
+  };
+
+  const handleRemoveLanguage = (langCode: string) => {
+    setLanguagesLearning(languagesLearning.filter(l => l !== langCode));
   };
 
   const handleSaveProfile = async () => {
@@ -88,6 +100,9 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
         .from('user_profiles')
         .update({
           display_name: displayName || null,
+          bio: bio || null,
+          profile_public: profilePublic,
+          languages_learning: languagesLearning,
           theme_preference: theme,
           notification_prefs: notificationPrefs,
         })
@@ -110,64 +125,45 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
     return 'U';
   };
 
+  const getLanguageInfo = (code: string) => {
+    return AVAILABLE_LANGUAGES.find(l => l.code === code) || { name: code, emoji: '🌍' };
+  };
+
   return (
     <div className="space-y-6">
-      <Card className="bg-slate-800 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white">Profile Picture</CardTitle>
-          <CardDescription className="text-slate-400">
-            Upload a profile picture (max 2MB)
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-6">
-            <Avatar className="h-24 w-24">
-              <AvatarImage src={profile.avatar_url} alt={displayName || profile.email} />
-              <AvatarFallback className="bg-slate-700 text-white text-2xl">
-                {getInitials()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <Label
-                htmlFor="avatar-upload"
-                className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-              >
-                {uploading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Uploading...
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4" />
-                    Upload Photo
-                  </>
-                )}
-              </Label>
-              <Input
-                id="avatar-upload"
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleAvatarUpload}
-                disabled={uploading}
-              />
-              <p className="text-xs text-slate-400 mt-2">JPG, PNG or GIF (max 2MB)</p>
-            </div>
+      {/* Profile Avatar Preview */}
+      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in">
+        <div className="flex items-center gap-2 mb-4">
+          <User className="h-5 w-5 text-talka-purple" />
+          <h3 className="font-display text-xl font-semibold text-slate-800">Your Profile</h3>
+        </div>
+        <p className="text-slate-500 text-sm font-medium mb-6">
+          Your profile picture is generated automatically
+        </p>
+        <div className="flex items-center gap-6">
+          <div className="w-24 h-24 rounded-full bg-gradient-cyan-blue flex items-center justify-center text-3xl font-bold text-white shadow-blue ring-4 ring-white">
+            {getInitials()}
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-slate-800 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white">Profile Information</CardTitle>
-          <CardDescription className="text-slate-400">
-            Update your personal information
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
           <div>
-            <Label htmlFor="display-name" className="text-slate-300">
+            <p className="font-display text-xl font-semibold text-slate-800">{displayName || 'Your Name'}</p>
+            <p className="text-slate-500 font-medium">{profile.email}</p>
+            <Link href={`/profile/${profile.id}`}>
+              <Button variant="link" className="text-talka-purple p-0 h-auto mt-2 font-semibold">
+                View public profile →
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Profile Information */}
+      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-1">
+        <h3 className="font-display text-xl font-semibold text-slate-800 mb-2">Profile Information</h3>
+        <p className="text-slate-500 text-sm font-medium mb-6">Update your personal information</p>
+        
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="display-name" className="text-slate-700 font-semibold">
               Display Name
             </Label>
             <Input
@@ -175,62 +171,150 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Enter your display name"
-              className="bg-slate-900 border-slate-700 text-white mt-2"
+              className="bg-slate-50 border-2 border-slate-200 rounded-2xl mt-2 font-medium focus:border-talka-purple focus:ring-0"
+              maxLength={50}
             />
           </div>
+
           <div>
-            <Label htmlFor="email" className="text-slate-300">
+            <Label htmlFor="bio" className="text-slate-700 font-semibold">
+              Bio
+            </Label>
+            <Textarea
+              id="bio"
+              value={bio}
+              onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO_LENGTH))}
+              placeholder="Tell others about yourself..."
+              className="bg-slate-50 border-2 border-slate-200 rounded-2xl mt-2 min-h-[100px] resize-none font-medium focus:border-talka-purple focus:ring-0"
+              maxLength={MAX_BIO_LENGTH}
+            />
+            <p className="text-xs text-slate-400 mt-1 text-right font-medium">
+              {bio.length}/{MAX_BIO_LENGTH}
+            </p>
+          </div>
+
+          <div>
+            <Label htmlFor="email" className="text-slate-700 font-semibold">
               Email Address
             </Label>
             <Input
               id="email"
               value={profile.email}
               disabled
-              className="bg-slate-900 border-slate-700 text-slate-400 mt-2"
+              className="bg-slate-100 border-2 border-slate-200 text-slate-400 rounded-2xl mt-2 font-medium"
             />
-            <p className="text-xs text-slate-500 mt-1">Email cannot be changed</p>
+            <p className="text-xs text-slate-400 mt-1 font-medium">Email cannot be changed</p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="bg-slate-800 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white">Appearance</CardTitle>
-          <CardDescription className="text-slate-400">
-            Customize how the app looks
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div>
-            <Label htmlFor="theme" className="text-slate-300">
-              Theme
-            </Label>
-            <Select value={theme} onValueChange={setTheme}>
-              <SelectTrigger className="bg-slate-900 border-slate-700 text-white mt-2">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700">
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="dark">Dark</SelectItem>
-                <SelectItem value="system">System</SelectItem>
-              </SelectContent>
-            </Select>
+      {/* Languages Learning */}
+      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-2">
+        <div className="flex items-center gap-2 mb-2">
+          <Globe className="h-5 w-5 text-talka-blue" />
+          <h3 className="font-display text-xl font-semibold text-slate-800">Languages I'm Learning</h3>
+        </div>
+        <p className="text-slate-500 text-sm font-medium mb-6">Show others what languages you're studying</p>
+        
+        <div className="flex gap-3 mb-4">
+          <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+            <SelectTrigger className="bg-slate-50 border-2 border-slate-200 rounded-2xl flex-1 font-medium focus:border-talka-purple focus:ring-0">
+              <SelectValue placeholder="Select a language" />
+            </SelectTrigger>
+            <SelectContent className="bg-white border-2 border-slate-200 rounded-2xl">
+              {AVAILABLE_LANGUAGES.filter(l => !languagesLearning.includes(l.code)).map((lang) => (
+                <SelectItem key={lang.code} value={lang.code} className="font-medium rounded-xl">
+                  {lang.emoji} {lang.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={handleAddLanguage}
+            disabled={!selectedLanguage}
+            className="bg-gradient-purple-pink text-white font-bold rounded-2xl px-6 shadow-purple disabled:opacity-50"
+          >
+            Add
+          </Button>
+        </div>
+
+        {languagesLearning.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {languagesLearning.map((langCode) => {
+              const lang = getLanguageInfo(langCode);
+              return (
+                <span
+                  key={langCode}
+                  className="px-4 py-2 bg-gradient-blue-purple text-white font-semibold rounded-xl text-sm flex items-center gap-2"
+                >
+                  {lang.emoji} {lang.name}
+                  <button
+                    onClick={() => handleRemoveLanguage(langCode)}
+                    className="hover:bg-white/20 rounded-full p-0.5 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </span>
+              );
+            })}
           </div>
-        </CardContent>
-      </Card>
+        ) : (
+          <p className="text-slate-400 text-sm font-medium italic">No languages added yet</p>
+        )}
+      </div>
 
-      <Card className="bg-slate-800 border-slate-700">
-        <CardHeader>
-          <CardTitle className="text-white">Notifications</CardTitle>
-          <CardDescription className="text-slate-400">
-            Manage your notification preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+      {/* Achievement Badges */}
+      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-3">
+        <div className="flex items-center gap-2 mb-2">
+          <Trophy className="h-5 w-5 text-talka-yellow" />
+          <h3 className="font-display text-xl font-semibold text-slate-800">My Achievements</h3>
+        </div>
+        <p className="text-slate-500 text-sm font-medium mb-6">Badges you've earned through your learning journey</p>
+        <AchievementBadges badges={badges} showAll size="lg" />
+      </div>
+
+      {/* Privacy */}
+      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-4">
+        <h3 className="font-display text-xl font-semibold text-slate-800 mb-2">Privacy</h3>
+        <p className="text-slate-500 text-sm font-medium mb-6">Control who can see your profile</p>
+        
+        <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
+          <div className="flex items-center gap-4">
+            {profilePublic ? (
+              <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
+                <Eye className="h-5 w-5 text-green-500" />
+              </div>
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center">
+                <EyeOff className="h-5 w-5 text-slate-500" />
+              </div>
+            )}
             <div>
-              <Label className="text-slate-300">Email Notifications</Label>
-              <p className="text-sm text-slate-400">Receive updates via email</p>
+              <Label className="text-slate-700 font-semibold">Public Profile</Label>
+              <p className="text-sm text-slate-500">
+                {profilePublic
+                  ? 'Anyone can view your profile and stats'
+                  : 'Only friends can view your profile'}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={profilePublic}
+            onCheckedChange={setProfilePublic}
+          />
+        </div>
+      </div>
+
+      {/* Notifications */}
+      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-5">
+        <h3 className="font-display text-xl font-semibold text-slate-800 mb-2">Notifications</h3>
+        <p className="text-slate-500 text-sm font-medium mb-6">Manage your notification preferences</p>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
+            <div>
+              <Label className="text-slate-700 font-semibold">Email Notifications</Label>
+              <p className="text-sm text-slate-500">Receive updates via email</p>
             </div>
             <Switch
               checked={notificationPrefs.email}
@@ -239,10 +323,10 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
               }
             />
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
             <div>
-              <Label className="text-slate-300">Friend Requests</Label>
-              <p className="text-sm text-slate-400">Get notified of new friend requests</p>
+              <Label className="text-slate-700 font-semibold">Friend Requests</Label>
+              <p className="text-sm text-slate-500">Get notified of new friend requests</p>
             </div>
             <Switch
               checked={notificationPrefs.friend_requests}
@@ -251,10 +335,10 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
               }
             />
           </div>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
             <div>
-              <Label className="text-slate-300">Streak Reminders</Label>
-              <p className="text-sm text-slate-400">Daily reminders to maintain your streak</p>
+              <Label className="text-slate-700 font-semibold">Streak Reminders</Label>
+              <p className="text-sm text-slate-500">Daily reminders to maintain your streak</p>
             </div>
             <Switch
               checked={notificationPrefs.streak_reminders}
@@ -263,38 +347,40 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
               }
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
+      {/* Message */}
       {message && (
         <div
-          className={`flex items-center gap-2 p-4 rounded-lg ${
+          className={`flex items-center gap-3 p-4 rounded-2xl animate-fade-in ${
             message.type === 'success'
-              ? 'bg-green-500/20 text-green-400 border border-green-500/30'
-              : 'bg-red-500/20 text-red-400 border border-red-500/30'
+              ? 'bg-green-100 text-green-700 border-2 border-green-200'
+              : 'bg-red-100 text-red-700 border-2 border-red-200'
           }`}
         >
           {message.type === 'success' ? (
-            <Check className="h-5 w-5" />
+            <Check className="h-5 w-5 text-green-500" />
           ) : (
-            <AlertCircle className="h-5 w-5" />
+            <AlertCircle className="h-5 w-5 text-red-500" />
           )}
-          <span>{message.text}</span>
+          <span className="font-semibold">{message.text}</span>
         </div>
       )}
 
+      {/* Save Button */}
       <Button
         onClick={handleSaveProfile}
         disabled={saving}
-        className="w-full bg-blue-600 hover:bg-blue-700"
+        className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50"
       >
         {saving ? (
           <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
             Saving...
           </>
         ) : (
-          'Save Changes'
+          'Save Changes ✨'
         )}
       </Button>
     </div>

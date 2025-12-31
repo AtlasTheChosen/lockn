@@ -204,15 +204,9 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                     <div className="text-center mb-4">
                       <h3 className="text-3xl font-light mb-4 text-white/90">{currentCard.targetPhrase}</h3>
                     </div>
-                    <div className="bg-white/5 rounded-xl p-6 space-y-4">
-                      <div>
-                        <p className="text-white/60 text-sm font-light mb-2">Translation:</p>
-                        <p className="text-xl font-light">{currentCard.nativeTranslation}</p>
-                      </div>
-                      <div>
-                        <p className="text-white/60 text-sm font-light mb-2">Example usage:</p>
-                        <p className="text-lg font-light text-white/90">{currentCard.exampleSentence}</p>
-                      </div>
+                    <div className="bg-white/5 rounded-xl p-6">
+                      <p className="text-white/60 text-sm font-light mb-2">Translation:</p>
+                      <p className="text-xl font-light">{currentCard.nativeTranslation}</p>
                     </div>
                     <p className="text-center text-white/40 text-sm font-light mt-4">
                       Rate your knowledge below

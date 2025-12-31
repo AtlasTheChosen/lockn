@@ -15,6 +15,10 @@ export async function POST(request: Request) {
   try {
     const { text, sourceLanguage = 'Spanish', targetLanguage = 'English' } = await request.json();
 
+    // #region agent log
+    console.log('[DEBUG translate-words] Input:', JSON.stringify({location:'translate-words/route.ts:POST',message:'Translation request received',data:{text,sourceLanguage,targetLanguage},timestamp:Date.now(),hypothesisId:'A-C'}));
+    // #endregion
+
     if (!text) {
       return NextResponse.json({ error: 'Missing text' }, { status: 400 });
     }

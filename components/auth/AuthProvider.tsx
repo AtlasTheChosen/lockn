@@ -1,22 +1,44 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     const supabase = createClient();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    // Get session on load to persist authentication
+    const initializeSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          // Session exists, refresh to ensure it's current (but don't block)
+          supabase.auth.refreshSession().catch((error) => {
+            console.warn('Error refreshing session on init:', error);
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing session:', error);
+      }
+    };
+
+    initializeSession();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         router.refresh();
       }
 
       if (event === 'SIGNED_OUT') {
-        router.push('/');
+        // Redirect to home if not already there or on auth pages
+        if (!pathname?.startsWith('/auth') && pathname !== '/') {
+          router.push('/');
+        }
         router.refresh();
       }
     });
@@ -24,7 +46,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     return () => {
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, pathname]);
 
+  // Always render children - don't conditionally return null
   return <>{children}</>;
 }

@@ -3,278 +3,348 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Search, Sparkles, Globe, GraduationCap, LogIn } from 'lucide-react';
+import { Search, Globe, GraduationCap, CreditCard, AlertTriangle, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SUPPORTED_LANGUAGES, CEFR_LEVELS } from '@/lib/constants';
+import { checkContentAppropriateness } from '@/lib/content-filter';
+import { DEBUG } from '@/lib/debug';
+import { createClient } from '@/lib/supabase/client';
+import AuthModal from '@/components/auth/AuthModal';
+import Logo from '@/components/ui/Logo';
 
 interface CommandLandingProps {
-  onStartTrial: (scenario: string, language: string, level: string) => void;
+  onStartTrial: (scenario: string, language: string, level: string, cardCount?: number) => void;
 }
 
-const ALL_SUGGESTIONS = [
-  'business negotiations in Tokyo',
-  'ordering at a busy Parisian café',
-  'bargaining at a Moroccan market',
-  'tech startup pitch meeting',
-  'debating politics with friends',
-  'asking for a raise professionally',
-  'workplace conflict resolution',
-  'flirting at a Madrid nightclub',
-  'making friends at a university',
-  'doctor appointment in Germany',
-  'navigating a Korean subway',
-  'cultural festival in Mumbai',
-  'job interview in finance',
-  'apartment hunting in Barcelona',
-  'romantic date conversation',
-  'tech support troubleshooting',
-  'networking at a conference',
-  'ordering food delivery by phone',
-  'complaining at a hotel',
-  'discussing movies with locals',
-  'sports bar banter',
-  'art gallery discussions',
-  'booking travel accommodations',
-  'returning items at a store',
-  'gym workout small talk',
-  'cooking class interactions',
-  'wine tasting vocabulary',
-  'discussing current events',
-  'environmental debate topics',
-  'music festival conversations',
+const CARD_COUNT_OPTIONS = [10, 25, 50] as const;
+type CardCount = typeof CARD_COUNT_OPTIONS[number];
+
+const SUGGESTIONS = [
+  { text: 'ordering pizza in Rome', emoji: '🍕' },
+  { text: 'job interview small talk', emoji: '💼' },
+  { text: 'gym conversation starters', emoji: '🏋️' },
+  { text: 'planning a birthday party', emoji: '🎉' },
+  { text: 'checking into a hotel', emoji: '✈️' },
+  { text: 'complimenting someone', emoji: '💃' },
+  { text: 'talking to a taxi driver', emoji: '🚕' },
+  { text: 'making coffee shop orders', emoji: '☕' },
 ];
-
-function getRandomSuggestions(count: number): string[] {
-  const shuffled = [...ALL_SUGGESTIONS].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, count);
-}
 
 export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
   const [searchValue, setSearchValue] = useState('');
-  const [isFocused, setIsFocused] = useState(false);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('Spanish');
-  const [selectedLevel, setSelectedLevel] = useState<string>('B1');
+  const [selectedLevel, setSelectedLevel] = useState<string>('B2');
+  const [selectedCardCount, setSelectedCardCount] = useState<CardCount>(10);
+  const [contentWarning, setContentWarning] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
 
   useEffect(() => {
-    setSuggestions(getRandomSuggestions(8));
-    const savedLang = localStorage.getItem('talka-trial-language');
-    const savedLevel = localStorage.getItem('talka-trial-level');
-    if (savedLang) {
-      setSelectedLanguage(savedLang);
+    const savedLang = localStorage.getItem('lockn-trial-language');
+    const savedLevel = localStorage.getItem('lockn-trial-level');
+    const savedCardCount = localStorage.getItem('lockn-card-count');
+    
+    if (savedLang) setSelectedLanguage(savedLang);
+    if (savedLevel) setSelectedLevel(savedLevel);
+    if (savedCardCount) {
+      const count = parseInt(savedCardCount, 10);
+      if (CARD_COUNT_OPTIONS.includes(count as CardCount)) {
+        setSelectedCardCount(count as CardCount);
+      }
     }
-    if (savedLevel) {
-      setSelectedLevel(savedLevel);
-    }
+
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+    };
+    checkAuth();
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value);
+    if (value.trim()) {
+      const contentCheck = checkContentAppropriateness(value);
+      if (!contentCheck.isAppropriate) {
+        setContentWarning('This content may contain inappropriate language.');
+      } else {
+        setContentWarning(null);
+      }
+    } else {
+      setContentWarning(null);
+    }
+  };
+
+  const handleSubmit = () => {
     if (searchValue.trim() && selectedLanguage) {
-      localStorage.setItem('talka-trial-language', selectedLanguage);
-      localStorage.setItem('talka-trial-level', selectedLevel);
-      onStartTrial(searchValue, selectedLanguage, selectedLevel);
+      setContentWarning(null);
+      localStorage.setItem('lockn-trial-language', selectedLanguage);
+      localStorage.setItem('lockn-trial-level', selectedLevel);
+      
+      if (isLoggedIn) {
+        localStorage.setItem('lockn-card-count', selectedCardCount.toString());
+        onStartTrial(searchValue, selectedLanguage, selectedLevel, selectedCardCount);
+      } else {
+        onStartTrial(searchValue, selectedLanguage, selectedLevel, 3);
+      }
     }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
     if (selectedLanguage) {
-      localStorage.setItem('talka-trial-language', selectedLanguage);
-      localStorage.setItem('talka-trial-level', selectedLevel);
-      onStartTrial(suggestion, selectedLanguage, selectedLevel);
+      localStorage.setItem('lockn-trial-language', selectedLanguage);
+      localStorage.setItem('lockn-trial-level', selectedLevel);
+      
+      if (isLoggedIn) {
+        localStorage.setItem('lockn-card-count', selectedCardCount.toString());
+        onStartTrial(suggestion, selectedLanguage, selectedLevel, selectedCardCount);
+      } else {
+        onStartTrial(suggestion, selectedLanguage, selectedLevel, 3);
+      }
     }
   };
 
   const handleLanguageChange = (value: string) => {
     setSelectedLanguage(value);
-    localStorage.setItem('talka-trial-language', value);
+    localStorage.setItem('lockn-trial-language', value);
   };
 
   const handleLevelChange = (value: string) => {
     setSelectedLevel(value);
-    localStorage.setItem('talka-trial-level', value);
+    localStorage.setItem('lockn-trial-level', value);
+  };
+
+  const handleCardCountChange = (count: CardCount) => {
+    setSelectedCardCount(count);
+    localStorage.setItem('lockn-card-count', count.toString());
+  };
+
+  const getLanguageEmoji = (name: string) => {
+    const emojiMap: Record<string, string> = {
+      Spanish: '🇪🇸', French: '🇫🇷', German: '🇩🇪', Italian: '🇮🇹',
+      Japanese: '🇯🇵', Korean: '🇰🇷', Mandarin: '🇨🇳', Portuguese: '🇧🇷',
+      Russian: '🇷🇺', Arabic: '🇸🇦', Hindi: '🇮🇳', Dutch: '🇳🇱',
+    };
+    return emojiMap[name] || '🌍';
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-black text-white px-6 relative">
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="absolute top-6 right-6 flex gap-2"
-      >
-        <Link href="/dashboard">
-          <Button
-            className="bg-gradient-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-black rounded-xl font-medium"
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            Test Dashboard
-          </Button>
-        </Link>
-        <Link href="/auth/login">
-          <Button
-            variant="outline"
-            className="border-white/20 text-white/80 hover:bg-white/10 hover:text-white rounded-xl"
-          >
-            <LogIn className="h-4 w-4 mr-2" />
-            Sign In
-          </Button>
-        </Link>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full max-w-2xl"
-      >
-        <div className="text-center mb-12">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-            className="inline-flex items-center justify-center gap-3 mb-6"
-          >
-            <Sparkles className="h-10 w-10 text-blue-500" />
-            <h1 className="text-3xl font-light tracking-tight">Talka</h1>
-          </motion.div>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="text-white/60 text-lg font-light"
-          >
-            Unlock authentic conversations through immersive language mastery
-          </motion.p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="mb-6">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.55 }}
-            className="relative mb-2"
-          >
-            <label className="text-white/80 text-sm font-light mb-3 block">
-              What real-world topic or scenario do you want to master?
-            </label>
-            <div
-              className={`relative rounded-2xl bg-white/5 border transition-all duration-300 ${
-                isFocused
-                  ? 'border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.3)]'
-                  : 'border-white/10'
-              }`}
-            >
-              <Search className="absolute left-6 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
-              <input
-                type="text"
-                value={searchValue}
-                onChange={(e) => setSearchValue(e.target.value)}
-                onFocus={() => setIsFocused(true)}
-                onBlur={() => setIsFocused(false)}
-                placeholder="e.g., Ordering coffee in Paris, Negotiating a salary, Handling small talk at a party, Travel emergencies"
-                className="w-full bg-transparent border-0 outline-none text-white placeholder:text-white/40 pl-16 pr-6 py-6 text-lg font-light"
-              />
-            </div>
-          </motion.div>
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="text-white/50 text-xs font-light mb-6"
-          >
-            We'll generate a story-based flashcard stack tailored to your topic with authentic phrases and context.
-          </motion.p>
-        </form>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65 }}
-          >
-            <label className="text-white/80 text-sm font-light mb-3 block flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              Target Language
-            </label>
-            <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
-              <SelectTrigger className="w-full bg-white/5 border-white/10 text-white rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                <SelectValue placeholder="Select a language..." />
-              </SelectTrigger>
-              <SelectContent className="max-h-64 bg-black/95 border-white/10">
-                {SUPPORTED_LANGUAGES.map((lang) => (
-                  <SelectItem key={lang.code} value={lang.name} className="text-white hover:bg-white/10">
-                    {lang.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7 }}
-          >
-            <label className="text-white/80 text-sm font-light mb-3 block flex items-center gap-2">
-              <GraduationCap className="h-4 w-4" />
-              Your Level (CEFR)
-            </label>
-            <Select value={selectedLevel} onValueChange={handleLevelChange}>
-              <SelectTrigger className="w-full bg-white/5 border-white/10 text-white rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-black/95 border-white/10">
-                {CEFR_LEVELS.map((level) => (
-                  <SelectItem key={level.code} value={level.code} className="text-white hover:bg-white/10">
-                    <div className="flex flex-col">
-                      <span className="font-semibold">{level.code}</span>
-                      <span className="text-xs text-white/60">{level.description}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </motion.div>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="text-center mb-4"
+    <div className="min-h-screen relative z-10">
+      {/* Guest Header */}
+      {!isLoggedIn && (
+        <motion.nav
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white px-6 md:px-8 py-5 shadow-talka-sm sticky top-0 z-50 flex justify-between items-center"
         >
-          <h3 className="text-white/60 text-sm font-light">
-            Can't think of a topic? Try these!
+          <Link href="/" className="flex items-center gap-2">
+            <Logo size="md" />
+            <span className="font-display text-3xl font-semibold gradient-text">
+              LOCKN
+            </span>
+          </Link>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setAuthModalMode('login');
+                setShowAuthModal(true);
+              }}
+              className="text-slate-600 font-semibold hover:text-talka-purple hover:bg-talka-purple/10 rounded-2xl px-6"
+            >
+              Sign In
+            </Button>
+            <Button 
+              onClick={() => {
+                setAuthModalMode('signup');
+                setShowAuthModal(true);
+              }}
+              className="bg-gradient-purple-pink text-white font-bold rounded-2xl px-6 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            >
+              Get Started ✨
+            </Button>
+          </div>
+        </motion.nav>
+      )}
+
+      <div className="px-4 md:px-8 py-8 md:py-16">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center mb-8"
+          >
+            <p className="text-lg text-slate-500 mb-4 font-medium animate-fade-in">
+              Hey there, language champion!
+            </p>
+            <h1 className="font-display text-4xl md:text-5xl font-semibold leading-tight mb-6 gradient-text-warm animate-fade-in stagger-1">
+              What do you want to talk about today?
+            </h1>
+          </motion.div>
+
+        {/* Create Stack Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="bg-white rounded-3xl p-6 md:p-8 shadow-talka-md mb-8 animate-fade-in stagger-2 relative z-10"
+        >
+          <h3 className="font-display text-2xl font-semibold mb-6 flex items-center gap-2">
+            ✨ Create Your Learning Stack
           </h3>
+          
+          <div>
+            {/* Search Input */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="flex-1 relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchValue}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && searchValue.trim() && selectedLanguage) {
+                      e.preventDefault();
+                      handleSubmit();
+                    }
+                  }}
+                  placeholder="Try: 'ordering tapas in Barcelona' or 'asking for directions in Tokyo'..."
+                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-slate-800 font-medium placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-talka-purple focus:bg-white focus:shadow-[0_0_0_4px_rgba(167,139,250,0.15)] transition-all"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleSubmit()}
+                disabled={!searchValue.trim() || !selectedLanguage}
+                className="bg-gradient-green-cyan text-white font-bold rounded-2xl px-8 py-4 shadow-green hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-green"
+              >
+                Create Magic! 🎨
+              </button>
+            </div>
+
+            {/* Content Warning */}
+            {contentWarning && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-start gap-3 p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl mb-6"
+              >
+                <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-amber-700 text-sm font-medium">{contentWarning}</p>
+              </motion.div>
+            )}
+
+            {/* Selectors Grid */}
+            <div className={`grid grid-cols-1 ${isLoggedIn ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
+              {/* Language Selector */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-500 mb-3">
+                  🌍 Language
+                </label>
+                <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
+                  <SelectTrigger className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 font-semibold focus:border-talka-purple focus:ring-0 text-slate-800">
+                    <SelectValue>
+                      {selectedLanguage} {getLanguageEmoji(selectedLanguage)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-2 border-slate-200 rounded-2xl">
+                    {SUPPORTED_LANGUAGES.map((lang) => (
+                      <SelectItem key={lang.code} value={lang.name} className="rounded-xl font-medium">
+                        {lang.name} {getLanguageEmoji(lang.name)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Level Selector */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-500 mb-3">
+                  📊 Level
+                </label>
+                <Select value={selectedLevel} onValueChange={handleLevelChange}>
+                  <SelectTrigger className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl py-4 font-semibold focus:border-talka-purple focus:ring-0 text-slate-800">
+                    <SelectValue>
+                      {selectedLevel} - {CEFR_LEVELS.find(l => l.code === selectedLevel)?.description}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="bg-white border-2 border-slate-200 rounded-2xl">
+                    {CEFR_LEVELS.map((level) => (
+                      <SelectItem key={level.code} value={level.code} className="rounded-xl font-medium">
+                        {level.code} - {level.description}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Card Count - only for logged-in users */}
+              {isLoggedIn && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-500 mb-3">
+                    🎴 Cards
+                  </label>
+                  <div className="flex gap-2">
+                    {CARD_COUNT_OPTIONS.map((count) => (
+                      <Button
+                        key={count}
+                        type="button"
+                        onClick={() => handleCardCountChange(count)}
+                        className={`flex-1 rounded-xl py-4 font-semibold transition-all ${
+                          selectedCardCount === count
+                            ? 'bg-gradient-purple-pink text-white shadow-purple'
+                            : 'bg-slate-50 border-2 border-slate-200 text-slate-600 hover:border-talka-purple hover:bg-white'
+                        }`}
+                      >
+                        {count}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </motion.div>
 
+        {/* Suggestions */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.85 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-3xl mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6 }}
+          className="animate-fade-in stagger-3"
         >
-          {suggestions.map((suggestion, index) => (
-            <motion.div
-              key={suggestion}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.9 + index * 0.05 }}
-            >
-              <Button
-                onClick={() => handleSuggestionClick(suggestion)}
-                variant="outline"
+          <p className="text-center text-slate-500 font-semibold mb-6">
+            🎲 Need inspiration? Try one of these!
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {SUGGESTIONS.map((suggestion, index) => (
+              <motion.button
+                key={suggestion.text}
+                onClick={() => handleSuggestionClick(suggestion.text)}
                 disabled={!selectedLanguage}
-                className="w-full rounded-xl bg-white/5 border-white/10 text-white/80 hover:bg-white/10 hover:text-white hover:border-blue-500 transition-all duration-300 px-6 py-4 font-light text-left justify-start disabled:opacity-50 disabled:cursor-not-allowed"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 + index * 0.05 }}
+                className="p-5 bg-white border-2 border-slate-200 rounded-2xl text-center font-semibold text-slate-700 hover:border-talka-pink hover:-translate-y-1 hover:shadow-talka-md hover:text-talka-pink transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none"
               >
-                {suggestion}
-              </Button>
-            </motion.div>
-          ))}
+                {suggestion.emoji} {suggestion.text}
+              </motion.button>
+            ))}
+          </div>
         </motion.div>
-      </motion.div>
+        </div>
+      </div>
+
+      {/* Auth Modal - placed at the end to ensure proper z-index layering */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        initialMode={authModalMode}
+      />
     </div>
   );
 }

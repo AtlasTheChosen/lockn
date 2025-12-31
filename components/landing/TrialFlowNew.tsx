@@ -5,17 +5,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Check, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { distance } from 'fastest-levenshtein';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
 import { CARD_RATINGS } from '@/lib/constants';
+import { createClient } from '@/lib/supabase/client';
 
 const RATING_OPTIONS = [
-  { value: CARD_RATINGS.REALLY_DONT_KNOW, label: "Really Don't Know", color: 'bg-red-500' },
-  { value: CARD_RATINGS.DONT_KNOW, label: "Don't Know", color: 'bg-orange-500' },
-  { value: CARD_RATINGS.NEUTRAL, label: 'Neutral', color: 'bg-yellow-500' },
-  { value: CARD_RATINGS.KINDA_KNOW, label: 'Kinda Know', color: 'bg-green-500' },
-  { value: CARD_RATINGS.REALLY_KNOW, label: 'Really Know', color: 'bg-blue-500' },
+  { value: CARD_RATINGS.REALLY_DONT_KNOW, label: "Really Don't Know", emoji: '😵', gradient: 'bg-gradient-to-r from-red-500 to-red-600' },
+  { value: CARD_RATINGS.DONT_KNOW, label: "Don't Know", emoji: '😕', gradient: 'bg-gradient-to-r from-orange-500 to-orange-600' },
+  { value: CARD_RATINGS.NEUTRAL, label: 'Neutral', emoji: '😐', gradient: 'bg-gradient-to-r from-yellow-500 to-yellow-600' },
+  { value: CARD_RATINGS.KINDA_KNOW, label: 'Kinda Know', emoji: '🙂', gradient: 'bg-gradient-to-r from-green-500 to-green-600' },
+  { value: CARD_RATINGS.REALLY_KNOW, label: 'Really Know', emoji: '🤩', gradient: 'bg-gradient-to-r from-blue-500 to-blue-600' },
 ];
 
 interface Card {
@@ -42,6 +42,22 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
   const [testResults, setTestResults] = useState<boolean[]>([]);
   const [wordTranslations, setWordTranslations] = useState<Record<string, any>>({});
   const [cardRatings, setCardRatings] = useState<Record<number, number>>({});
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsLoggedIn(!!session);
+      console.log('[TrialFlow] Auth check:', { isLoggedIn: !!session });
+    };
+    checkAuth();
+  }, []);
+
+  // Check if all cards are mastered (rated 4 or 5)
+  const allCardsMastered = Object.keys(cardRatings).length === cards.length && 
+    Object.values(cardRatings).every(rating => rating >= CARD_RATINGS.KINDA_KNOW);
 
   const currentCard = cards[currentIndex];
   const progress = phase === 'learning'
@@ -52,7 +68,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
     if (phase === 'learning' && isFlipped && currentCard) {
       const targetKey = `${currentIndex}-target`;
       if (!wordTranslations[targetKey]) {
-        const targetLang = localStorage.getItem('talka-trial-language') || 'Spanish';
+        const targetLang = localStorage.getItem('lockn-trial-language') || 'Spanish';
         getWordTranslations(currentCard.targetPhrase, targetLang, 'English').then(translations => {
           setWordTranslations((prev: Record<string, any>) => ({
             ...prev,
@@ -125,21 +141,60 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
   const handleRating = (rating: number) => {
     const newRatings = { ...cardRatings, [currentIndex]: rating };
     setCardRatings(newRatings);
-    localStorage.setItem('talka-trial-ratings', JSON.stringify(newRatings));
+    localStorage.setItem('lockn-trial-ratings', JSON.stringify(newRatings));
 
-    handleNext();
-  };
+    // Check mastery with the NEW ratings
+    const allRated = Object.keys(newRatings).length === cards.length;
+    const allMastered = allRated && Object.values(newRatings).every(r => r >= CARD_RATINGS.KINDA_KNOW);
 
-  const handleNext = () => {
-    if (phase === 'learning') {
-      if (currentIndex < cards.length - 1) {
+    console.log('[TrialFlow] Rating:', { 
+      cardIndex: currentIndex, 
+      rating, 
+      allRated, 
+      allMastered,
+      isLoggedIn 
+    });
+
+    // Auto-advance to next card
+    if (currentIndex < cards.length - 1) {
+      // More cards to go
+      setTimeout(() => {
         setCurrentIndex(currentIndex + 1);
         setIsFlipped(false);
+      }, 300);
+    } else {
+      // Last card rated - decide what to do
+      if (!isLoggedIn) {
+        // Guest: Go to signup (no test)
+        console.log('[TrialFlow] Guest finished, going to signup');
+        setTimeout(() => onComplete(), 500);
+      } else if (allMastered) {
+        // Logged-in and all mastered: Start test
+        console.log('[TrialFlow] All mastered, starting test');
+        setTimeout(() => {
+          setPhase('testing');
+          setCurrentIndex(0);
+          setIsFlipped(false);
+        }, 500);
       } else {
-        setPhase('testing');
-        setCurrentIndex(0);
-        setIsFlipped(false);
+        // Logged-in but not all mastered: Cycle back to first unmastered
+        console.log('[TrialFlow] Not all mastered, cycling back');
+        const firstUnmasteredIndex = cards.findIndex((_, i) => 
+          !newRatings[i] || newRatings[i] < CARD_RATINGS.KINDA_KNOW
+        );
+        setTimeout(() => {
+          setCurrentIndex(firstUnmasteredIndex >= 0 ? firstUnmasteredIndex : 0);
+          setIsFlipped(false);
+        }, 300);
       }
+    }
+  };
+
+  // Keep handleNext for the Previous button navigation only
+  const handleNext = () => {
+    if (phase === 'learning' && currentIndex < cards.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setIsFlipped(false);
     }
   };
 
@@ -194,46 +249,59 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-black text-white">
-      <div className="h-0.5 bg-white/10">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white">
+      {/* Progress Bar */}
+      <div className="h-2 bg-slate-200">
         <motion.div
-          className="h-full bg-blue-500"
+          className="h-full bg-gradient-purple-pink"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.3 }}
         />
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-6 py-12">
+      <div className="flex-1 flex items-center justify-center px-4 md:px-6 py-8 md:py-12">
         <div className="w-full max-w-2xl">
+          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-8"
+            className="text-center mb-6"
           >
             {phase === 'learning' ? (
               <>
-                <Badge className="mb-3 bg-blue-500/20 text-blue-400 border-blue-500/30">
-                  Learning Phase
-                </Badge>
-                <p className="text-white/60 text-sm font-light mb-2">
+                <span className="inline-block px-4 py-2 bg-gradient-purple-pink text-white font-bold rounded-full text-sm mb-4 shadow-purple">
+                  ✨ Learning Phase
+                </span>
+                <p className="text-slate-500 text-sm font-semibold mb-2">
                   Card {currentIndex + 1} of {cards.length}
+                  {isLoggedIn && (
+                    <span className="ml-2">
+                      • {Object.values(cardRatings).filter(r => r >= CARD_RATINGS.KINDA_KNOW).length}/{cards.length} mastered
+                    </span>
+                  )}
                 </p>
-                <h2 className="text-2xl font-light capitalize">{scenario}</h2>
+                <h2 className="font-display text-2xl font-semibold text-slate-800 capitalize">{scenario}</h2>
+                {isLoggedIn && !allCardsMastered && Object.keys(cardRatings).length === cards.length && (
+                  <p className="text-amber-600 text-sm font-medium mt-2">
+                    Rate all cards as "Kinda Know" or "Really Know" to unlock the test
+                  </p>
+                )}
               </>
             ) : (
               <>
-                <Badge className="mb-3 bg-green-500/20 text-green-400 border-green-500/30">
-                  Testing Phase
-                </Badge>
-                <p className="text-white/60 text-sm font-light mb-2">
+                <span className="inline-block px-4 py-2 bg-gradient-green-cyan text-white font-bold rounded-full text-sm mb-4 shadow-green">
+                  📝 Testing Phase
+                </span>
+                <p className="text-slate-500 text-sm font-semibold mb-2">
                   Question {testResults.length + 1} of {cards.length}
                 </p>
-                <h2 className="text-2xl font-light">Type the English translation</h2>
+                <h2 className="font-display text-2xl font-semibold text-slate-800">Type the English translation</h2>
               </>
             )}
           </motion.div>
 
+          {/* Card */}
           <AnimatePresence mode="wait">
             <motion.div
               key={`${phase}-${currentIndex}`}
@@ -246,58 +314,52 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
               {phase === 'learning' ? (
                 <div
                   onClick={handleFlip}
-                  className="bg-white/5 border border-white/10 rounded-3xl p-8 min-h-[400px] flex flex-col justify-center cursor-pointer hover:bg-white/8 transition-all duration-300"
+                  className="bg-white border-2 border-slate-200 rounded-3xl p-8 min-h-[350px] flex flex-col justify-center cursor-pointer hover:border-talka-purple hover:shadow-talka-md transition-all duration-300 shadow-talka-sm"
                 >
                   {!isFlipped ? (
                     <div className="space-y-6">
                       <div className="flex justify-center mb-4">
-                        <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20">
+                        <span className="px-4 py-2 bg-slate-100 text-slate-600 font-semibold rounded-full text-sm">
                           {currentCard.toneAdvice}
-                        </Badge>
+                        </span>
                       </div>
                       <div className="text-center">
-                        <h3 className="text-4xl font-light mb-6">{currentCard.targetPhrase}</h3>
+                        <h3 className="font-display text-4xl font-semibold text-slate-800 mb-6">{currentCard.targetPhrase}</h3>
                       </div>
-                      <p className="text-center text-white/40 text-sm font-light mt-8">
-                        Tap card to reveal meaning
+                      <p className="text-center text-slate-400 text-sm font-medium mt-8">
+                        👆 Tap card to reveal meaning
                       </p>
                     </div>
                   ) : (
                     <div className="space-y-6">
                       <div className="text-center mb-4">
-                        <h3 className="text-3xl font-light mb-4">
+                        <h3 className="font-display text-3xl font-semibold text-slate-800 mb-4">
                           <WordHoverText
                             text={currentCard.targetPhrase}
                             translations={wordTranslations[`${currentIndex}-target`] || []}
                           />
                         </h3>
                       </div>
-                      <div className="bg-white/5 rounded-xl p-6 space-y-4">
-                        <div>
-                          <p className="text-white/60 text-sm font-light mb-2">Translation:</p>
-                          <p className="text-xl font-light text-white/90">{currentCard.nativeTranslation}</p>
-                        </div>
-                        <div>
-                          <p className="text-white/60 text-sm font-light mb-2">Example usage:</p>
-                          <p className="text-lg font-light text-white/90">{currentCard.exampleSentence}</p>
-                        </div>
+                      <div className="bg-slate-50 rounded-2xl p-6">
+                        <p className="text-slate-500 text-sm font-semibold mb-2">🔤 Translation:</p>
+                        <p className="text-xl font-semibold text-slate-800">{currentCard.nativeTranslation}</p>
                       </div>
-                      <p className="text-center text-white/40 text-xs font-light mt-4">
+                      <p className="text-center text-slate-400 text-xs font-medium mt-4">
                         Hover over words in the target language to see meanings
                       </p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="bg-white/5 border border-white/10 rounded-3xl p-8 min-h-[400px] flex flex-col justify-center">
+                <div className="bg-white border-2 border-slate-200 rounded-3xl p-8 min-h-[350px] flex flex-col justify-center shadow-talka-sm">
                   <div className="space-y-6">
                     <div className="flex justify-center mb-4">
-                      <Badge variant="secondary" className="bg-white/10 text-white/80 border-white/20">
+                      <span className="px-4 py-2 bg-slate-100 text-slate-600 font-semibold rounded-full text-sm">
                         {currentCard.toneAdvice}
-                      </Badge>
+                      </span>
                     </div>
                     <div className="text-center">
-                      <h3 className="text-4xl font-light mb-8">{currentCard.targetPhrase}</h3>
+                      <h3 className="font-display text-4xl font-semibold text-slate-800 mb-8">{currentCard.targetPhrase}</h3>
                     </div>
 
                     {!feedback ? (
@@ -307,15 +369,15 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                           onChange={(e) => setUserAnswer(e.target.value)}
                           onKeyPress={handleKeyPress}
                           placeholder="Type the English translation..."
-                          className="bg-white/10 border-white/20 text-white text-lg py-6 rounded-xl placeholder:text-white/40 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                          className="bg-slate-50 border-2 border-slate-200 text-slate-800 text-lg py-6 rounded-2xl placeholder:text-slate-400 focus:border-talka-purple focus:ring-0 font-medium"
                           autoFocus
                         />
                         <Button
                           onClick={handleSubmitAnswer}
                           disabled={!userAnswer.trim()}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 text-base"
+                          className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-6 text-base shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50"
                         >
-                          Submit Answer
+                          Submit Answer ✨
                         </Button>
                       </div>
                     ) : (
@@ -323,33 +385,37 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                         <motion.div
                           initial={{ opacity: 0, scale: 0.9 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          className={`p-6 rounded-xl ${
+                          className={`p-6 rounded-2xl border-2 ${
                             feedback.passed
-                              ? 'bg-green-500/20 border border-green-500/30'
-                              : 'bg-orange-500/20 border border-orange-500/30'
+                              ? 'bg-green-50 border-green-200'
+                              : 'bg-amber-50 border-amber-200'
                           }`}
                         >
                           <div className="flex items-start gap-3">
                             {feedback.passed ? (
-                              <Check className="h-6 w-6 text-green-400 flex-shrink-0 mt-1" />
+                              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                <Check className="h-6 w-6 text-green-500" />
+                              </div>
                             ) : (
-                              <X className="h-6 w-6 text-orange-400 flex-shrink-0 mt-1" />
+                              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
+                                <X className="h-6 w-6 text-amber-500" />
+                              </div>
                             )}
                             <div>
-                              <p className={`font-medium mb-2 ${
-                                feedback.passed ? 'text-green-400' : 'text-orange-400'
+                              <p className={`font-bold mb-2 ${
+                                feedback.passed ? 'text-green-600' : 'text-amber-600'
                               }`}>
-                                {feedback.passed ? 'Correct!' : 'Not quite'}
+                                {feedback.passed ? '🎉 Correct!' : 'Not quite'}
                               </p>
-                              <p className="text-white/90 text-sm">{feedback.message}</p>
+                              <p className="text-slate-600 text-sm font-medium">{feedback.message}</p>
                             </div>
                           </div>
                         </motion.div>
                         <Button
                           onClick={handleNextTestCard}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 text-base"
+                          className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-6 text-base shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
-                          {currentIndex < cards.length - 1 ? 'Next Card' : 'Complete Trial'}
+                          {currentIndex < cards.length - 1 ? 'Next Card →' : 'Complete Trial 🎊'}
                         </Button>
                       </div>
                     )}
@@ -359,6 +425,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
             </motion.div>
           </AnimatePresence>
 
+          {/* Rating Buttons */}
           {phase === 'learning' && (
             <>
               {isFlipped && (
@@ -367,38 +434,38 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                   animate={{ opacity: 1, y: 0 }}
                   className="mt-6 space-y-3"
                 >
-                  <p className="text-center text-white/60 text-sm font-light mb-2">
+                  <p className="text-center text-slate-500 text-sm font-semibold mb-3">
                     Rate your knowledge:
                   </p>
-                  {RATING_OPTIONS.map((option) => (
-                    <Button
-                      key={option.value}
-                      onClick={() => handleRating(option.value)}
-                      className={`w-full ${option.color} hover:opacity-90 text-white rounded-xl py-5 text-base font-light`}
-                    >
-                      {option.label}
-                      {cardRatings[currentIndex] === option.value && <Check className="ml-2 h-5 w-5" />}
-                    </Button>
-                  ))}
+                  <div className="grid grid-cols-1 gap-2">
+                    {RATING_OPTIONS.map((option) => (
+                      <Button
+                        key={option.value}
+                        onClick={() => handleRating(option.value)}
+                        className={`w-full ${option.gradient} hover:opacity-90 text-white rounded-2xl py-4 text-base font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all`}
+                      >
+                        {option.emoji} {option.label}
+                        {cardRatings[currentIndex] === option.value && <Check className="ml-2 h-5 w-5" />}
+                      </Button>
+                    ))}
+                  </div>
                 </motion.div>
               )}
               {!isFlipped && (
-                <div className="mt-8 flex justify-between items-center">
-                  <Button
-                    onClick={handlePrev}
-                    disabled={currentIndex === 0}
-                    variant="ghost"
-                    className="text-white/60 hover:text-white disabled:opacity-30"
-                  >
-                    <ChevronLeft className="h-5 w-5 mr-2" />
-                    Previous
-                  </Button>
-                  <Button
-                    onClick={handleNext}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8"
-                  >
-                    {currentIndex === cards.length - 1 ? 'Start Test' : 'Next'}
-                  </Button>
+                <div className="mt-8 flex justify-center items-center">
+                  {currentIndex > 0 && (
+                    <Button
+                      onClick={handlePrev}
+                      variant="ghost"
+                      className="text-slate-500 hover:text-slate-800 font-semibold"
+                    >
+                      <ChevronLeft className="h-5 w-5 mr-2" />
+                      Previous
+                    </Button>
+                  )}
+                  <p className="text-slate-400 text-sm font-medium ml-4">
+                    👆 Tap card to flip, then rate your knowledge
+                  </p>
                 </div>
               )}
             </>

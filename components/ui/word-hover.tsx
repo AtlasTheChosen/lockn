@@ -24,6 +24,12 @@ interface WordHoverTextProps {
 export function WordHoverText({ text, translations = [], className = '' }: WordHoverTextProps) {
   const words = text.split(/(\s+|[.,!?;:])/g).filter(w => w.trim().length > 0 || /\s/.test(w));
 
+  // #region agent log
+  if (translations.length > 0) {
+    fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'word-hover.tsx:WordHoverText',message:'Rendering WordHoverText with translations',data:{text,wordsToRender:words.filter(w=>!/^\s+$/.test(w)),translationsProvided:translations.map(t=>({word:t.word,translation:t.translation}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+  }
+  // #endregion
+
   const getTranslation = (word: string): WordTranslation | null => {
     const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '');
     return translations.find(t => t.word.toLowerCase() === cleanWord) || null;
@@ -40,30 +46,30 @@ export function WordHoverText({ text, translations = [], className = '' }: WordH
           const trans = getTranslation(segment);
 
           if (!trans) {
-            return <span key={index} className="text-white/90">{segment}</span>;
+            return <span key={index} className="inherit">{segment}</span>;
           }
 
           return (
             <Tooltip key={index}>
               <TooltipTrigger asChild>
-                <span className="text-white/90 cursor-help hover:text-blue-400 transition-colors underline decoration-dotted decoration-blue-400/40 underline-offset-2">
+                <span className="cursor-help hover:text-talka-purple transition-colors underline decoration-dotted decoration-talka-purple/40 underline-offset-2">
                   {segment}
                 </span>
               </TooltipTrigger>
               <TooltipContent
                 side="top"
-                className="max-w-xs bg-black/95 border-white/20 text-white"
+                className="max-w-xs bg-slate-800 border-slate-700 text-white rounded-xl shadow-lg"
               >
-                <div className="space-y-1">
-                  <p className="font-semibold text-blue-400">{trans.translation}</p>
+                <div className="space-y-1 p-1">
+                  <p className="font-bold text-talka-cyan">{trans.translation}</p>
                   {trans.conjugation && (
-                    <div className="text-xs text-green-400/80 mt-2 pt-2 border-t border-white/10">
-                      <p className="font-medium">Verb Form:</p>
+                    <div className="text-xs text-green-400 mt-2 pt-2 border-t border-slate-600">
+                      <p className="font-semibold">Verb Form:</p>
                       <p>{trans.conjugation}</p>
                     </div>
                   )}
                   {trans.alternatives && trans.alternatives.length > 0 && (
-                    <div className="text-xs text-white/60 space-y-0.5 mt-2 pt-2 border-t border-white/10">
+                    <div className="text-xs text-slate-300 space-y-0.5 mt-2 pt-2 border-t border-slate-600">
                       {trans.alternatives.map((alt, i) => (
                         <p key={i}>• {alt}</p>
                       ))}

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { FREE_TIER_LIMITS } from '@/lib/constants';
+import { DEBUG_SERVER } from '@/lib/debug';
+import { checkContentAppropriateness } from '@/lib/content-filter';
 
 function getOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -79,7 +81,16 @@ TONE: Native speaker precision, literary quality, complete cultural fluency`
 }
 
 export async function POST(request: Request) {
+  const apiStartTime = Date.now();
+  DEBUG_SERVER.api('=== Generate Stack API: Request received ===');
+  
   const openai = getOpenAI();
+  if (!openai) {
+    DEBUG_SERVER.apiError('OpenAI not configured');
+  } else {
+    DEBUG_SERVER.api('OpenAI client initialized');
+  }
+
   try {
     const supabase = await createClient();
     const {
@@ -93,27 +104,53 @@ export async function POST(request: Request) {
     const { scenario, targetLanguage, nativeLanguage = 'English', stackSize = 15, difficulty = 'B1', conversationalMode = false } = await request.json();
 
     if (!scenario || !targetLanguage) {
+      DEBUG_SERVER.apiError('Missing required fields', null, { scenario: !!scenario, targetLanguage: !!targetLanguage });
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Check for inappropriate content
+    const contentCheck = checkContentAppropriateness(scenario);
+    if (!contentCheck.isAppropriate) {
+      DEBUG_SERVER.apiError('Inappropriate content detected', null, { scenario: scenario.substring(0, 50), reason: contentCheck.reason });
+      return NextResponse.json({ 
+        error: 'Inappropriate subject matter requested. Please enter a different topic for language learning.' 
+      }, { status: 400 });
+    }
+
     if (!openai) {
+      DEBUG_SERVER.apiError('OpenAI not available');
       return NextResponse.json(
         { error: 'AI generation is temporarily unavailable. Please try again later.' },
         { status: 503 }
       );
     }
 
-    const { data: profile } = await supabase
+    DEBUG_SERVER.api('Fetching user profile');
+    const profileStartTime = Date.now();
+    const { data: profile, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('id', user.id)
       .maybeSingle();
+    DEBUG_SERVER.timing('Profile fetch', profileStartTime);
+
+    if (profileError) {
+      DEBUG_SERVER.apiError('Profile fetch error', profileError);
+    }
 
     if (!profile) {
+      DEBUG_SERVER.apiError('Profile not found', null, { userId: user.id });
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
+    DEBUG_SERVER.api('Profile found', {
+      isPremium: profile.is_premium,
+      isBanned: profile.is_banned,
+      dailyGenerations: profile.daily_generations_count,
+    });
+
     if (profile.is_banned) {
+      DEBUG_SERVER.apiError('Account suspended', null, { userId: user.id });
       return NextResponse.json({ error: 'Account suspended' }, { status: 403 });
     }
 
@@ -133,23 +170,40 @@ export async function POST(request: Request) {
     }
 
     if (!profile.is_premium && profile.daily_generations_count >= FREE_TIER_LIMITS.DAILY_GENERATIONS) {
+      DEBUG_SERVER.apiError('Daily generation limit reached', null, {
+        count: profile.daily_generations_count,
+        limit: FREE_TIER_LIMITS.DAILY_GENERATIONS,
+      });
       return NextResponse.json(
         { error: 'Daily generation limit reached. Upgrade to Premium for unlimited generations.' },
         { status: 429 }
       );
     }
 
-    const { data: incompleteStacks } = await supabase
+    DEBUG_SERVER.api('Checking incomplete stacks');
+    const stacksStartTime = Date.now();
+    const { data: incompleteStacks, error: stacksError } = await supabase
       .from('card_stacks')
       .select('id')
       .eq('user_id', user.id)
       .eq('is_completed', false);
+    DEBUG_SERVER.timing('Incomplete stacks check', stacksStartTime);
+
+    if (stacksError) {
+      DEBUG_SERVER.apiError('Incomplete stacks check error', stacksError);
+    }
+
+    DEBUG_SERVER.api('Incomplete stacks count', { count: incompleteStacks?.length || 0 });
 
     if (
       !profile.is_premium &&
       incompleteStacks &&
       incompleteStacks.length >= FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS
     ) {
+      DEBUG_SERVER.apiError('Max incomplete stacks reached', null, {
+        count: incompleteStacks.length,
+        limit: FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS,
+      });
       return NextResponse.json(
         { error: 'Maximum incomplete stacks reached. Complete or delete existing stacks, or upgrade to Premium.' },
         { status: 429 }
@@ -224,23 +278,42 @@ Generate ONLY ${difficulty}-level phrases. If in doubt, err on the side of simpl
     try {
       parsed = JSON.parse(content);
     } catch (e) {
+      // Try to extract JSON from markdown code blocks or other formatting
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        parsed = JSON.parse(jsonMatch[0]);
+        try {
+          parsed = JSON.parse(jsonMatch[0]);
+        } catch (parseError) {
+          console.error('Failed to parse extracted JSON:', parseError);
+          console.error('Content received:', content.substring(0, 500));
+          throw new Error(`Failed to parse AI response. Content preview: ${content.substring(0, 200)}`);
+        }
       } else {
-        throw new Error('Failed to parse AI response');
+        console.error('No JSON found in response. Content:', content.substring(0, 500));
+        throw new Error(`Failed to parse AI response. No valid JSON found. Content preview: ${content.substring(0, 200)}`);
       }
     }
 
     if (!parsed.cards || !Array.isArray(parsed.cards)) {
-      throw new Error('Invalid response format');
+      console.error('Invalid response format. Parsed:', parsed);
+      throw new Error(`Invalid response format. Expected cards array, got: ${JSON.stringify(parsed).substring(0, 200)}`);
     }
 
+    DEBUG_SERVER.api('Creating stack in database');
+    console.log('[API:generate-stack] 📦 Creating stack for user:', user.id);
+    const stackStartTime = Date.now();
+    
+    // Capitalize the first letter of each word in the title
+    const capitalizedTitle = scenario
+      .split(' ')
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+    
     const { data: stack, error: stackError } = await supabase
       .from('card_stacks')
       .insert({
         user_id: user.id,
-        title: scenario,
+        title: capitalizedTitle,
         target_language: targetLanguage,
         native_language: nativeLanguage,
         card_count: parsed.cards.length,
@@ -249,11 +322,29 @@ Generate ONLY ${difficulty}-level phrases. If in doubt, err on the side of simpl
       })
       .select()
       .single();
+    DEBUG_SERVER.timing('Stack creation', stackStartTime);
 
-    if (stackError || !stack) {
-      throw new Error('Failed to create stack');
+    console.log('[API:generate-stack] Stack insert result:', { 
+      success: !!stack, 
+      stackId: stack?.id,
+      error: stackError?.message,
+      errorCode: stackError?.code
+    });
+
+    if (stackError) {
+      DEBUG_SERVER.apiError('Stack creation failed', stackError);
     }
 
+    if (stackError || !stack) {
+      DEBUG_SERVER.apiError('Failed to create stack', stackError);
+      throw new Error('Failed to create stack: ' + (stackError?.message || 'Unknown error'));
+    }
+
+    DEBUG_SERVER.api('Stack created', { stackId: stack.id, cardCount: parsed.cards.length });
+
+    DEBUG_SERVER.api('Creating flashcards');
+    console.log('[API:generate-stack] 🃏 Creating', parsed.cards.length, 'flashcards for stack:', stack.id);
+    const cardsStartTime = Date.now();
     const flashcards = parsed.cards.map((card: any, index: number) => ({
       stack_id: stack.id,
       user_id: user.id,
@@ -264,29 +355,58 @@ Generate ONLY ${difficulty}-level phrases. If in doubt, err on the side of simpl
       tone_advice: card.tone_advice,
     }));
 
-    const { error: cardsError } = await supabase.from('flashcards').insert(flashcards);
+    console.log('[API:generate-stack] Flashcards to insert:', flashcards.length);
+    const { data: insertedCards, error: cardsError } = await supabase.from('flashcards').insert(flashcards).select();
+    DEBUG_SERVER.timing('Flashcards creation', cardsStartTime);
+
+    console.log('[API:generate-stack] Flashcards insert result:', {
+      success: !cardsError,
+      insertedCount: insertedCards?.length,
+      error: cardsError?.message,
+      errorCode: cardsError?.code
+    });
 
     if (cardsError) {
+      DEBUG_SERVER.apiError('Flashcards creation failed', cardsError, { stackId: stack.id });
+      console.error('[API:generate-stack] ❌ Flashcards insert failed:', cardsError);
       await supabase.from('card_stacks').delete().eq('id', stack.id);
-      throw new Error('Failed to create flashcards');
+      DEBUG_SERVER.api('Stack deleted due to flashcards error');
+      throw new Error('Failed to create flashcards: ' + cardsError.message);
     }
 
-    await supabase.from('generation_logs').insert({
+    console.log('[API:generate-stack] ✅ Flashcards created successfully:', insertedCards?.length);
+    DEBUG_SERVER.api('Flashcards created successfully', { count: flashcards.length });
+
+    DEBUG_SERVER.api('Updating generation logs and profile');
+    const { error: logError } = await supabase.from('generation_logs').insert({
       user_id: user.id,
       scenario,
       target_language: targetLanguage,
     });
+    if (logError) {
+      DEBUG_SERVER.apiError('Generation log insert failed (non-critical)', logError);
+    }
 
-    await supabase
+    const { error: profileUpdateError } = await supabase
       .from('user_profiles')
       .update({
         daily_generations_count: profile.daily_generations_count + 1,
       })
       .eq('id', user.id);
+    if (profileUpdateError) {
+      DEBUG_SERVER.apiError('Profile update failed (non-critical)', profileUpdateError);
+    }
+
+    DEBUG_SERVER.timing('Total API request time', apiStartTime);
+    DEBUG_SERVER.api('Generation completed successfully', {
+      stackId: stack.id,
+      cardCount: parsed.cards.length,
+    });
 
     return NextResponse.json({ stackId: stack.id, stack, cards: parsed.cards });
   } catch (error: any) {
-    console.error('Generation error:', error);
+    DEBUG_SERVER.apiError('Generation exception', error);
+    DEBUG_SERVER.timing('Total API request time (failed)', apiStartTime);
     return NextResponse.json(
       { error: error.message || 'Failed to generate stack' },
       { status: 500 }

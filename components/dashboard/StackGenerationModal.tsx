@@ -9,9 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { X, Loader2, Sparkles, MessageSquare } from 'lucide-react';
-import { SUPPORTED_LANGUAGES, STACK_SIZES, CEFR_LEVELS } from '@/lib/constants';
+import { X, Loader2, Sparkles, MessageSquare, AlertTriangle, CreditCard } from 'lucide-react';
+import { SUPPORTED_LANGUAGES, CEFR_LEVELS } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
+import { DEBUG } from '@/lib/debug';
+
+const CARD_COUNT_OPTIONS = [10, 25, 50] as const;
+type CardCount = typeof CARD_COUNT_OPTIONS[number];
 
 interface StackGenerationModalProps {
   isOpen: boolean;
@@ -23,35 +27,77 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
   const [scenario, setScenario] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('es');
   const [selectedDifficulty, setSelectedDifficulty] = useState('B1');
-  const [selectedSize, setSelectedSize] = useState(15);
+  const [selectedSize, setSelectedSize] = useState<CardCount>(10);
   const [conversationalMode, setConversationalMode] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
+  const [contentWarning, setContentWarning] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
 
+  const handleScenarioChange = (value: string) => {
+    DEBUG.ui('Scenario input changed', { length: value.length });
+    setScenario(value);
+    setError('');
+    if (value.trim()) {
+      const contentCheck = checkContentAppropriateness(value);
+      DEBUG.ui('Content check', { isAppropriate: contentCheck.isAppropriate });
+      if (!contentCheck.isAppropriate) {
+        DEBUG.ui('Content warning', { reason: contentCheck.reason });
+        setContentWarning(contentCheck.reason || 'This content may be inappropriate for language learning.');
+      } else {
+        setContentWarning(null);
+      }
+    } else {
+      setContentWarning(null);
+    }
+  };
+
   const handleGenerate = async () => {
+    const generationStartTime = Date.now();
+    DEBUG.generation('=== Stack Generation Started ===', {
+      scenario: scenario.trim(),
+      language: selectedLanguage,
+      difficulty: selectedDifficulty,
+      cardCount: selectedSize,
+      conversationalMode,
+      userId,
+    });
+
     if (!scenario.trim()) {
+      DEBUG.generationError('Generation blocked: no scenario');
       setError('Please enter a scenario');
       return;
     }
 
     const contentCheck = checkContentAppropriateness(scenario);
     if (!contentCheck.isAppropriate) {
+      DEBUG.generationError('Generation blocked: inappropriate content', { reason: contentCheck.reason });
       setError(contentCheck.reason || 'This content is not appropriate for language learning.');
+      setContentWarning(contentCheck.reason || 'This content may be inappropriate for language learning.');
       return;
     }
 
     setGenerating(true);
     setError('');
 
+    const targetLanguageName = SUPPORTED_LANGUAGES.find((l) => l.code === selectedLanguage)?.name;
+    DEBUG.generation('Sending generation request', {
+      scenario: scenario.trim(),
+      targetLanguage: targetLanguageName,
+      stackSize: selectedSize,
+      difficulty: selectedDifficulty,
+      conversationalMode,
+    });
+
     try {
+      const apiStartTime = Date.now();
       const response = await fetch('/api/generate-stack', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           scenario: scenario.trim(),
-          targetLanguage: SUPPORTED_LANGUAGES.find((l) => l.code === selectedLanguage)?.name,
+          targetLanguage: targetLanguageName,
           nativeLanguage: 'English',
           stackSize: selectedSize,
           difficulty: selectedDifficulty,
@@ -59,19 +105,37 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
         }),
       });
 
+      DEBUG.timing('API request duration', apiStartTime);
+      DEBUG.api('API response received', { status: response.status, ok: response.ok });
+      console.log('[StackGenModal] API response status:', response.status);
+
       const data = await response.json();
+      console.log('[StackGenModal] API response data:', { 
+        hasStackId: !!data.stackId, 
+        hasError: !!data.error,
+        cardCount: data.cards?.length 
+      });
 
       if (data.error) {
+        DEBUG.generationError('Generation failed', { error: data.error });
+        console.error('[StackGenModal] ❌ Generation error:', data.error);
         setError(data.error);
         setGenerating(false);
         return;
       }
 
       if (data.stackId) {
+        DEBUG.generation('Generation successful', { stackId: data.stackId, cardCount: data.cards?.length });
+        DEBUG.timing('Total generation time', generationStartTime);
+        console.log('[StackGenModal] ✅ Stack created:', data.stackId, 'with', data.cards?.length, 'cards');
         router.push(`/stack/${data.stackId}`);
         router.refresh();
+      } else {
+        DEBUG.generationError('Generation succeeded but no stackId returned', data);
+        console.error('[StackGenModal] ⚠️ No stackId in response:', data);
       }
-    } catch (err) {
+    } catch (err: any) {
+      DEBUG.generationError('Generation exception', err);
       setError('Failed to generate stack. Please try again.');
       setGenerating(false);
     }
@@ -119,12 +183,22 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
               <label className="text-white/80 text-sm font-light mb-2 block">
                 What real-world topic or scenario do you want to master?
               </label>
-              <Input
-                value={scenario}
-                onChange={(e) => setScenario(e.target.value)}
-                placeholder="e.g., Ordering coffee in Paris, Negotiating a salary, Handling small talk at a party, Travel emergencies"
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              />
+                  <Input
+                    value={scenario}
+                    onChange={(e) => handleScenarioChange(e.target.value)}
+                    placeholder="e.g., Ordering coffee in Paris, Negotiating a salary, Handling small talk at a party, Travel emergencies"
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                  />
+                  {contentWarning && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="flex items-start gap-2 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-xl mt-3"
+                    >
+                      <AlertTriangle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-yellow-300 text-sm font-light">{contentWarning}</p>
+                    </motion.div>
+                  )}
               <p className="text-white/50 text-xs font-light mt-2">
                 We'll generate a story-based flashcard stack tailored to your topic with authentic phrases and context.
               </p>
@@ -176,21 +250,30 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
             </div>
 
             <div>
-              <label className="text-white/80 text-sm font-light mb-3 block">Stack Size</label>
-              <div className="grid grid-cols-5 gap-3">
-                {STACK_SIZES.map((size) => (
+              <label className="text-white/80 text-sm font-light mb-3 block flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Number of Cards
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {CARD_COUNT_OPTIONS.map((count) => (
                   <Card
-                    key={size.value}
-                    onClick={() => setSelectedSize(size.value)}
+                    key={count}
+                    onClick={() => {
+                      setSelectedSize(count);
+                      localStorage.setItem('talka-card-count', count.toString());
+                      DEBUG.storage('Card count changed in modal', count);
+                    }}
                     className={`cursor-pointer transition-all ${
-                      selectedSize === size.value
+                      selectedSize === count
                         ? 'bg-blue-500/20 border-blue-500'
                         : 'bg-white/5 border-white/10 hover:bg-white/8'
                     }`}
                   >
                     <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-light mb-1">{size.value}</p>
-                      <p className="text-xs text-white/60 font-light">{size.description}</p>
+                      <p className="text-2xl font-light mb-1">{count}</p>
+                      <p className="text-xs text-white/60 font-light">
+                        {count === 10 ? 'Quick' : count === 25 ? 'Standard' : 'Deep dive'}
+                      </p>
                     </CardContent>
                   </Card>
                 ))}
@@ -225,8 +308,8 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
 
             <Button
               onClick={handleGenerate}
-              disabled={generating || !scenario.trim()}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 text-base font-light"
+              disabled={generating || !scenario.trim() || !!contentWarning}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 text-base font-light disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {generating ? (
                 <>
@@ -236,7 +319,7 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
               ) : (
                 <>
                   <Sparkles className="mr-2 h-5 w-5" />
-                  Generate Stack
+                  Generate {selectedSize} Cards
                 </>
               )}
             </Button>

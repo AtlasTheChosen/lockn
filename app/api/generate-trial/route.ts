@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { DEBUG_SERVER } from '@/lib/debug';
+import { checkContentAppropriateness } from '@/lib/content-filter';
 
 const DEMO_CARDS = [
   {
@@ -50,20 +52,48 @@ FORBIDDEN: Explicit sexual content, graphic violence, hate speech, illegal activ
 If a scenario crosses into forbidden territory, refuse politely.`;
 
 export async function POST(request: Request) {
+  const apiStartTime = Date.now();
+  DEBUG_SERVER.api('=== Generate Trial API: Request received ===');
+  
   const openai = getOpenAI();
+  if (!openai) {
+    DEBUG_SERVER.apiError('OpenAI not configured');
+  }
+
   try {
-    const { scenario, targetLanguage = 'Spanish', nativeLanguage = 'English', stackSize = 5, difficulty = 'B1' } = await request.json();
+    const requestBody = await request.json();
+    const { scenario, targetLanguage = 'Spanish', nativeLanguage = 'English', stackSize = 5, difficulty = 'B1' } = requestBody;
+    
+    DEBUG_SERVER.api('Trial generation parameters', {
+      scenario: scenario?.substring(0, 50),
+      targetLanguage,
+      stackSize,
+      difficulty,
+    });
 
     if (!scenario) {
+      DEBUG_SERVER.apiError('Missing scenario');
       return NextResponse.json({ error: 'Missing scenario' }, { status: 400 });
     }
 
+    // Check for inappropriate content
+    const contentCheck = checkContentAppropriateness(scenario);
+    if (!contentCheck.isAppropriate) {
+      DEBUG_SERVER.apiError('Inappropriate content detected', null, { scenario: scenario.substring(0, 50), reason: contentCheck.reason });
+      return NextResponse.json({ 
+        error: 'Inappropriate subject matter requested. Please enter a different topic for language learning.' 
+      }, { status: 400 });
+    }
+
     if (!openai) {
+      DEBUG_SERVER.apiError('OpenAI not available');
       return NextResponse.json({
         error: 'OpenAI API key not configured. Please add OPENAI_API_KEY to your .env file to generate custom content for your selected topic.'
       }, { status: 503 });
     }
 
+    DEBUG_SERVER.generation('Starting OpenAI trial generation', { model: 'gpt-4o', stackSize, difficulty });
+    const openaiStartTime = Date.now();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
@@ -126,30 +156,50 @@ Stay STRICTLY on the topic of: ${scenario}`,
       max_tokens: 2000,
     });
 
+    DEBUG_SERVER.timing('OpenAI completion', openaiStartTime);
     const content = completion.choices[0].message.content;
+    
+    DEBUG_SERVER.generation('OpenAI response received', {
+      hasContent: !!content,
+      contentLength: content?.length || 0,
+    });
+
     if (!content) {
+      DEBUG_SERVER.generationError('No content generated');
       throw new Error('No content generated');
     }
 
     let parsed;
     try {
       parsed = JSON.parse(content);
-    } catch (e) {
+      DEBUG_SERVER.generation('JSON parsed successfully', { cardCount: parsed.cards?.length });
+    } catch (e: any) {
+      DEBUG_SERVER.generationError('JSON parse failed, attempting regex', e);
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         parsed = JSON.parse(jsonMatch[0]);
+        DEBUG_SERVER.generation('JSON extracted via regex', { cardCount: parsed.cards?.length });
       } else {
+        DEBUG_SERVER.generationError('Failed to extract JSON', null, { contentPreview: content.substring(0, 200) });
         throw new Error('Failed to parse AI response');
       }
     }
 
     if (!parsed.cards || !Array.isArray(parsed.cards)) {
+      DEBUG_SERVER.generationError('Invalid response format', null, {
+        hasCards: !!parsed.cards,
+        isArray: Array.isArray(parsed.cards),
+      });
       throw new Error('Invalid response format');
     }
 
+    DEBUG_SERVER.timing('Total trial API time', apiStartTime);
+    DEBUG_SERVER.api('Trial generation completed', { cardCount: parsed.cards.length });
+
     return NextResponse.json({ cards: parsed.cards });
   } catch (error: any) {
-    console.error('Generation error:', error);
+    DEBUG_SERVER.apiError('Trial generation exception', error);
+    DEBUG_SERVER.timing('Total trial API time (failed)', apiStartTime);
     return NextResponse.json(
       { error: error.message || 'Failed to generate cards' },
       { status: 500 }

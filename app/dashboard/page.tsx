@@ -3,17 +3,29 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { useSession } from '@/hooks/use-session';
 import DashboardTabs from '@/components/dashboard/DashboardTabs';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import DisplayNameModal from '@/components/auth/DisplayNameModal';
+import { AppLayout } from '@/components/layout';
+import { isDeadlinePassed, STREAK_DAILY_REQUIREMENT, getTodayDate } from '@/lib/streak';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(true);
+  const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
+  
+  const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<any>({
+  const [needsDisplayName, setNeedsDisplayName] = useState(false);
+  const [data, setData] = useState<{
+    user: any;
+    profile: any;
+    stacks: any[];
+    stats: any;
+    userName: string;
+  }>({
     user: null,
     profile: null,
     stacks: [],
@@ -21,181 +33,268 @@ export default function DashboardPage() {
     userName: 'Guest',
   });
 
-  const loadData = useCallback(async () => {
+  const loadDashboardData = useCallback(async (userId: string, userEmail?: string) => {
+    const supabase = createClient();
+    
     try {
       setError(null);
-      const supabase = createClient();
+      
+      // Fetch profile
+      let profile = sessionProfile;
+      if (!profile) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) throw userError;
-
-      if (!user) {
-        router.push('/auth/login');
-        return;
+        if (profileError) {
+          if (profileError.code === 'PGRST116' || !profileData) {
+            const { data: newProfile } = await supabase
+              .from('user_profiles')
+              .insert({ id: userId, email: userEmail })
+              .select()
+              .single();
+            profile = newProfile;
+          }
+        } else {
+          profile = profileData;
+        }
       }
 
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-
+      // Create profile if still missing
       if (!profile) {
         try {
-          await supabase.from('user_profiles').insert({
-            id: user.id,
-            email: user.email,
-          });
-        } catch (insertError: any) {
-          if (!insertError?.message?.includes('duplicate key')) {
-            throw insertError;
-          }
+          const { data: newProfile } = await supabase
+            .from('user_profiles')
+            .insert({ id: userId, email: userEmail })
+            .select()
+            .single();
+          profile = newProfile;
+        } catch (e) {
+          console.warn('[Dashboard] Could not create profile:', e);
         }
-
-        try {
-          await supabase.from('user_stats').insert({
-            user_id: user.id,
-          });
-        } catch {}
-
-        return loadData();
       }
 
-      const { data: stacks, error: stacksError } = await supabase
+      // Fetch stacks
+      const { data: stacksData, error: stacksError } = await supabase
         .from('card_stacks')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (stacksError) throw stacksError;
-
-      const { data: stats, error: statsError } = await supabase
+      // Fetch stats
+      let stats = null;
+      const { data: statsData, error: statsError } = await supabase
         .from('user_stats')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .maybeSingle();
 
-      if (statsError) throw statsError;
+      if (statsError) {
+        try {
+          const { data: newStats } = await supabase
+            .from('user_stats')
+            .insert({ user_id: userId })
+            .select()
+            .single();
+          stats = newStats;
+        } catch (e) {
+          console.warn('[Dashboard] Could not create stats:', e);
+        }
+      } else {
+        stats = statsData;
+      }
 
-      const userName = profile?.display_name || user?.email?.split('@')[0] || 'Guest';
+      const userName = profile?.display_name || userEmail?.split('@')[0] || 'Guest';
+
+      // Check for overdue test deadlines and freeze streak if needed
+      if (stacksData && stats) {
+        const overdueStacks = stacksData.filter(
+          (stack: any) => 
+            stack.test_deadline && 
+            isDeadlinePassed(stack.test_deadline) &&
+            (stack.test_progress ?? 0) < 100 &&
+            stack.mastered_count === stack.card_count
+        );
+
+        const overdueStackIds = overdueStacks.map((s: any) => s.id);
+        const currentFrozenStacks = stats.streak_frozen_stacks || [];
+        
+        const newOverdueStacks = overdueStackIds.filter(
+          (id: string) => !currentFrozenStacks.includes(id)
+        );
+
+        if (newOverdueStacks.length > 0 || (overdueStackIds.length > 0 && !stats.streak_frozen)) {
+          const updatedFrozenStacks = [...new Set([...currentFrozenStacks, ...overdueStackIds])];
+          
+          const { error: freezeError } = await supabase
+            .from('user_stats')
+            .update({
+              streak_frozen: true,
+              streak_frozen_stacks: updatedFrozenStacks,
+            })
+            .eq('user_id', userId);
+
+          if (!freezeError) {
+            stats.streak_frozen = true;
+            stats.streak_frozen_stacks = updatedFrozenStacks;
+          }
+        }
+      }
+
+      // Check if streak should be reset (new day and didn't meet yesterday's requirement)
+      if (stats && !stats.streak_frozen) {
+        const today = getTodayDate();
+        const lastActiveDate = stats.daily_cards_date;
+        
+        if (lastActiveDate && lastActiveDate !== today) {
+          const yesterdayCards = stats.daily_cards_learned || 0;
+          
+          if (yesterdayCards < STREAK_DAILY_REQUIREMENT) {
+            const { error: resetError } = await supabase
+              .from('user_stats')
+              .update({
+                current_streak: 0,
+                daily_cards_learned: 0,
+                daily_cards_date: today,
+              })
+              .eq('user_id', userId);
+
+            if (!resetError) {
+              stats.current_streak = 0;
+              stats.daily_cards_learned = 0;
+              stats.daily_cards_date = today;
+            }
+          } else {
+            const { error: resetError } = await supabase
+              .from('user_stats')
+              .update({
+                daily_cards_learned: 0,
+                daily_cards_date: today,
+              })
+              .eq('user_id', userId);
+
+            if (!resetError) {
+              stats.daily_cards_learned = 0;
+              stats.daily_cards_date = today;
+            }
+          }
+        }
+      }
 
       setData({
-        user,
+        user: { id: userId, email: userEmail },
         profile,
-        stacks: stacks || [],
+        stacks: stacksData || [],
         stats,
         userName,
       });
+
+      if (!profile?.display_name) {
+        setNeedsDisplayName(true);
+      }
+      
     } catch (err: any) {
-      console.error('Error loading dashboard data:', err);
+      console.error('[Dashboard] Error loading data:', err);
       setError(err.message || 'Failed to load dashboard data');
     } finally {
-      setLoading(false);
+      setDataLoading(false);
     }
-  }, [router]);
+  }, [sessionProfile]);
 
   useEffect(() => {
-    const supabase = createClient();
+    if (sessionLoading) return;
 
-    loadData();
+    if (!sessionUser) {
+      router.push('/auth/login');
+      return;
+    }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        loadData();
-      }
-      if (event === 'SIGNED_OUT') {
-        router.push('/auth/login');
-      }
-    });
+    loadDashboardData(sessionUser.id, sessionUser.email);
+  }, [sessionUser, sessionLoading, router, loadDashboardData]);
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [loadData, router]);
+  const handleRefresh = useCallback(() => {
+    if (sessionUser) {
+      setDataLoading(true);
+      loadDashboardData(sessionUser.id, sessionUser.email);
+    }
+  }, [sessionUser, loadDashboardData]);
 
-  if (loading) {
+  // Loading state
+  if (sessionLoading || (dataLoading && !error)) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-        <nav className="border-b border-slate-700 bg-slate-900/50 backdrop-blur-sm sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <Skeleton className="h-6 w-32 bg-slate-700" />
-              <Skeleton className="h-8 w-24 bg-slate-700" />
-            </div>
-          </div>
-        </nav>
+      <AppLayout>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <Skeleton className="h-9 w-48 mb-2 bg-slate-700" />
-            <Skeleton className="h-5 w-64 bg-slate-700" />
+            <Skeleton className="h-10 w-64 mb-2 bg-slate-200" />
+            <Skeleton className="h-5 w-96 bg-slate-200" />
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
             {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="bg-slate-800 border-slate-700">
-                <CardContent className="p-6">
-                  <Skeleton className="h-20 bg-slate-700" />
-                </CardContent>
-              </Card>
+              <div key={i} className="bg-white rounded-3xl p-6 shadow-talka-sm">
+                <Skeleton className="h-4 w-20 mb-4 bg-slate-200" />
+                <Skeleton className="h-10 w-16 bg-slate-200" />
+              </div>
             ))}
           </div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="bg-slate-800 border-slate-700">
-                <CardHeader>
-                  <Skeleton className="h-32 bg-slate-700" />
-                </CardHeader>
-              </Card>
-            ))}
+          <div className="bg-white rounded-3xl p-8 shadow-talka-sm">
+            <Skeleton className="h-96 w-full bg-slate-100" />
           </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
+  // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <Card className="bg-slate-800 border-slate-700 max-w-md w-full">
-          <CardHeader>
-            <div className="flex items-center gap-3 text-red-400">
-              <AlertCircle className="h-6 w-6" />
-              <h2 className="text-xl font-bold">Error Loading Dashboard</h2>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-slate-300">{error}</p>
-            <Button
-              onClick={() => {
-                setLoading(true);
-                loadData();
-              }}
-              className="w-full bg-blue-600 hover:bg-blue-700"
+      <AppLayout>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-8 text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="font-display text-xl font-semibold text-red-700 mb-2">Error Loading Dashboard</h2>
+            <p className="text-slate-600 mb-6 max-w-md mx-auto">{error}</p>
+            <Button 
+              onClick={handleRefresh} 
+              className="bg-gradient-purple-pink text-white font-bold rounded-2xl px-6 py-3"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
             </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </AppLayout>
     );
   }
 
+  const handleDisplayNameSet = (displayName: string) => {
+    setNeedsDisplayName(false);
+    setData(prev => ({
+      ...prev,
+      profile: { ...prev.profile, display_name: displayName },
+      userName: displayName,
+    }));
+  };
+
   return (
-    <DashboardTabs
-      stacks={data.stacks}
-      stats={data.stats}
-      profile={data.profile}
-      userId={data.user?.id || ''}
-      userName={data.userName}
-      onUpdate={loadData}
-    />
+    <AppLayout>
+      {/* Display name modal */}
+      {needsDisplayName && data.user?.id && (
+        <DisplayNameModal 
+          userId={data.user.id} 
+          onComplete={handleDisplayNameSet} 
+        />
+      )}
+      
+      <DashboardTabs
+        stacks={data.stacks}
+        stats={data.stats}
+        profile={data.profile}
+        userId={data.user?.id || ''}
+        userName={data.userName}
+        onUpdate={handleRefresh}
+      />
+    </AppLayout>
   );
 }

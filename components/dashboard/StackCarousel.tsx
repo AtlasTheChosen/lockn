@@ -45,7 +45,12 @@ export default function StackCarousel({ stacks }: StackCarouselProps) {
   }, [emblaApi]);
 
   const getProgress = (stack: Stack) => {
+    if (!stack.total_cards || stack.total_cards === 0) return 0;
     return Math.round((stack.mastered_count / stack.total_cards) * 100);
+  };
+
+  const capitalizeTitle = (title: string) => {
+    return title.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   };
 
   if (stacks.length === 0) {
@@ -61,7 +66,7 @@ export default function StackCarousel({ stacks }: StackCarouselProps) {
               <h3 className="text-xl font-bold text-white mb-2">No active stacks</h3>
               <p className="text-slate-400 mb-6">Generate one to start your learning journey!</p>
               <Button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/')}
                 className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white"
               >
                 <Plus className="h-4 w-4 mr-2" />
@@ -120,7 +125,7 @@ export default function StackCarousel({ stacks }: StackCarouselProps) {
                       </Badge>
                     </div>
                     <CardTitle className="text-white text-lg line-clamp-2">
-                      {stack.title}
+                      {capitalizeTitle(stack.title)}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -152,3 +157,4 @@ export default function StackCarousel({ stacks }: StackCarouselProps) {
     </div>
   );
 }
+

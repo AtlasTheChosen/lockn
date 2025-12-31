@@ -7,7 +7,10 @@ import { motion } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Loader2, Sparkles } from 'lucide-react';
+import OAuthButtons from '@/components/auth/OAuthButtons';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +20,7 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [stayLoggedIn, setStayLoggedIn] = useState(true);
   const [supabase, setSupabase] = useState<any>(null);
   const router = useRouter();
 
@@ -45,7 +49,7 @@ export default function SignupPage() {
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -53,33 +57,51 @@ export default function SignupPage() {
       },
     });
 
-    if (error) {
-      setError(error.message);
+    if (signUpError) {
+      setError(signUpError.message);
       setLoading(false);
     } else if (data.user) {
-      const { data: existingProfile } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .eq('id', data.user.id)
-        .maybeSingle();
+      try {
+        const { data: existingProfile } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
 
-      if (!existingProfile) {
-        try {
-          await supabase.from('user_profiles').insert({
-            id: data.user.id,
-            email: data.user.email,
-          });
-        } catch {}
+        if (!existingProfile) {
+          try {
+            await supabase.from('user_profiles').insert({
+              id: data.user.id,
+              email: data.user.email,
+            });
+          } catch (profileError) {
+            console.warn('Profile creation error:', profileError);
+          }
 
-        try {
-          await supabase.from('user_stats').insert({
-            user_id: data.user.id,
-          });
-        } catch {}
+          try {
+            await supabase.from('user_stats').insert({
+              user_id: data.user.id,
+            });
+          } catch (statsError) {
+            console.warn('Stats creation error:', statsError);
+          }
+        }
+
+        // Session persists automatically via Supabase cookies
+        // The stayLoggedIn checkbox is for user preference display
+        setLoading(false);
+        router.push('/dashboard');
+        router.refresh();
+      } catch (profileError) {
+        console.error('Error setting up profile:', profileError);
+        // Still redirect even if profile setup fails
+        setLoading(false);
+        router.push('/dashboard');
+        router.refresh();
       }
-
-      router.push('/dashboard');
-      router.refresh();
+    } else {
+      setError('Account creation failed. Please try again.');
+      setLoading(false);
     }
   };
 
@@ -99,7 +121,7 @@ export default function SignupPage() {
             className="inline-flex items-center justify-center gap-3 mb-6"
           >
             <Sparkles className="h-10 w-10 text-blue-500" />
-            <h1 className="text-3xl font-light tracking-tight">Talka</h1>
+            <h1 className="text-3xl font-light tracking-tight">LOCKN</h1>
           </motion.div>
           <motion.h2
             initial={{ opacity: 0 }}
@@ -124,6 +146,20 @@ export default function SignupPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
         >
+          {/* OAuth Buttons */}
+          <OAuthButtons onError={setError} />
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-white/10"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-black text-white/40 font-light">or sign up with email</span>
+            </div>
+          </div>
+
+          {/* Email/Password Form */}
           <form onSubmit={handleSignup} className="space-y-6">
             <div>
               <Input
@@ -154,6 +190,20 @@ export default function SignupPage() {
                 required
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="stay-logged-in-signup"
+                checked={stayLoggedIn}
+                onCheckedChange={(checked) => setStayLoggedIn(checked as boolean)}
+                className="border-white/20"
+              />
+              <Label
+                htmlFor="stay-logged-in-signup"
+                className="text-sm font-light text-white/80 cursor-pointer"
+              >
+                Stay logged in
+              </Label>
             </div>
             {error && (
               <motion.p

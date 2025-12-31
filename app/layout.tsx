@@ -1,18 +1,30 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import { Quicksand, Fredoka } from 'next/font/google';
 import AuthProvider from '@/components/auth/AuthProvider';
 
-const inter = Inter({ subsets: ['latin'] });
+const quicksand = Quicksand({ 
+  subsets: ['latin'],
+  variable: '--font-quicksand',
+  weight: ['400', '500', '600', '700'],
+});
+
+const fredoka = Fredoka({ 
+  subsets: ['latin'],
+  variable: '--font-fredoka',
+  weight: ['300', '400', '500', '600', '700'],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://talka.app'),
-  title: 'Talka - Immersive Story-Driven Language Mastery',
+  title: 'LOCKN - Language Learning',
   description: 'Unlock authentic conversations through immersive, story-driven language mastery.',
   openGraph: {
     images: [
       {
-        url: 'https://bolt.new/static/og_default.png',
+        url: process.env.NEXT_PUBLIC_SITE_URL 
+          ? `${process.env.NEXT_PUBLIC_SITE_URL}/og-image.png`
+          : '/og-image.png',
       },
     ],
   },
@@ -20,7 +32,9 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: [
       {
-        url: 'https://bolt.new/static/og_default.png',
+        url: process.env.NEXT_PUBLIC_SITE_URL 
+          ? `${process.env.NEXT_PUBLIC_SITE_URL}/og-image.png`
+          : '/og-image.png',
       },
     ],
   },
@@ -32,9 +46,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <AuthProvider>{children}</AuthProvider>
+    <html lang="en" className={`${quicksand.variable} ${fredoka.variable}`}>
+      <body className={quicksand.className}>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

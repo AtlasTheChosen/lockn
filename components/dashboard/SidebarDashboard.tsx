@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Home, Users, Settings, Plus, LogOut, Trophy, Flame, Target, Sparkles } from 'lucide-react';
+import { Home, Users, Settings, Plus, LogOut, Trophy, Flame, Target, Sparkles, FileText, X } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,9 @@ interface Stack {
   total_cards: number;
   mastered_count: number;
   created_at: string;
+  is_completed?: boolean;
+  test_progress?: number;
+  test_notes?: any[];
 }
 
 interface Stats {
@@ -48,6 +52,8 @@ type TabType = 'home' | 'social' | 'settings';
 
 export default function SidebarDashboard({ user, profile, stacks, stats }: SidebarDashboardProps) {
   const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [selectedStackNotes, setSelectedStackNotes] = useState<Stack | null>(null);
   const [showGenerationModal, setShowGenerationModal] = useState(false);
   const router = useRouter();
   const supabase = createClient();
@@ -142,7 +148,7 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
               <h1 className="text-4xl font-light mb-2">
                 Welcome back{profile?.display_name ? `, ${profile.display_name}` : ''}
               </h1>
-              <p className="text-white/60 font-light">Continue your learning journey</p>
+              <p className="text-white/60 font-light">Continue your learning journey.</p>
             </motion.div>
 
             <motion.div
@@ -169,7 +175,7 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
                   </div>
                   <div>
                     <p className="text-2xl font-light">{stats?.total_mastered || 0}</p>
-                    <p className="text-white/60 text-sm font-light">Cards Mastered</p>
+                    <p className="text-white/60 text-sm font-light">Total Passed</p>
                   </div>
                 </CardContent>
               </Card>
@@ -205,7 +211,7 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
               {activeStacks.length === 0 ? (
                 <Card className="bg-white/5 border-white/10 border-dashed">
                   <CardContent className="p-12 text-center">
-                    <p className="text-white/60 font-light mb-4">No active stacks yet</p>
+                    <p className="text-white/60 font-light mb-4">No active stacks yet.</p>
                     <Button
                       onClick={handleNewStack}
                       variant="outline"
@@ -226,9 +232,25 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start mb-4">
                           <h3 className="text-xl font-light capitalize">{stack.scenario}</h3>
-                          <Badge className="bg-blue-500/20 text-blue-400 border-0">
-                            {stack.language}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            {stack.test_notes && stack.test_notes.length > 0 && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-yellow-400 hover:text-yellow-300 hover:bg-yellow-500/10"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedStackNotes(stack);
+                                  setShowNotesModal(true);
+                                }}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                            )}
+                            <Badge className="bg-blue-500/20 text-blue-400 border-0">
+                              {stack.language}
+                            </Badge>
+                          </div>
                         </div>
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
@@ -244,6 +266,18 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
                                 width: `${(stack.mastered_count / stack.total_cards) * 100}%`,
                               }}
                             />
+                          </div>
+                          <div className="flex justify-between text-sm mt-2">
+                            <span className="text-white/60 font-light">Test Score</span>
+                            <span className={`font-light ${
+                              stack.test_progress === 100 
+                                ? 'text-green-400' 
+                                : stack.test_progress && stack.test_progress > 0
+                                  ? 'text-white'
+                                  : 'text-white/40'
+                            }`}>
+                              {stack.test_progress ?? 0}%
+                            </span>
                           </div>
                         </div>
                       </CardContent>
@@ -286,14 +320,87 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
+              className="space-y-8"
             >
-              <h1 className="text-4xl font-light mb-6">Leaderboard</h1>
-              <Card className="bg-white/5 border-white/10">
-                <CardContent className="p-12 text-center">
-                  <Trophy className="h-12 w-12 text-white/40 mx-auto mb-4" />
-                  <p className="text-white/60 font-light">Leaderboard coming soon</p>
-                </CardContent>
-              </Card>
+              <h1 className="text-4xl font-light mb-6">Social</h1>
+              
+              {/* Quick Links Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <Card 
+                  className="bg-white/5 border-white/10 hover:bg-white/8 transition-all cursor-pointer"
+                  onClick={() => router.push('/friends')}
+                >
+                  <CardContent className="p-6 flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                      <Users className="h-6 w-6 text-blue-500" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-light">Friends</p>
+                      <p className="text-white/60 text-sm font-light">Manage connections</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card 
+                  className="bg-white/5 border-white/10 hover:bg-white/8 transition-all cursor-pointer"
+                  onClick={() => router.push('/leaderboard')}
+                >
+                  <CardContent className="p-6 flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                      <Trophy className="h-6 w-6 text-yellow-500" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-light">Leaderboard</p>
+                      <p className="text-white/60 text-sm font-light">See top learners</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card 
+                  className="bg-white/5 border-white/10 hover:bg-white/8 transition-all cursor-pointer"
+                  onClick={() => router.push('/challenges')}
+                >
+                  <CardContent className="p-6 flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                      <Target className="h-6 w-6 text-purple-500" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-light">Challenges</p>
+                      <p className="text-white/60 text-sm font-light">Compete with friends</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card 
+                  className="bg-white/5 border-white/10 hover:bg-white/8 transition-all cursor-pointer"
+                  onClick={() => router.push('/activity')}
+                >
+                  <CardContent className="p-6 flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-green-500/20 flex items-center justify-center">
+                      <Sparkles className="h-6 w-6 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-light">Activity</p>
+                      <p className="text-white/60 text-sm font-light">See what's happening</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card 
+                  className="bg-white/5 border-white/10 hover:bg-white/8 transition-all cursor-pointer"
+                  onClick={() => router.push('/library')}
+                >
+                  <CardContent className="p-6 flex items-center gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                      <FileText className="h-6 w-6 text-indigo-500" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-light">Library</p>
+                      <p className="text-white/60 text-sm font-light">Browse shared stacks</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </motion.div>
           </div>
         )}
@@ -310,9 +417,19 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
                   <CardContent className="p-6">
                     <h3 className="text-lg font-light mb-2">Account</h3>
                     <p className="text-white/60 text-sm font-light mb-4">{user.email}</p>
-                    <Badge className={profile?.is_premium ? 'bg-blue-500/20 text-blue-400' : 'bg-white/10 text-white/60'}>
-                      {profile?.is_premium ? 'Premium' : 'Free'}
-                    </Badge>
+                    <div className="flex items-center gap-3">
+                      <Badge className={profile?.is_premium ? 'bg-blue-500/20 text-blue-400' : 'bg-white/10 text-white/60'}>
+                        {profile?.is_premium ? 'Premium' : 'Free'}
+                      </Badge>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push('/profile')}
+                        className="border-white/20 text-white/80 hover:bg-white/10"
+                      >
+                        Edit Profile
+                      </Button>
+                    </div>
                   </CardContent>
                 </Card>
                 {!profile?.is_premium && (
@@ -337,6 +454,43 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
         )}
       </main>
     </div>
+
+    {/* Notes Modal */}
+    <Dialog open={showNotesModal} onOpenChange={setShowNotesModal}>
+      <DialogContent className="bg-slate-900 border-white/10 max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-white font-light flex items-center gap-2">
+            <FileText className="h-5 w-5 text-yellow-400" />
+            Test Notes - {selectedStackNotes?.scenario}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="max-h-96 overflow-y-auto space-y-3">
+          {selectedStackNotes?.test_notes?.length === 0 ? (
+            <p className="text-white/60 text-center py-8">No notes yet. Complete a test to see AI feedback here.</p>
+          ) : (
+            selectedStackNotes?.test_notes?.map((note: any, idx: number) => (
+              <div key={idx} className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <div className="flex justify-between items-start mb-2">
+                  <p className="text-white font-medium">{note.targetPhrase}</p>
+                  <Badge className={note.passed ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}>
+                    {note.passed ? 'Passed' : 'Failed'}
+                  </Badge>
+                </div>
+                <p className="text-white/60 text-sm mb-2">Your answer: {note.userAnswer}</p>
+                {note.correction && (
+                  <div className="bg-yellow-500/10 rounded-lg p-2 border border-yellow-500/20">
+                    <p className="text-yellow-400 text-sm">Correction: {note.correction}</p>
+                  </div>
+                )}
+                {note.feedback && (
+                  <p className="text-white/40 text-xs mt-2 italic">{note.feedback}</p>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

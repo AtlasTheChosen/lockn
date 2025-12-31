@@ -40,6 +40,10 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
     ? Infinity
     : FREE_TIER_LIMITS.DAILY_GENERATIONS - (profile?.daily_generations_count || 0);
 
+  const capitalizeTitle = (title: string) => {
+    return title.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  };
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     router.push('/');
@@ -151,7 +155,7 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
           </Card>
           <Card>
             <CardHeader className="pb-3">
-              <CardDescription>Cards Mastered</CardDescription>
+              <CardDescription>Total Passed</CardDescription>
               <div className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-blue-500" />
                 <CardTitle className="text-2xl">{stats?.total_cards_mastered || 0}</CardTitle>
@@ -305,7 +309,7 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
                           </Badge>
                         )}
                       </div>
-                      <CardTitle className="text-lg">{stack.title}</CardTitle>
+                      <CardTitle className="text-lg">{capitalizeTitle(stack.title)}</CardTitle>
                       <CardDescription>
                         {stack.completed_count} / {stack.card_count} cards mastered
                       </CardDescription>
