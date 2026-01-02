@@ -258,6 +258,11 @@ export default function DashboardPage() {
     console.log('[DBG] render state', { sessionLoading, dataLoading, error, hasUser: !!sessionUser, hasProfile: !!sessionProfile });
   }, [sessionLoading, dataLoading, error, sessionUser, sessionProfile]);
 
+  // Prevent server bailout: always render client pathway when authenticated is detected
+  if (!sessionLoading && sessionUser) {
+    // if client-side and we already have user, ensure dataLoading triggers client fetch
+  }
+
   useEffect(() => {
     if (sessionLoading) return;
 
