@@ -21,6 +21,7 @@ export default function StackPage({ params }: { params: { id: string } }) {
       return;
     }
 
+    const userId = sessionUser.id; // Capture for TypeScript
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -28,7 +29,7 @@ export default function StackPage({ params }: { params: { id: string } }) {
       try {
         // Fetch stack using native fetch
         const stackResponse = await fetch(
-          `${supabaseUrl}/rest/v1/card_stacks?id=eq.${params.id}&user_id=eq.${sessionUser.id}&select=*`,
+          `${supabaseUrl}/rest/v1/card_stacks?id=eq.${params.id}&user_id=eq.${userId}&select=*`,
           {
             headers: {
               'apikey': supabaseKey!,
