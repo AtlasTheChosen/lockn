@@ -1,5 +1,7 @@
 'use client';
 
+import Image from 'next/image';
+
 interface LogoProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   className?: string;
@@ -18,12 +20,13 @@ export default function Logo({ size = '2xl', className = '' }: LogoProps) {
   const pixelSize = sizes[size];
   
   return (
-    <img
+    <Image
       src="/images/Logo.png"
       alt="LOCKN Logo"
       width={pixelSize}
       height={pixelSize}
       className={`object-contain ${className}`}
+      priority
     />
   );
 }
