@@ -264,8 +264,6 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    if (sessionLoading) return;
-
     if (!sessionUser) {
       console.log('[DBG] load effect: no user, redirect login');
       router.push('/auth/login');
@@ -273,8 +271,9 @@ export default function DashboardPage() {
     }
 
     console.log('[DBG] load effect: invoking loadDashboardData');
+    setDataLoading(true);
     loadDashboardData(sessionUser.id, sessionUser.email);
-  }, [sessionUser, sessionLoading, router, loadDashboardData]);
+  }, [sessionUser, router, loadDashboardData]);
 
   const handleRefresh = useCallback(() => {
     if (sessionUser) {
