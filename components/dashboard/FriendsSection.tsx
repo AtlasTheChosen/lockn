@@ -212,14 +212,16 @@ export default function FriendsSection({ userId }: Props) {
         return;
       }
 
+      // Use ilike with wildcard pattern for case-insensitive partial match
+      const searchPattern = `*${searchDisplayName.trim()}*`;
       const profiles = await supaFetch<any[]>(
-        `user_profiles?display_name=ilike.${encodeURIComponent(searchDisplayName)}&select=id,display_name`
+        `user_profiles?display_name=ilike.${encodeURIComponent(searchPattern)}&select=id,display_name`
       );
       
       const targetProfile = profiles?.[0];
 
       if (!targetProfile) {
-        setMessage({ type: 'error', text: 'User not found. Make sure you enter their exact display name.' });
+        setMessage({ type: 'error', text: 'User not found. Try searching with a partial name.' });
         return;
       }
 
@@ -379,7 +381,7 @@ export default function FriendsSection({ userId }: Props) {
               value={searchDisplayName}
               onChange={(e) => setSearchDisplayName(e.target.value)}
               placeholder="Enter display name..."
-              className="bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 h-14 font-medium focus:border-talka-purple focus:ring-0"
+              className="bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 h-14 font-medium focus:border-talka-purple focus:ring-0 text-slate-800 placeholder:text-slate-500"
               onKeyDown={(e) => e.key === 'Enter' && handleSendRequest()}
             />
           </div>
