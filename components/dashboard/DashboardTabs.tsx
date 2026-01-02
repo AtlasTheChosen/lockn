@@ -14,6 +14,7 @@ interface Props {
   profile: UserProfile | null;
   userId: string;
   userName?: string;
+  accessToken: string;
   onUpdate: () => void;
   onShowTutorial?: () => void;
 }
@@ -24,6 +25,7 @@ export default function DashboardTabs({
   profile,
   userId,
   userName,
+  accessToken,
   onUpdate,
   onShowTutorial,
 }: Props) {
@@ -183,7 +185,7 @@ export default function DashboardTabs({
           <h1 className="font-display text-3xl font-semibold gradient-text mb-8 animate-fade-in">
             👥 Friends
           </h1>
-          <FriendsSection userId={userId} />
+          <FriendsSection userId={userId} accessToken={accessToken} />
         </div>
       )}
     </div>

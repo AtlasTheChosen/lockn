@@ -17,7 +17,7 @@ import { Badge } from '@/lib/types';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
+  const { user: sessionUser, profile: sessionProfile, accessToken, loading: sessionLoading } = useSession();
   const { checkAndAwardBadges } = useBadgeChecker();
   
   const loadingRef = useRef(false);
@@ -358,6 +358,7 @@ export default function DashboardPage() {
         profile={data.profile}
         userId={data.user?.id || ''}
         userName={data.userName}
+        accessToken={accessToken || ''}
         onUpdate={handleRefresh}
         onShowTutorial={() => setShowStreakTutorial(true)}
       />

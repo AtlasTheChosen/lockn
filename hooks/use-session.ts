@@ -10,6 +10,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export function useSession() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Use ref to ensure single initialization
@@ -23,8 +24,8 @@ export function useSession() {
     }
     initialized.current = true;
 
-    // Helper to fetch profile using native fetch (avoids Supabase client hanging)
-    const fetchProfile = async (userId: string) => {
+    // Helper to fetch profile using native fetch with user's token
+    const fetchProfile = async (userId: string, token: string) => {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
@@ -34,7 +35,7 @@ export function useSession() {
           {
             headers: {
               'apikey': supabaseKey,
-              'Authorization': `Bearer ${supabaseKey}`,
+              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
             signal: controller.signal,
@@ -62,13 +63,15 @@ export function useSession() {
 
     // Helper to handle session
     const handleSession = async (session: any, source: string) => {
-      if (session?.user) {
+      if (session?.user && session?.access_token) {
         setUser(session.user);
-        const profileData = await fetchProfile(session.user.id);
+        setAccessToken(session.access_token);
+        const profileData = await fetchProfile(session.user.id, session.access_token);
         setProfile(profileData);
       } else {
         setUser(null);
         setProfile(null);
+        setAccessToken(null);
       }
       
       setLoading(false);
@@ -83,6 +86,7 @@ export function useSession() {
           console.error('[useSession] getSession error:', error);
           setUser(null);
           setProfile(null);
+          setAccessToken(null);
           setLoading(false);
           return;
         }
@@ -92,6 +96,7 @@ export function useSession() {
         console.error('[useSession] Init error:', e);
         setUser(null);
         setProfile(null);
+        setAccessToken(null);
         setLoading(false);
       }
     };
@@ -108,5 +113,5 @@ export function useSession() {
     };
   }, []); // Empty deps - run once only
 
-  return { user, profile, loading };
+  return { user, profile, accessToken, loading };
 }

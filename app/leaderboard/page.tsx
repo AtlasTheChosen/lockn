@@ -23,7 +23,7 @@ type FilterType = 'weekly_avg' | 'this_week' | 'stacks';
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const { user: sessionUser, loading: sessionLoading } = useSession();
+  const { user: sessionUser, accessToken, loading: sessionLoading } = useSession();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,14 +31,15 @@ export default function LeaderboardPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('weekly_avg');
 
-  const loadLeaderboardData = useCallback(async () => {
+  const loadLeaderboardData = useCallback(async (token: string) => {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
     try {
       setError(null);
       
-      console.log('[Leaderboard] Loading data...');
+      // Use user's access token for RLS
+      const authToken = token || supabaseKey!;
       
       // Fetch profiles using native fetch
       const profilesResponse = await fetch(
@@ -46,22 +47,17 @@ export default function LeaderboardPage() {
         {
           headers: {
             'apikey': supabaseKey!,
-            'Authorization': `Bearer ${supabaseKey}`,
+            'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json',
           },
         }
       );
       
-      console.log('[Leaderboard] Profiles response:', profilesResponse.status);
-      
       if (!profilesResponse.ok) {
-        const errorText = await profilesResponse.text();
-        console.error('[Leaderboard] Profiles error:', errorText);
         throw new Error(`Failed to fetch profiles: ${profilesResponse.status}`);
       }
       
       const profilesData = await profilesResponse.json();
-      console.log('[Leaderboard] Profiles count:', profilesData?.length || 0);
 
       // Fetch stats using native fetch
       const statsResponse = await fetch(
@@ -69,15 +65,13 @@ export default function LeaderboardPage() {
         {
           headers: {
             'apikey': supabaseKey!,
-            'Authorization': `Bearer ${supabaseKey}`,
+            'Authorization': `Bearer ${authToken}`,
             'Content-Type': 'application/json',
           },
         }
       );
       
-      console.log('[Leaderboard] Stats response:', statsResponse.status);
       const statsData = statsResponse.ok ? await statsResponse.json() : [];
-      console.log('[Leaderboard] Stats count:', statsData?.length || 0);
       
       const statsMap = new Map(statsData?.map((s: any) => [s.user_id, s]) || []);
       
@@ -94,7 +88,6 @@ export default function LeaderboardPage() {
         };
       });
 
-      console.log('[Leaderboard] Combined users:', combinedUsers.length);
       setUsers(combinedUsers);
       
     } catch (err: any) {
@@ -107,14 +100,14 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (sessionLoading) return;
 
-    if (!sessionUser) {
+    if (!sessionUser || !accessToken) {
       router.push('/auth/login');
       return;
     }
 
     setCurrentUserId(sessionUser.id);
-    loadLeaderboardData();
-  }, [sessionUser, sessionLoading, router, loadLeaderboardData]);
+    loadLeaderboardData(accessToken);
+  }, [sessionUser, accessToken, sessionLoading, router, loadLeaderboardData]);
 
   const getSortedUsers = (metric: FilterType) => {
     return [...users].sort((a, b) => {

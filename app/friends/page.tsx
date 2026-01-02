@@ -12,7 +12,7 @@ import { AppLayout } from '@/components/layout';
 
 export default function FriendsPage() {
   const router = useRouter();
-  const { user: sessionUser, loading: sessionLoading } = useSession();
+  const { user: sessionUser, accessToken, loading: sessionLoading } = useSession();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -93,7 +93,7 @@ export default function FriendsPage() {
           </p>
         </div>
         
-        <FriendsSection userId={sessionUser.id} />
+        <FriendsSection userId={sessionUser.id} accessToken={accessToken || ''} />
       </div>
     </AppLayout>
   );

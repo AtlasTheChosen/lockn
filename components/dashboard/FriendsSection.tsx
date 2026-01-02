@@ -22,6 +22,7 @@ import { calculateWeeklyAverage } from '@/lib/weekly-stats';
 
 interface Props {
   userId: string;
+  accessToken: string;
 }
 
 interface FriendStats {
@@ -41,16 +42,18 @@ interface FriendWithProfile extends Friendship {
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const headers = {
-  'apikey': supabaseKey,
-  'Authorization': `Bearer ${supabaseKey}`,
-  'Content-Type': 'application/json',
-};
+function getHeaders(token: string) {
+  return {
+    'apikey': supabaseKey,
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+  };
+}
 
-async function supaFetch<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
+async function supaFetch<T>(endpoint: string, token: string, options?: RequestInit): Promise<T | null> {
   try {
     const response = await fetch(`${supabaseUrl}/rest/v1/${endpoint}`, {
-      headers,
+      headers: getHeaders(token),
       ...options,
     });
     if (!response.ok) return null;
@@ -60,34 +63,34 @@ async function supaFetch<T>(endpoint: string, options?: RequestInit): Promise<T 
   }
 }
 
-async function supaInsert(table: string, data: any): Promise<any> {
+async function supaInsert(table: string, data: any, token: string): Promise<any> {
   const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
     method: 'POST',
-    headers: { ...headers, 'Prefer': 'return=representation' },
+    headers: { ...getHeaders(token), 'Prefer': 'return=representation' },
     body: JSON.stringify(data),
   });
   if (!response.ok) throw new Error('Insert failed');
   return response.json();
 }
 
-async function supaUpdate(table: string, query: string, data: any): Promise<void> {
+async function supaUpdate(table: string, query: string, data: any, token: string): Promise<void> {
   const response = await fetch(`${supabaseUrl}/rest/v1/${table}?${query}`, {
     method: 'PATCH',
-    headers: { ...headers, 'Prefer': 'return=minimal' },
+    headers: { ...getHeaders(token), 'Prefer': 'return=minimal' },
     body: JSON.stringify(data),
   });
   if (!response.ok) throw new Error('Update failed');
 }
 
-async function supaDelete(table: string, query: string): Promise<void> {
+async function supaDelete(table: string, query: string, token: string): Promise<void> {
   const response = await fetch(`${supabaseUrl}/rest/v1/${table}?${query}`, {
     method: 'DELETE',
-    headers,
+    headers: getHeaders(token),
   });
   if (!response.ok) throw new Error('Delete failed');
 }
 
-export default function FriendsSection({ userId }: Props) {
+export default function FriendsSection({ userId, accessToken }: Props) {
   const [friends, setFriends] = useState<FriendWithProfile[]>([]);
   const [pendingRequests, setPendingRequests] = useState<FriendWithProfile[]>([]);
   const [sentRequests, setSentRequests] = useState<FriendWithProfile[]>([]);
@@ -108,7 +111,8 @@ export default function FriendsSection({ userId }: Props) {
       setMessage(null);
 
       const friendshipsData = await supaFetch<any[]>(
-        `friendships?or=(user_id.eq.${userId},friend_id.eq.${userId})&select=*`
+        `friendships?or=(user_id.eq.${userId},friend_id.eq.${userId})&select=*`,
+        accessToken
       );
 
       if (!friendshipsData || friendshipsData.length === 0) {
@@ -135,11 +139,13 @@ export default function FriendsSection({ userId }: Props) {
       }
 
       const profilesData = await supaFetch<any[]>(
-        `user_profiles?id=in.(${Array.from(userIds).join(',')})&select=id,display_name,avatar_url`
+        `user_profiles?id=in.(${Array.from(userIds).join(',')})&select=id,display_name,avatar_url`,
+        accessToken
       );
 
       const statsData = await supaFetch<any[]>(
-        `user_stats?user_id=in.(${Array.from(userIds).join(',')})&select=user_id,current_week_cards,weekly_cards_history,total_stacks_completed`
+        `user_stats?user_id=in.(${Array.from(userIds).join(',')})&select=user_id,current_week_cards,weekly_cards_history,total_stacks_completed`,
+        accessToken
       );
 
       const profileMap = new Map(profilesData?.map((p) => [p.id, p]) || []);
@@ -215,7 +221,8 @@ export default function FriendsSection({ userId }: Props) {
       // Use ilike with wildcard pattern for case-insensitive partial match
       const searchPattern = `*${searchDisplayName.trim()}*`;
       const profiles = await supaFetch<any[]>(
-        `user_profiles?display_name=ilike.${encodeURIComponent(searchPattern)}&select=id,display_name`
+        `user_profiles?display_name=ilike.${encodeURIComponent(searchPattern)}&select=id,display_name`,
+        accessToken
       );
       
       const targetProfile = profiles?.[0];
@@ -231,13 +238,14 @@ export default function FriendsSection({ userId }: Props) {
       }
 
       const existing = await supaFetch<any[]>(
-        `friendships?or=(and(user_id.eq.${userId},friend_id.eq.${targetProfile.id}),and(user_id.eq.${targetProfile.id},friend_id.eq.${userId}))&select=*`
+        `friendships?or=(and(user_id.eq.${userId},friend_id.eq.${targetProfile.id}),and(user_id.eq.${targetProfile.id},friend_id.eq.${userId}))&select=*`,
+        accessToken
       );
 
       if (existing && existing.length > 0) {
         const record = existing[0];
         if (record.status === 'pending' && record.user_id === targetProfile.id && record.friend_id === userId) {
-          await supaUpdate('friendships', `id=eq.${record.id}`, { status: 'accepted' });
+          await supaUpdate('friendships', `id=eq.${record.id}`, { status: 'accepted' }, accessToken);
           setMessage({ type: 'success', text: `You are now friends with ${targetProfile.display_name}!` });
           setSearchDisplayName('');
           loadFriends();
@@ -258,7 +266,7 @@ export default function FriendsSection({ userId }: Props) {
         user_id: userId,
         friend_id: targetProfile.id,
         status: 'pending',
-      });
+      }, accessToken);
 
       setMessage({ type: 'success', text: `Friend request sent to ${targetProfile.display_name}!` });
       setSearchDisplayName('');
@@ -275,18 +283,20 @@ export default function FriendsSection({ userId }: Props) {
       setActionLoading(friendshipId);
       
       const friendships = await supaFetch<any[]>(
-        `friendships?id=eq.${friendshipId}&select=user_id,friend_id`
+        `friendships?id=eq.${friendshipId}&select=user_id,friend_id`,
+        accessToken
       );
       
       const friendship = friendships?.[0];
       if (!friendship) throw new Error('Friendship not found');
       
-      await supaUpdate('friendships', `id=eq.${friendshipId}`, { status: 'accepted' });
+      await supaUpdate('friendships', `id=eq.${friendshipId}`, { status: 'accepted' }, accessToken);
       
       // Clean up reverse pending
       try {
         await supaDelete('friendships', 
-          `user_id=eq.${friendship.friend_id}&friend_id=eq.${friendship.user_id}&status=eq.pending`
+          `user_id=eq.${friendship.friend_id}&friend_id=eq.${friendship.user_id}&status=eq.pending`,
+          accessToken
         );
       } catch {}
 
@@ -302,7 +312,7 @@ export default function FriendsSection({ userId }: Props) {
   const handleDeclineRequest = async (friendshipId: string) => {
     try {
       setActionLoading(friendshipId);
-      await supaDelete('friendships', `id=eq.${friendshipId}`);
+      await supaDelete('friendships', `id=eq.${friendshipId}`, accessToken);
       setMessage({ type: 'success', text: 'Friend request declined' });
       loadFriends();
     } catch (error: any) {
@@ -315,7 +325,7 @@ export default function FriendsSection({ userId }: Props) {
   const handleRemoveFriend = async (friendshipId: string) => {
     try {
       setActionLoading(friendshipId);
-      await supaDelete('friendships', `id=eq.${friendshipId}`);
+      await supaDelete('friendships', `id=eq.${friendshipId}`, accessToken);
       setMessage({ type: 'success', text: 'Friend removed' });
       loadFriends();
     } catch (error: any) {
@@ -328,7 +338,7 @@ export default function FriendsSection({ userId }: Props) {
   const handleBlockUser = async (friendshipId: string) => {
     try {
       setActionLoading(friendshipId);
-      await supaUpdate('friendships', `id=eq.${friendshipId}`, { status: 'blocked' });
+      await supaUpdate('friendships', `id=eq.${friendshipId}`, { status: 'blocked' }, accessToken);
       setMessage({ type: 'success', text: 'User blocked' });
       loadFriends();
     } catch (error: any) {
@@ -341,7 +351,7 @@ export default function FriendsSection({ userId }: Props) {
   const handleUnblockUser = async (friendshipId: string) => {
     try {
       setActionLoading(friendshipId);
-      await supaDelete('friendships', `id=eq.${friendshipId}`);
+      await supaDelete('friendships', `id=eq.${friendshipId}`, accessToken);
       setMessage({ type: 'success', text: 'User unblocked' });
       loadFriends();
     } catch (error: any) {
