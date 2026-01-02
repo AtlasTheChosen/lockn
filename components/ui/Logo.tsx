@@ -21,7 +21,7 @@ export default function Logo({ size = '2xl', className = '' }: LogoProps) {
   
   return (
     <Image
-      src="/images/Logo.png"
+      src="/images/logo.png"
       alt="LOCKN Logo"
       width={pixelSize}
       height={pixelSize}
