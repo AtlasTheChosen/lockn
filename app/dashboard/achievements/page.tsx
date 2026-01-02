@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { useSession } from '@/hooks/use-session';
 import { Badge } from '@/lib/types';
 import { BADGE_DEFINITIONS } from '@/components/social/AchievementBadges';
 import { useBadgeChecker, buildBadgeStats } from '@/hooks/useBadgeChecker';
@@ -185,7 +185,7 @@ const categoryConfig: Record<Badge['category'], {
 
 export default function AchievementsPage() {
   const router = useRouter();
-  const supabase = createClient();
+  const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
   const { checkAndAwardBadges } = useBadgeChecker();
   
   const [loading, setLoading] = useState(true);
@@ -194,44 +194,76 @@ export default function AchievementsPage() {
   const [selectedCategory, setSelectedCategory] = useState<Badge['category'] | 'all'>('all');
 
   useEffect(() => {
+    if (sessionLoading) return;
+    
+    if (!sessionUser) {
+      router.push('/auth/login');
+      return;
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
     async function loadData() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.user) {
-          router.push('/auth/login');
-          return;
+        // Use profile from session if available
+        let profile = sessionProfile;
+        
+        if (!profile) {
+          const profileResponse = await fetch(
+            `${supabaseUrl}/rest/v1/user_profiles?id=eq.${sessionUser.id}&select=badges,is_premium,languages_learning`,
+            {
+              headers: {
+                'apikey': supabaseKey!,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          );
+          const profileData = profileResponse.ok ? await profileResponse.json() : [];
+          profile = profileData?.[0];
         }
 
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('badges, is_premium, languages_learning')
-          .eq('id', session.user.id)
-          .single();
+        // Fetch user stats
+        const statsResponse = await fetch(
+          `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${sessionUser.id}&select=current_streak,longest_streak,total_cards_mastered,total_stacks_completed,daily_cards_learned,tests_completed,perfect_test_streak,daily_goal_streak,ice_breaker_count`,
+          {
+            headers: {
+              'apikey': supabaseKey!,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        const statsData = statsResponse.ok ? await statsResponse.json() : [];
+        const userStats = statsData?.[0];
 
-        const { data: userStats } = await supabase
-          .from('user_stats')
-          .select('current_streak, longest_streak, total_cards_mastered, total_stacks_completed, daily_cards_learned, tests_completed, perfect_test_streak, daily_goal_streak, ice_breaker_count')
-          .eq('user_id', session.user.id)
-          .single();
-
-        const { count: friendsCount } = await supabase
-          .from('friendships')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'accepted')
-          .or(`user_id.eq.${session.user.id},friend_id.eq.${session.user.id}`);
+        // Fetch friends count
+        const friendsResponse = await fetch(
+          `${supabaseUrl}/rest/v1/friendships?status=eq.accepted&or=(user_id.eq.${sessionUser.id},friend_id.eq.${sessionUser.id})&select=id`,
+          {
+            headers: {
+              'apikey': supabaseKey!,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'count=exact',
+            },
+          }
+        );
+        const friendsCount = friendsResponse.ok ? (await friendsResponse.json())?.length ?? 0 : 0;
 
         const earnedBadges = (profile?.badges || []) as Badge[];
         setBadges(earnedBadges);
 
         const badgeStats = buildBadgeStats(userStats, {
-          friends_count: friendsCount ?? 0,
+          friends_count: friendsCount,
           languages_count: profile?.languages_learning?.length ?? 0,
           is_premium: profile?.is_premium ?? false,
         });
         setStats(badgeStats);
 
         if (userStats) {
-          await checkAndAwardBadges(session.user.id, badgeStats, earnedBadges);
+          await checkAndAwardBadges(sessionUser.id, badgeStats, earnedBadges);
         }
       } catch (error) {
         console.error('Error loading achievements:', error);
@@ -241,7 +273,7 @@ export default function AchievementsPage() {
     }
 
     loadData();
-  }, [supabase, router, checkAndAwardBadges]);
+  }, [sessionUser, sessionProfile, sessionLoading, router, checkAndAwardBadges]);
 
   // Calculate counts
   const earnedCounts: Record<Badge['category'], number> = {
@@ -309,7 +341,7 @@ export default function AchievementsPage() {
     return b.progress - a.progress;
   });
 
-  if (loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 flex items-center justify-center">
         <div className="text-center">
@@ -552,4 +584,3 @@ export default function AchievementsPage() {
     </div>
   );
 }
-

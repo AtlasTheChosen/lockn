@@ -2,63 +2,83 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
+import { useSession } from '@/hooks/use-session';
 import StackLearningClient from '@/components/stack/StackLearningClient';
 
 export default function StackPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const { user: sessionUser, loading: sessionLoading } = useSession();
   const [loading, setLoading] = useState(true);
   const [stack, setStack] = useState<any>(null);
   const [cards, setCards] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    if (sessionLoading) return;
+    
+    if (!sessionUser) {
+      router.push('/auth/login');
+      return;
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     async function loadStack() {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        router.push('/auth/login');
-        return;
-      }
+      try {
+        // Fetch stack using native fetch
+        const stackResponse = await fetch(
+          `${supabaseUrl}/rest/v1/card_stacks?id=eq.${params.id}&user_id=eq.${sessionUser.id}&select=*`,
+          {
+            headers: {
+              'apikey': supabaseKey!,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
 
-      const { data: stackData, error: stackError } = await supabase
-        .from('card_stacks')
-        .select('*')
-        .eq('id', params.id)
-        .eq('user_id', session.user.id)
-        .single();
+        if (!stackResponse.ok) {
+          setError('Stack not found or access denied');
+          setLoading(false);
+          return;
+        }
 
-      if (stackError || !stackData) {
-        setError('Stack not found or access denied');
+        const stackData = await stackResponse.json();
+        if (!stackData || stackData.length === 0) {
+          setError('Stack not found or access denied');
+          setLoading(false);
+          return;
+        }
+
+        // Fetch cards using native fetch
+        const cardsResponse = await fetch(
+          `${supabaseUrl}/rest/v1/flashcards?stack_id=eq.${params.id}&order=card_order&select=*`,
+          {
+            headers: {
+              'apikey': supabaseKey!,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        const cardsData = cardsResponse.ok ? await cardsResponse.json() : [];
+
+        setStack(stackData[0]);
+        setCards(cardsData || []);
         setLoading(false);
-        return;
-      }
-
-      const { data: cardsData, error: cardsError } = await supabase
-        .from('flashcards')
-        .select('*')
-        .eq('stack_id', params.id)
-        .order('card_order');
-
-      if (cardsError) {
-        setError('Error loading cards');
+      } catch (e: any) {
+        console.error('Error loading stack:', e);
+        setError('Error loading stack');
         setLoading(false);
-        return;
       }
-
-      setStack(stackData);
-      setCards(cardsData || []);
-      setLoading(false);
     }
 
     loadStack();
-  }, [params.id, router]);
+  }, [params.id, router, sessionUser, sessionLoading]);
 
-  if (loading) return (
+  if (sessionLoading || loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
       <div className="w-12 h-12 border-4 border-talka-purple/30 border-t-talka-purple rounded-full animate-spin mb-4"></div>
       <p className="font-display text-xl font-semibold text-slate-700">Loading stack...</p>

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -38,18 +37,66 @@ interface FriendWithProfile extends Friendship {
   stats?: FriendStats;
 }
 
+// Native fetch helpers
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+const headers = {
+  'apikey': supabaseKey,
+  'Authorization': `Bearer ${supabaseKey}`,
+  'Content-Type': 'application/json',
+};
+
+async function supaFetch<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
+  try {
+    const response = await fetch(`${supabaseUrl}/rest/v1/${endpoint}`, {
+      headers,
+      ...options,
+    });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
+async function supaInsert(table: string, data: any): Promise<any> {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { ...headers, 'Prefer': 'return=representation' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Insert failed');
+  return response.json();
+}
+
+async function supaUpdate(table: string, query: string, data: any): Promise<void> {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${table}?${query}`, {
+    method: 'PATCH',
+    headers: { ...headers, 'Prefer': 'return=minimal' },
+    body: JSON.stringify(data),
+  });
+  if (!response.ok) throw new Error('Update failed');
+}
+
+async function supaDelete(table: string, query: string): Promise<void> {
+  const response = await fetch(`${supabaseUrl}/rest/v1/${table}?${query}`, {
+    method: 'DELETE',
+    headers,
+  });
+  if (!response.ok) throw new Error('Delete failed');
+}
+
 export default function FriendsSection({ userId }: Props) {
   const [friends, setFriends] = useState<FriendWithProfile[]>([]);
-  const [pendingRequests, setPendingRequests] = useState<FriendWithProfile[]>([]); // Incoming requests (where I'm friend_id)
-  const [sentRequests, setSentRequests] = useState<FriendWithProfile[]>([]); // Outgoing requests (where I'm user_id)
+  const [pendingRequests, setPendingRequests] = useState<FriendWithProfile[]>([]);
+  const [sentRequests, setSentRequests] = useState<FriendWithProfile[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<FriendWithProfile[]>([]);
   const [searchDisplayName, setSearchDisplayName] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'blocked'>('friends');
-
-  const supabase = createClient();
 
   useEffect(() => {
     loadFriends();
@@ -60,25 +107,14 @@ export default function FriendsSection({ userId }: Props) {
       setLoading(true);
       setMessage(null);
 
-      const { data: friendshipsData, error: friendshipsError } = await supabase
-        .from('friendships')
-        .select('*')
-        .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
-
-      if (friendshipsError) {
-        console.error('[FriendsSection] Error loading friendships:', friendshipsError);
-        if (friendshipsError.message?.includes('relation') || friendshipsError.message?.includes('does not exist') || friendshipsError.code === '42P01') {
-          setMessage({ type: 'error', text: 'Friendships table not found. Please create this table in Supabase.' });
-        } else {
-          setMessage({ type: 'error', text: 'Failed to load friendships' });
-        }
-        setLoading(false);
-        return;
-      }
+      const friendshipsData = await supaFetch<any[]>(
+        `friendships?or=(user_id.eq.${userId},friend_id.eq.${userId})&select=*`
+      );
 
       if (!friendshipsData || friendshipsData.length === 0) {
         setFriends([]);
         setPendingRequests([]);
+        setSentRequests([]);
         setBlockedUsers([]);
         setLoading(false);
         return;
@@ -92,37 +128,28 @@ export default function FriendsSection({ userId }: Props) {
       if (userIds.size === 0) {
         setFriends([]);
         setPendingRequests([]);
+        setSentRequests([]);
         setBlockedUsers([]);
         setLoading(false);
         return;
       }
 
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('user_profiles')
-        .select('id, display_name, avatar_url')
-        .in('id', Array.from(userIds));
+      const profilesData = await supaFetch<any[]>(
+        `user_profiles?id=in.(${Array.from(userIds).join(',')})&select=id,display_name,avatar_url`
+      );
 
-      if (profilesError) {
-        console.error('[FriendsSection] Error loading profiles:', profilesError);
-        setMessage({ type: 'error', text: 'Failed to load friend profiles' });
-        setLoading(false);
-        return;
-      }
-
-      const { data: statsData } = await supabase
-        .from('user_stats')
-        .select('user_id, current_week_cards, weekly_cards_history, total_stacks_completed')
-        .in('user_id', Array.from(userIds));
+      const statsData = await supaFetch<any[]>(
+        `user_stats?user_id=in.(${Array.from(userIds).join(',')})&select=user_id,current_week_cards,weekly_cards_history,total_stacks_completed`
+      );
 
       const profileMap = new Map(profilesData?.map((p) => [p.id, p]) || []);
       const statsMap = new Map(statsData?.map((s) => [s.user_id, s]) || []);
 
       const accepted: FriendWithProfile[] = [];
-      const incoming: FriendWithProfile[] = []; // Requests TO me (I'm friend_id)
-      const outgoing: FriendWithProfile[] = []; // Requests FROM me (I'm user_id)
+      const incoming: FriendWithProfile[] = [];
+      const outgoing: FriendWithProfile[] = [];
       const blocked: FriendWithProfile[] = [];
       
-      // First pass: collect all accepted friend IDs to filter out stale pending requests
       const acceptedFriendIds = new Set<string>();
       friendshipsData.forEach((friendship) => {
         if (friendship.status === 'accepted') {
@@ -130,9 +157,6 @@ export default function FriendsSection({ userId }: Props) {
           acceptedFriendIds.add(friendId);
         }
       });
-
-      // Track pending requests to clean up (duplicates where friendship already exists)
-      const pendingToDelete: string[] = [];
 
       friendshipsData.forEach((friendship) => {
         const friendId = friendship.user_id === userId ? friendship.friend_id : friendship.user_id;
@@ -154,33 +178,17 @@ export default function FriendsSection({ userId }: Props) {
         if (friendship.status === 'accepted') {
           accepted.push(withProfile);
         } else if (friendship.status === 'pending') {
-          // Skip pending requests if already friends with this person
-          if (acceptedFriendIds.has(friendId)) {
-            // Mark for cleanup
-            pendingToDelete.push(friendship.id);
-            return;
-          }
+          if (acceptedFriendIds.has(friendId)) return;
           
           if (friendship.friend_id === userId) {
-            // Incoming request - someone sent me a request
             incoming.push(withProfile);
           } else if (friendship.user_id === userId) {
-            // Outgoing request - I sent this request
             outgoing.push(withProfile);
           }
         } else if (friendship.status === 'blocked') {
           blocked.push(withProfile);
         }
       });
-      
-      // Clean up stale pending requests in the background
-      if (pendingToDelete.length > 0) {
-        supabase
-          .from('friendships')
-          .delete()
-          .in('id', pendingToDelete)
-          .then(() => console.log('Cleaned up stale pending requests'));
-      }
 
       setFriends(accepted);
       setPendingRequests(incoming);
@@ -188,6 +196,7 @@ export default function FriendsSection({ userId }: Props) {
       setBlockedUsers(blocked);
     } catch (error) {
       console.error('Error loading friends:', error);
+      setMessage({ type: 'error', text: 'Failed to load friends' });
     } finally {
       setLoading(false);
     }
@@ -203,11 +212,11 @@ export default function FriendsSection({ userId }: Props) {
         return;
       }
 
-      const { data: targetProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('id, display_name')
-        .ilike('display_name', searchDisplayName)
-        .maybeSingle();
+      const profiles = await supaFetch<any[]>(
+        `user_profiles?display_name=ilike.${encodeURIComponent(searchDisplayName)}&select=id,display_name`
+      );
+      
+      const targetProfile = profiles?.[0];
 
       if (!targetProfile) {
         setMessage({ type: 'error', text: 'User not found. Make sure you enter their exact display name.' });
@@ -219,48 +228,35 @@ export default function FriendsSection({ userId }: Props) {
         return;
       }
 
-      const { data: existing } = await supabase
-        .from('friendships')
-        .select('*')
-        .or(
-          `and(user_id.eq.${userId},friend_id.eq.${targetProfile.id}),and(user_id.eq.${targetProfile.id},friend_id.eq.${userId})`
-        )
-        .maybeSingle();
+      const existing = await supaFetch<any[]>(
+        `friendships?or=(and(user_id.eq.${userId},friend_id.eq.${targetProfile.id}),and(user_id.eq.${targetProfile.id},friend_id.eq.${userId}))&select=*`
+      );
 
-      if (existing) {
-        // If there's a pending request FROM the target user TO us, accept it instead
-        if (existing.status === 'pending' && existing.user_id === targetProfile.id && existing.friend_id === userId) {
-          const { error: acceptError } = await supabase
-            .from('friendships')
-            .update({ status: 'accepted' })
-            .eq('id', existing.id);
-          
-          if (acceptError) throw acceptError;
-          
+      if (existing && existing.length > 0) {
+        const record = existing[0];
+        if (record.status === 'pending' && record.user_id === targetProfile.id && record.friend_id === userId) {
+          await supaUpdate('friendships', `id=eq.${record.id}`, { status: 'accepted' });
           setMessage({ type: 'success', text: `You are now friends with ${targetProfile.display_name}!` });
           setSearchDisplayName('');
           loadFriends();
           return;
         }
         
-        // Otherwise show appropriate message based on status
-        if (existing.status === 'accepted') {
+        if (record.status === 'accepted') {
           setMessage({ type: 'error', text: `You are already friends with ${targetProfile.display_name}` });
-        } else if (existing.status === 'pending') {
+        } else if (record.status === 'pending') {
           setMessage({ type: 'error', text: `Friend request already sent to ${targetProfile.display_name}` });
-        } else if (existing.status === 'blocked') {
+        } else if (record.status === 'blocked') {
           setMessage({ type: 'error', text: 'Cannot send friend request to this user' });
         }
         return;
       }
 
-      const { error } = await supabase.from('friendships').insert({
+      await supaInsert('friendships', {
         user_id: userId,
         friend_id: targetProfile.id,
         status: 'pending',
       });
-
-      if (error) throw error;
 
       setMessage({ type: 'success', text: `Friend request sent to ${targetProfile.display_name}!` });
       setSearchDisplayName('');
@@ -276,33 +272,21 @@ export default function FriendsSection({ userId }: Props) {
     try {
       setActionLoading(friendshipId);
       
-      // First, get the friendship details to know who sent it
-      const { data: friendship } = await supabase
-        .from('friendships')
-        .select('user_id, friend_id')
-        .eq('id', friendshipId)
-        .single();
+      const friendships = await supaFetch<any[]>(
+        `friendships?id=eq.${friendshipId}&select=user_id,friend_id`
+      );
       
-      if (!friendship) {
-        throw new Error('Friendship not found');
-      }
+      const friendship = friendships?.[0];
+      if (!friendship) throw new Error('Friendship not found');
       
-      // Accept this request
-      const { error } = await supabase
-        .from('friendships')
-        .update({ status: 'accepted' })
-        .eq('id', friendshipId);
-
-      if (error) throw error;
+      await supaUpdate('friendships', `id=eq.${friendshipId}`, { status: 'accepted' });
       
-      // Clean up any reverse pending request (if user B also sent a request to user A)
-      // Delete any pending request where the roles are reversed
-      await supabase
-        .from('friendships')
-        .delete()
-        .eq('user_id', friendship.friend_id)
-        .eq('friend_id', friendship.user_id)
-        .eq('status', 'pending');
+      // Clean up reverse pending
+      try {
+        await supaDelete('friendships', 
+          `user_id=eq.${friendship.friend_id}&friend_id=eq.${friendship.user_id}&status=eq.pending`
+        );
+      } catch {}
 
       setMessage({ type: 'success', text: 'Friend request accepted!' });
       loadFriends();
@@ -316,10 +300,7 @@ export default function FriendsSection({ userId }: Props) {
   const handleDeclineRequest = async (friendshipId: string) => {
     try {
       setActionLoading(friendshipId);
-      const { error } = await supabase.from('friendships').delete().eq('id', friendshipId);
-
-      if (error) throw error;
-
+      await supaDelete('friendships', `id=eq.${friendshipId}`);
       setMessage({ type: 'success', text: 'Friend request declined' });
       loadFriends();
     } catch (error: any) {
@@ -332,10 +313,7 @@ export default function FriendsSection({ userId }: Props) {
   const handleRemoveFriend = async (friendshipId: string) => {
     try {
       setActionLoading(friendshipId);
-      const { error } = await supabase.from('friendships').delete().eq('id', friendshipId);
-
-      if (error) throw error;
-
+      await supaDelete('friendships', `id=eq.${friendshipId}`);
       setMessage({ type: 'success', text: 'Friend removed' });
       loadFriends();
     } catch (error: any) {
@@ -348,13 +326,7 @@ export default function FriendsSection({ userId }: Props) {
   const handleBlockUser = async (friendshipId: string) => {
     try {
       setActionLoading(friendshipId);
-      const { error } = await supabase
-        .from('friendships')
-        .update({ status: 'blocked' })
-        .eq('id', friendshipId);
-
-      if (error) throw error;
-
+      await supaUpdate('friendships', `id=eq.${friendshipId}`, { status: 'blocked' });
       setMessage({ type: 'success', text: 'User blocked' });
       loadFriends();
     } catch (error: any) {
@@ -367,10 +339,7 @@ export default function FriendsSection({ userId }: Props) {
   const handleUnblockUser = async (friendshipId: string) => {
     try {
       setActionLoading(friendshipId);
-      const { error } = await supabase.from('friendships').delete().eq('id', friendshipId);
-
-      if (error) throw error;
-
+      await supaDelete('friendships', `id=eq.${friendshipId}`);
       setMessage({ type: 'success', text: 'User unblocked' });
       loadFriends();
     } catch (error: any) {
