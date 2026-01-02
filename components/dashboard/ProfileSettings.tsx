@@ -54,10 +54,11 @@ const MAX_BIO_LENGTH = 500;
 
 interface Props {
   profile: UserProfile;
+  accessToken: string;
   onUpdate: () => void;
 }
 
-export default function ProfileSettings({ profile, onUpdate }: Props) {
+export default function ProfileSettings({ profile, accessToken, onUpdate }: Props) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [bio, setBio] = useState(profile.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(1));
@@ -106,7 +107,7 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
           method: 'PATCH',
           headers: {
             'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
+            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
@@ -198,12 +199,12 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
                       setShowAvatarPicker(false);
                       
                       try {
-                        // Save to database
+                        // Save to database using user's access token for RLS
                         const response = await fetch(`${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`, {
                           method: 'PATCH',
                           headers: {
                             'apikey': supabaseKey,
-                            'Authorization': `Bearer ${supabaseKey}`,
+                            'Authorization': `Bearer ${accessToken}`,
                             'Content-Type': 'application/json',
                           },
                           body: JSON.stringify({ avatar_url: url }),
