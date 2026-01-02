@@ -108,35 +108,51 @@ export default function DashboardPage() {
       fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after profile',data:{hasProfile:!!profile},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after profile', e?.message);});
       // #endregion
 
-      // Fetch stacks with AbortController timeout
-      log('stacks fetch start');
+      // Fetch stacks using native fetch (bypass Supabase client)
+      log('stacks fetch start - native fetch');
       
       let stacksData: any[] | null = null;
       let stacksError: any = null;
       
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      log('stacks env check', { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
+      
       const abortController = new AbortController();
       const timeoutId = setTimeout(() => {
-        log('stacks TIMEOUT firing abort');
+        log('stacks TIMEOUT - aborting fetch');
         abortController.abort();
       }, 8000);
       
       try {
-        log('stacks executing query with abort signal');
-        const { data, error } = await supabase
-          .from('card_stacks')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false })
-          .abortSignal(abortController.signal);
+        const url = `${supabaseUrl}/rest/v1/card_stacks?user_id=eq.${userId}&order=created_at.desc&select=*`;
+        log('stacks fetching URL', { url: url.substring(0, 80) + '...' });
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'apikey': supabaseKey!,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          signal: abortController.signal,
+        });
         
         clearTimeout(timeoutId);
-        log('stacks query returned', { count: data?.length ?? 0, hasError: !!error });
-        stacksData = data;
-        stacksError = error;
+        log('stacks fetch response', { status: response.status, ok: response.ok });
+        
+        if (response.ok) {
+          stacksData = await response.json();
+          log('stacks data received', { count: stacksData?.length ?? 0 });
+        } else {
+          const errorText = await response.text();
+          log('stacks error response', { status: response.status, error: errorText.substring(0, 100) });
+          stacksError = { message: `HTTP ${response.status}: ${errorText}` };
+        }
       } catch (e: any) {
         clearTimeout(timeoutId);
         log('stacks EXCEPTION', { message: e?.message, name: e?.name });
-        stacksError = { message: e?.message || 'Query failed' };
+        stacksError = { message: e?.message || 'Fetch failed' };
       }
 
       if (stacksError) {
