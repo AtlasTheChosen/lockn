@@ -54,8 +54,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${quicksand.variable} ${fredoka.variable}`}>
-      <body className={quicksand.className}>
+    <html lang="en" className={`${quicksand.variable} ${fredoka.variable}`} suppressHydrationWarning>
+      <body className={quicksand.className} suppressHydrationWarning>
         <AuthProvider>
           <MobilePreviewProvider>
             {children}
