@@ -215,7 +215,7 @@ export default function DashboardPage() {
       console.log('[DBG] after stats', { hasStats: !!stats });
       log('after stats', { hasStats: !!stats });
       // #region agent log
-      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H3',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stats',data:{hasStats:!!stats,statsError:statsError?.message ?? null},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stats', e?.message);});
+      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H3',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stats',data:{hasStats:!!stats},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stats', e?.message);});
       // #endregion
 
       const userName = profile?.display_name || userEmail?.split('@')[0] || 'Guest';
