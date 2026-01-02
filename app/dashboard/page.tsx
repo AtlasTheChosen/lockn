@@ -95,15 +95,30 @@ export default function DashboardPage() {
 
       // #region agent log
       console.log('[DEBUG] Profile loaded:', { hasProfile: !!profile });
-      console.log('[DEBUG] Fetching stacks...');
+      console.log('[DEBUG] Fetching stacks... URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
       // #endregion
 
-      // Fetch stacks
-      const { data: stacksData, error: stacksError } = await supabase
-        .from('card_stacks')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      // Fetch stacks with timeout
+      let stacksData: any[] | null = null;
+      let stacksError: any = null;
+      try {
+        const stacksPromise = supabase
+          .from('card_stacks')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Stacks query timeout after 10s')), 10000)
+        );
+        
+        const result = await Promise.race([stacksPromise, timeoutPromise]) as any;
+        stacksData = result.data;
+        stacksError = result.error;
+      } catch (e: any) {
+        console.error('[DEBUG] Stacks query FAILED:', e.message);
+        stacksError = e;
+      }
 
       // #region agent log
       console.log('[DEBUG] Stacks query result:', { count: stacksData?.length, error: stacksError?.message });
