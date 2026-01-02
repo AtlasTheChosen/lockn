@@ -35,29 +35,37 @@ export default function LeaderboardPage() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
+    console.log('[Leaderboard] Starting load, token length:', token?.length || 0);
+    
     try {
       setError(null);
       
       // Use user's access token for RLS
       const authToken = token || supabaseKey!;
+      console.log('[Leaderboard] Using auth token, first 20 chars:', authToken?.substring(0, 20));
       
       // Fetch profiles using native fetch
-      const profilesResponse = await fetch(
-        `${supabaseUrl}/rest/v1/user_profiles?select=id,display_name,avatar_url&limit=50`,
-        {
-          headers: {
-            'apikey': supabaseKey!,
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      const profilesUrl = `${supabaseUrl}/rest/v1/user_profiles?select=id,display_name,avatar_url&limit=50`;
+      console.log('[Leaderboard] Fetching profiles from:', profilesUrl);
+      
+      const profilesResponse = await fetch(profilesUrl, {
+        headers: {
+          'apikey': supabaseKey!,
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      console.log('[Leaderboard] Profiles response status:', profilesResponse.status);
       
       if (!profilesResponse.ok) {
-        throw new Error(`Failed to fetch profiles: ${profilesResponse.status}`);
+        const errorText = await profilesResponse.text();
+        console.error('[Leaderboard] Profiles error body:', errorText);
+        throw new Error(`Failed to fetch profiles: ${profilesResponse.status} - ${errorText}`);
       }
       
       const profilesData = await profilesResponse.json();
+      console.log('[Leaderboard] Profiles received:', profilesData?.length || 0, profilesData);
 
       // Fetch stats using native fetch
       const statsResponse = await fetch(
@@ -98,13 +106,20 @@ export default function LeaderboardPage() {
   }, []);
 
   useEffect(() => {
-    if (sessionLoading) return;
+    console.log('[Leaderboard] useEffect - sessionLoading:', sessionLoading, 'sessionUser:', !!sessionUser, 'accessToken:', !!accessToken);
+    
+    if (sessionLoading) {
+      console.log('[Leaderboard] Still loading session, waiting...');
+      return;
+    }
 
     if (!sessionUser || !accessToken) {
+      console.log('[Leaderboard] No user or token, redirecting to login');
       router.push('/auth/login');
       return;
     }
 
+    console.log('[Leaderboard] Loading data with user:', sessionUser.id);
     setCurrentUserId(sessionUser.id);
     loadLeaderboardData(accessToken);
   }, [sessionUser, accessToken, sessionLoading, router, loadLeaderboardData]);
