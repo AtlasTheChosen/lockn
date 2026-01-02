@@ -7,6 +7,9 @@ import { TopNav, BottomNav } from '@/components/navigation';
 // Custom event name for profile updates
 export const PROFILE_UPDATED_EVENT = 'profile-updated';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
 interface AppLayoutProps {
   children: React.ReactNode;
   hideNav?: boolean;
@@ -23,33 +26,52 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     
-    if (session?.user) {
+    if (session?.user && session?.access_token) {
       setIsLoggedIn(true);
+      const token = session.access_token;
       
-      // Get user profile
-      const { data: profile } = await supabase
-        .from('user_profiles')
-        .select('display_name, avatar_url')
-        .eq('id', session.user.id)
-        .single();
-      
-      if (profile?.display_name) {
-        setDisplayName(profile.display_name);
+      // Get user profile using native fetch
+      try {
+        const profileRes = await fetch(
+          `${supabaseUrl}/rest/v1/user_profiles?id=eq.${session.user.id}&select=display_name,avatar_url`,
+          {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
+        if (profileRes.ok) {
+          const profiles = await profileRes.json();
+          const profile = profiles?.[0];
+          if (profile?.display_name) setDisplayName(profile.display_name);
+          if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
+        }
+      } catch (e) {
+        console.warn('[AppLayout] Profile fetch error:', e);
       }
-      if (profile?.avatar_url) {
-        setAvatarUrl(profile.avatar_url);
-      }
       
-      // Get user stats for streak
-      const { data: stats } = await supabase
-        .from('user_stats')
-        .select('current_streak, streak_frozen')
-        .eq('user_id', session.user.id)
-        .single();
-      
-      if (stats) {
-        setStreak(stats.current_streak || 0);
-        setStreakFrozen(stats.streak_frozen || false);
+      // Get user stats for streak using native fetch
+      try {
+        const statsRes = await fetch(
+          `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${session.user.id}&select=current_streak,streak_frozen`,
+          {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${token}`,
+            },
+          }
+        );
+        if (statsRes.ok) {
+          const statsArr = await statsRes.json();
+          const stats = statsArr?.[0];
+          if (stats) {
+            setStreak(stats.current_streak || 0);
+            setStreakFrozen(stats.streak_frozen || false);
+          }
+        }
+      } catch (e) {
+        console.warn('[AppLayout] Stats fetch error:', e);
       }
     }
   }, []);
