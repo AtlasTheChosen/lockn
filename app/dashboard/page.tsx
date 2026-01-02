@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useSession } from '@/hooks/use-session';
@@ -20,6 +20,7 @@ export default function DashboardPage() {
   const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
   const { checkAndAwardBadges } = useBadgeChecker();
   
+  const loadingRef = useRef(false); // Prevent double invocation
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsDisplayName, setNeedsDisplayName] = useState(false);
@@ -39,6 +40,13 @@ export default function DashboardPage() {
   });
 
   const loadDashboardData = useCallback(async (userId: string, userEmail?: string) => {
+    // Prevent double invocation
+    if (loadingRef.current) {
+      console.log('[DBG] dashboard loadDashboardData SKIPPED (already loading)');
+      return;
+    }
+    loadingRef.current = true;
+
     const supabase = createClient();
     const log = (msg: string, data?: any) => console.log('[DBG] dashboard', msg, data ?? '');
     log('start loadDashboardData', { userId, hasSessionProfile: !!sessionProfile });
@@ -100,13 +108,29 @@ export default function DashboardPage() {
       fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after profile',data:{hasProfile:!!profile},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after profile', e?.message);});
       // #endregion
 
-      // Fetch stacks
+      // Fetch stacks with timeout
       log('stacks fetch start');
-      const { data: stacksData, error: stacksError } = await supabase
-        .from('card_stacks')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      let stacksData: any[] | null = null;
+      let stacksError: any = null;
+      try {
+        const stacksPromise = supabase
+          .from('card_stacks')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false });
+        
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Stacks query timeout (10s)')), 10000)
+        );
+        
+        const result = await Promise.race([stacksPromise, timeoutPromise]) as any;
+        stacksData = result.data;
+        stacksError = result.error;
+        log('stacks fetch completed', { stacksCount: stacksData?.length ?? 0 });
+      } catch (e: any) {
+        log('stacks fetch exception', { message: e?.message });
+        stacksError = { message: e?.message || 'Unknown stacks error' };
+      }
 
       if (stacksError) {
         console.error('[Dashboard] Stacks error:', stacksError.message);
@@ -262,6 +286,7 @@ export default function DashboardPage() {
       fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H4',location:'app/dashboard/page.tsx:loadDashboardData',message:'catch loadDashboardData',data:{error:err?.message ?? 'unknown'},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail catch', e?.message);});
       // #endregion
     } finally {
+      loadingRef.current = false; // Reset guard
       setDataLoading(false);
       console.log('[DBG] finally loadDashboardData setDataLoading false');
       // #region agent log
