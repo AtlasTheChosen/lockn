@@ -108,36 +108,32 @@ export default function DashboardPage() {
       fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after profile',data:{hasProfile:!!profile},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after profile', e?.message);});
       // #endregion
 
-      // Fetch stacks with timeout
-      log('stacks fetch start');
-      
-      // Check Supabase client auth state
-      const { data: { session: clientSession } } = await supabase.auth.getSession();
-      log('stacks pre-check auth', { hasClientSession: !!clientSession, clientUserId: clientSession?.user?.id });
+      // Fetch stacks with timeout (no getSession - it hangs on Vercel)
+      log('stacks fetch start - direct query');
       
       let stacksData: any[] | null = null;
       let stacksError: any = null;
       try {
-        log('stacks creating promise');
+        log('stacks creating query');
         const stacksPromise = supabase
           .from('card_stacks')
           .select('*')
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
         
-        log('stacks promise created, starting race');
-        const timeoutPromise = new Promise((_, reject) => 
+        log('stacks query created, starting timeout race');
+        const timeoutPromise = new Promise<never>((_, reject) => 
           setTimeout(() => reject(new Error('Stacks query timeout (10s)')), 10000)
         );
         
-        log('stacks awaiting race');
-        const result = await Promise.race([stacksPromise, timeoutPromise]) as any;
-        log('stacks race resolved');
-        stacksData = result.data;
-        stacksError = result.error;
-        log('stacks fetch completed', { stacksCount: stacksData?.length ?? 0 });
+        log('stacks awaiting race...');
+        const result = await Promise.race([stacksPromise, timeoutPromise]);
+        log('stacks race resolved', { hasData: !!(result as any).data });
+        stacksData = (result as any).data;
+        stacksError = (result as any).error;
+        log('stacks fetch completed', { stacksCount: stacksData?.length ?? 0, hasError: !!stacksError });
       } catch (e: any) {
-        log('stacks fetch exception', { message: e?.message });
+        log('stacks fetch EXCEPTION', { message: e?.message, name: e?.name });
         stacksError = { message: e?.message || 'Unknown stacks error' };
       }
 
