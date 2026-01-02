@@ -39,14 +39,8 @@ export default function LandingPage() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:checkAuth:start',message:'checkAuth called',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:checkAuth:result',message:'checkAuth getSession result',data:{hasSession:!!session,userId:session?.user?.id?.slice(0,8)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-      // #endregion
       setIsLoggedIn(!!session);
     };
     checkAuth();

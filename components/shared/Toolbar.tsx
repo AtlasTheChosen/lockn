@@ -48,59 +48,42 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
   const supabase = createClient();
 
   const handleLogout = async () => {
-    console.log('[Toolbar] Logout initiated');
-    
     // Close mobile menu if open
     setMobileMenuOpen(false);
     
-    // 1. Clear ALL Supabase-related data from localStorage FIRST (synchronous, reliable)
+    // 1. Clear ALL storage (localStorage, sessionStorage, cookies)
     try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (
-          key.includes('supabase') || 
-          key.includes('sb-') || 
-          key.includes('auth') ||
-          key.includes('token')
-        )) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach(key => localStorage.removeItem(key));
-      
-      // Clear sessionStorage
-      const sessionKeysToRemove: string[] = [];
-      for (let i = 0; i < sessionStorage.length; i++) {
-        const key = sessionStorage.key(i);
-        if (key && (
-          key.includes('supabase') || 
-          key.includes('sb-') || 
-          key.includes('auth') ||
-          key.includes('token')
-        )) {
-          sessionKeysToRemove.push(key);
-        }
-      }
-      sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
-      
-      // Clear cookies
-      document.cookie.split(';').forEach(cookie => {
-        const name = cookie.split('=')[0].trim();
-        if (name.includes('supabase') || name.includes('sb-') || name.includes('auth')) {
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+      // Clear localStorage
+      const localKeys = Object.keys(localStorage);
+      localKeys.forEach(key => {
+        if (key.includes('supabase') || key.includes('sb-') || key.includes('auth') || key.includes('token')) {
+          localStorage.removeItem(key);
         }
       });
+      
+      // Clear sessionStorage
+      const sessionKeys = Object.keys(sessionStorage);
+      sessionKeys.forEach(key => {
+        if (key.includes('supabase') || key.includes('sb-') || key.includes('auth') || key.includes('token')) {
+          sessionStorage.removeItem(key);
+        }
+      });
+      
+      // Clear ALL cookies for current domain
+      document.cookie.split(';').forEach(cookie => {
+        const name = cookie.split('=')[0].trim();
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
+      });
     } catch (e) {
-      console.warn('[Toolbar] Error clearing storage:', e);
+      // Ignore errors
     }
     
-    // 2. Try Supabase signOut in background (don't wait for it)
+    // 2. Fire signOut in background
     supabase.auth.signOut({ scope: 'global' }).catch(() => {});
     
-    // 3. Redirect immediately
-    console.log('[Toolbar] Redirecting to home');
-    window.location.href = '/';
+    // 3. Hard redirect to home (with cache bust)
+    window.location.replace('/');
   };
 
   const getInitials = () => {
