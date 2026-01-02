@@ -255,7 +255,7 @@ export default function DashboardPage() {
   }, [sessionProfile, checkAndAwardBadges]);
 
   useEffect(() => {
-    console.log('[DBG] render state', { sessionLoading, dataLoading, error, hasUser: !!sessionUser, hasProfile: !!sessionProfile });
+    console.log('[DBG] render state vals', 'sessionLoading', sessionLoading, 'dataLoading', dataLoading, 'hasUser', !!sessionUser, 'hasProfile', !!sessionProfile, 'error', error);
   }, [sessionLoading, dataLoading, error, sessionUser, sessionProfile]);
 
   // Prevent server bailout: always render client pathway when authenticated is detected
@@ -267,10 +267,12 @@ export default function DashboardPage() {
     if (sessionLoading) return;
 
     if (!sessionUser) {
+      console.log('[DBG] load effect: no user, redirect login');
       router.push('/auth/login');
       return;
     }
 
+    console.log('[DBG] load effect: invoking loadDashboardData');
     loadDashboardData(sessionUser.id, sessionUser.email);
   }, [sessionUser, sessionLoading, router, loadDashboardData]);
 
