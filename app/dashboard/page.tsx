@@ -108,33 +108,35 @@ export default function DashboardPage() {
       fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after profile',data:{hasProfile:!!profile},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after profile', e?.message);});
       // #endregion
 
-      // Fetch stacks with timeout (no getSession - it hangs on Vercel)
-      log('stacks fetch start - direct query');
+      // Fetch stacks with AbortController timeout
+      log('stacks fetch start');
       
       let stacksData: any[] | null = null;
       let stacksError: any = null;
+      
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        log('stacks TIMEOUT firing abort');
+        abortController.abort();
+      }, 8000);
+      
       try {
-        log('stacks creating query');
-        const stacksPromise = supabase
+        log('stacks executing query with abort signal');
+        const { data, error } = await supabase
           .from('card_stacks')
           .select('*')
           .eq('user_id', userId)
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .abortSignal(abortController.signal);
         
-        log('stacks query created, starting timeout race');
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('Stacks query timeout (10s)')), 10000)
-        );
-        
-        log('stacks awaiting race...');
-        const result = await Promise.race([stacksPromise, timeoutPromise]);
-        log('stacks race resolved', { hasData: !!(result as any).data });
-        stacksData = (result as any).data;
-        stacksError = (result as any).error;
-        log('stacks fetch completed', { stacksCount: stacksData?.length ?? 0, hasError: !!stacksError });
+        clearTimeout(timeoutId);
+        log('stacks query returned', { count: data?.length ?? 0, hasError: !!error });
+        stacksData = data;
+        stacksError = error;
       } catch (e: any) {
-        log('stacks fetch EXCEPTION', { message: e?.message, name: e?.name });
-        stacksError = { message: e?.message || 'Unknown stacks error' };
+        clearTimeout(timeoutId);
+        log('stacks EXCEPTION', { message: e?.message, name: e?.name });
+        stacksError = { message: e?.message || 'Query failed' };
       }
 
       if (stacksError) {
