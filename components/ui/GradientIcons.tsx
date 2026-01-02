@@ -2,6 +2,12 @@
 
 import React, { useId } from 'react';
 
+interface IconDefinition {
+  path: string;
+  viewBox: string;
+  strokeWidth?: number;
+}
+
 interface GradientIconProps {
   name: keyof typeof iconPaths;
   size?: number;
@@ -9,7 +15,7 @@ interface GradientIconProps {
   colors?: [string, string];
 }
 
-const iconPaths = {
+const iconPaths: Record<string, IconDefinition> = {
   rocket: {
     path: 'M12 2L15 8.5L22 9L16.5 14L18 21L12 17.5L6 21L7.5 14L2 9L9 8.5L12 2Z',
     viewBox: '0 0 24 24',
