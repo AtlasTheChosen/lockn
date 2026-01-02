@@ -166,34 +166,54 @@ export default function DashboardPage() {
       fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stacks',data:{stacksCount:stacksData?.length ?? null,stacksError:stacksError?.message ?? null},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stacks', e?.message);});
       // #endregion
 
-      // Fetch stats
-      let stats = null;
-      log('stats fetch start');
-      const { data: statsData, error: statsError } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
-      if (statsError) {
-        log('stats fetch error', { message: statsError.message });
-        try {
-          const { data: newStats } = await supabase
-            .from('user_stats')
-            .insert({ user_id: userId })
-            .select()
-            .single();
-          stats = newStats;
-          log('stats created', { hasStats: !!stats });
-        } catch (e) {
-          console.warn('[Dashboard] Could not create stats:', e);
+      // Fetch stats using native fetch
+      let stats: any = null;
+      log('stats fetch start - native fetch');
+      
+      try {
+        const statsUrl = `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}&select=*`;
+        const statsResponse = await fetch(statsUrl, {
+          method: 'GET',
+          headers: {
+            'apikey': supabaseKey!,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        log('stats fetch response', { status: statsResponse.status });
+        
+        if (statsResponse.ok) {
+          const statsArray = await statsResponse.json();
+          stats = statsArray?.[0] || null;
+          log('stats data received', { hasStats: !!stats });
+          
+          // Create stats if not exists
+          if (!stats) {
+            log('stats not found, creating...');
+            const createResponse = await fetch(`${supabaseUrl}/rest/v1/user_stats`, {
+              method: 'POST',
+              headers: {
+                'apikey': supabaseKey!,
+                'Authorization': `Bearer ${supabaseKey}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=representation',
+              },
+              body: JSON.stringify({ user_id: userId }),
+            });
+            if (createResponse.ok) {
+              const created = await createResponse.json();
+              stats = created?.[0] || null;
+              log('stats created', { hasStats: !!stats });
+            }
+          }
         }
-      } else {
-        stats = statsData;
+      } catch (e: any) {
+        log('stats EXCEPTION', { message: e?.message });
       }
 
-      console.log('[DBG] after stats', { hasStats: !!stats, statsError: statsError?.message ?? null });
-      log('after stats', { hasStats: !!stats, statsError: statsError?.message ?? null });
+      console.log('[DBG] after stats', { hasStats: !!stats });
+      log('after stats', { hasStats: !!stats });
       // #region agent log
       fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H3',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stats',data:{hasStats:!!stats,statsError:statsError?.message ?? null},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stats', e?.message);});
       // #endregion
