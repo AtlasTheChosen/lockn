@@ -32,3 +32,4 @@ SELECT 'Friendships RLS policy fixed! Recipients can now see pending requests.' 
 
 
 
+

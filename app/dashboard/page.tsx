@@ -43,10 +43,21 @@ export default function DashboardPage() {
     
     // #region agent log
     console.log('[DEBUG] loadDashboardData START', { userId, userEmail, timestamp: Date.now() });
+    console.log('[DEBUG] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
     // #endregion
     
     try {
       setError(null);
+      
+      // #region agent log - Test simple query first
+      console.log('[DEBUG] Testing simple count query on card_stacks...');
+      try {
+        const { count, error: countErr } = await supabase.from('card_stacks').select('*', { count: 'exact', head: true });
+        console.log('[DEBUG] Simple count result:', { count, error: countErr?.message });
+      } catch (testErr: any) {
+        console.log('[DEBUG] Simple count FAILED:', testErr.message);
+      }
+      // #endregion
       
       // #region agent log
       console.log('[DEBUG] Fetching profile...');
@@ -95,28 +106,48 @@ export default function DashboardPage() {
 
       // #region agent log
       console.log('[DEBUG] Profile loaded:', { hasProfile: !!profile });
-      console.log('[DEBUG] Fetching stacks... URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+      console.log('[DEBUG] Fetching stacks for user:', userId);
       // #endregion
 
       // Fetch stacks with timeout
       let stacksData: any[] | null = null;
       let stacksError: any = null;
       try {
+        // #region agent log
+        console.log('[DEBUG] Creating stacks query promise...');
+        // #endregion
+        
         const stacksPromise = supabase
           .from('card_stacks')
           .select('*')
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
         
+        // #region agent log
+        console.log('[DEBUG] Promise created, starting race with 10s timeout...');
+        // #endregion
+        
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Stacks query timeout after 10s')), 10000)
+          setTimeout(() => {
+            // #region agent log
+            console.log('[DEBUG] ⚠️ TIMEOUT TRIGGERED - 10s elapsed, query hung');
+            // #endregion
+            reject(new Error('Stacks query timeout after 10s'));
+          }, 10000)
         );
         
         const result = await Promise.race([stacksPromise, timeoutPromise]) as any;
+        
+        // #region agent log
+        console.log('[DEBUG] ✅ Stacks query resolved:', { count: result?.data?.length, error: result?.error?.message });
+        // #endregion
+        
         stacksData = result.data;
         stacksError = result.error;
       } catch (e: any) {
-        console.error('[DEBUG] Stacks query FAILED:', e.message);
+        // #region agent log
+        console.error('[DEBUG] ❌ Stacks query EXCEPTION:', e.message);
+        // #endregion
         stacksError = e;
       }
 

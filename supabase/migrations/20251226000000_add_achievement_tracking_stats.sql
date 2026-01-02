@@ -23,3 +23,4 @@ COMMENT ON COLUMN user_stats.perfect_test_streak IS 'Current streak of consecuti
 COMMENT ON COLUMN user_stats.daily_goal_streak IS 'Current streak of consecutive days meeting daily goal (10 cards)';
 COMMENT ON COLUMN user_stats.ice_breaker_count IS 'Number of times user completed an overdue test to unfreeze streak';
 
+

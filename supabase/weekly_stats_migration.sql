@@ -52,3 +52,4 @@ CREATE INDEX IF NOT EXISTS idx_user_stats_current_week_cards ON user_stats(curre
 
 
 
+
