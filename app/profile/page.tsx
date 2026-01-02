@@ -16,7 +16,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
+  const { user: sessionUser, profile: sessionProfile, accessToken, loading: sessionLoading } = useSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -156,7 +156,7 @@ export default function ProfilePage() {
 
         {/* Profile Settings */}
         {profile ? (
-          <ProfileSettings profile={profile} onUpdate={loadData} />
+          <ProfileSettings profile={profile} accessToken={accessToken || ''} onUpdate={loadData} />
         ) : (
           <Card className="bg-slate-800 border-slate-700">
             <CardContent className="py-12 text-center">
