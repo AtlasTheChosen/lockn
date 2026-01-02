@@ -48,32 +48,13 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
   const supabase = createClient();
 
   const handleLogout = async () => {
+    console.log('[Toolbar] Logout initiated');
+    
+    // Close mobile menu if open
+    setMobileMenuOpen(false);
+    
+    // 1. Clear ALL Supabase-related data from localStorage FIRST (synchronous, reliable)
     try {
-      // Close mobile menu if open
-      setMobileMenuOpen(false);
-      
-      console.log('[Toolbar] Logout initiated');
-      
-      // 1. Try Supabase signOut (with short timeout, don't wait too long)
-      try {
-        const signOutPromise = supabase.auth.signOut({ scope: 'global' });
-        const timeoutPromise = new Promise((resolve) => 
-          setTimeout(() => resolve({ error: { message: 'timeout' } }), 2000)
-        );
-        
-        const result = await Promise.race([signOutPromise, timeoutPromise]) as any;
-        
-        if (result?.error) {
-          console.warn('Supabase signOut issue:', result.error);
-        } else {
-          console.log('[Toolbar] Supabase signOut successful');
-        }
-      } catch (signOutError) {
-        console.warn('Supabase signOut error:', signOutError);
-      }
-      
-      // 2. Clear ALL Supabase-related data from localStorage
-      console.log('[Toolbar] Clearing localStorage auth data');
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -86,12 +67,9 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
           keysToRemove.push(key);
         }
       }
-      keysToRemove.forEach(key => {
-        console.log('[Toolbar] Removing localStorage key:', key);
-        localStorage.removeItem(key);
-      });
+      keysToRemove.forEach(key => localStorage.removeItem(key));
       
-      // 3. Clear sessionStorage too
+      // Clear sessionStorage
       const sessionKeysToRemove: string[] = [];
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
@@ -104,39 +82,25 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
           sessionKeysToRemove.push(key);
         }
       }
-      sessionKeysToRemove.forEach(key => {
-        sessionStorage.removeItem(key);
-      });
+      sessionKeysToRemove.forEach(key => sessionStorage.removeItem(key));
       
-      // 4. Clear cookies (best effort)
+      // Clear cookies
       document.cookie.split(';').forEach(cookie => {
         const name = cookie.split('=')[0].trim();
         if (name.includes('supabase') || name.includes('sb-') || name.includes('auth')) {
           document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
         }
       });
-      
-      console.log('[Toolbar] Auth data cleared, navigating to home');
-      
-      // 5. Force full page reload to clear any in-memory state
-      window.location.href = '/';
-    } catch (err) {
-      console.error('Logout error:', err);
-      // Even on error, clear localStorage and redirect
-      try {
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-          const key = localStorage.key(i);
-          if (key && (key.includes('supabase') || key.includes('sb-') || key.includes('auth'))) {
-            keysToRemove.push(key);
-          }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-      } catch (e) {
-        // Ignore
-      }
-      window.location.href = '/';
+    } catch (e) {
+      console.warn('[Toolbar] Error clearing storage:', e);
     }
+    
+    // 2. Try Supabase signOut in background (don't wait for it)
+    supabase.auth.signOut({ scope: 'global' }).catch(() => {});
+    
+    // 3. Redirect immediately
+    console.log('[Toolbar] Redirecting to home');
+    window.location.href = '/';
   };
 
   const getInitials = () => {
