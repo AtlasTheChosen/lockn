@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { useSession } from '@/hooks/use-session';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,6 +24,15 @@ import {
 } from 'lucide-react';
 import type { SharedStack, CardStack, FriendProfile } from '@/lib/types';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+const headers = {
+  'apikey': supabaseKey,
+  'Authorization': `Bearer ${supabaseKey}`,
+  'Content-Type': 'application/json',
+};
+
 function LibraryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -36,34 +44,23 @@ function LibraryContent() {
   const [copying, setCopying] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const supabase = createClient();
-
   const loadSharedStacks = useCallback(async () => {
     try {
       setLoading(true);
 
       // Fetch public shared stacks
-      const { data: sharesData, error: sharesError } = await supabase
-        .from('shared_stacks')
-        .select(`
-          id,
-          stack_id,
-          shared_by,
-          is_public,
-          copy_count,
-          created_at
-        `)
-        .eq('is_public', true)
-        .order('copy_count', { ascending: false });
+      const sharesResponse = await fetch(
+        `${supabaseUrl}/rest/v1/shared_stacks?is_public=eq.true&order=copy_count.desc&select=id,stack_id,shared_by,is_public,copy_count,created_at`,
+        { headers }
+      );
 
-      if (sharesError) {
-        if (sharesError.message?.includes('does not exist')) {
-          setSharedStacks([]);
-          setLoading(false);
-          return;
-        }
-        throw sharesError;
+      if (!sharesResponse.ok) {
+        setSharedStacks([]);
+        setLoading(false);
+        return;
       }
+
+      const sharesData = await sharesResponse.json();
 
       if (!sharesData || sharesData.length === 0) {
         setSharedStacks([]);
@@ -72,34 +69,36 @@ function LibraryContent() {
       }
 
       // Get stack IDs and user IDs
-      const stackIds = Array.from(new Set(sharesData.map(s => s.stack_id)));
-      const userIds = Array.from(new Set(sharesData.map(s => s.shared_by)));
+      const stackIds = Array.from(new Set(sharesData.map((s: any) => s.stack_id)));
+      const userIds = Array.from(new Set(sharesData.map((s: any) => s.shared_by)));
 
       // Fetch stacks
-      const { data: stacksData } = await supabase
-        .from('card_stacks')
-        .select('id, title, description, target_language, native_language, card_count')
-        .in('id', stackIds);
+      const stacksResponse = await fetch(
+        `${supabaseUrl}/rest/v1/card_stacks?id=in.(${stackIds.join(',')})&select=id,title,description,target_language,native_language,card_count`,
+        { headers }
+      );
+      const stacksData = stacksResponse.ok ? await stacksResponse.json() : [];
 
       // Fetch profiles
-      const { data: profilesData } = await supabase
-        .from('user_profiles')
-        .select('id, email, display_name, avatar_url')
-        .in('id', userIds);
+      const profilesResponse = await fetch(
+        `${supabaseUrl}/rest/v1/user_profiles?id=in.(${userIds.join(',')})&select=id,email,display_name,avatar_url`,
+        { headers }
+      );
+      const profilesData = profilesResponse.ok ? await profilesResponse.json() : [];
 
-      const stackMap = new Map(stacksData?.map(s => [s.id, s]) || []);
+      const stackMap = new Map(stacksData?.map((s: any) => [s.id, s]) || []);
       const profileMap = new Map<string, FriendProfile>(
-        profilesData?.map(p => [p.id, p]) || []
+        profilesData?.map((p: any) => [p.id, p]) || []
       );
 
       // Combine data
       const enrichedStacks: SharedStack[] = sharesData
-        .map(share => ({
+        .map((share: any) => ({
           ...share,
           stack: stackMap.get(share.stack_id) as CardStack | undefined,
           sharer_profile: profileMap.get(share.shared_by),
         }))
-        .filter(s => s.stack); // Only include stacks that still exist
+        .filter((s: any) => s.stack);
 
       setSharedStacks(enrichedStacks);
     } catch (err: any) {
@@ -107,7 +106,7 @@ function LibraryContent() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     loadSharedStacks();
@@ -126,38 +125,41 @@ function LibraryContent() {
       setMessage(null);
 
       // First, fetch the original flashcards
-      const { data: originalCards, error: cardsError } = await supabase
-        .from('flashcards')
-        .select('*')
-        .eq('stack_id', sharedStack.stack_id)
-        .order('card_order', { ascending: true });
-
-      if (cardsError) throw cardsError;
+      const cardsResponse = await fetch(
+        `${supabaseUrl}/rest/v1/flashcards?stack_id=eq.${sharedStack.stack_id}&order=card_order&select=*`,
+        { headers }
+      );
+      const originalCards = cardsResponse.ok ? await cardsResponse.json() : [];
 
       // Create new stack for the user
-      const { data: newStack, error: stackError } = await supabase
-        .from('card_stacks')
-        .insert({
-          user_id: sessionUser.id,
-          title: sharedStack.stack.title,
-          description: sharedStack.stack.description,
-          target_language: sharedStack.stack.target_language,
-          native_language: sharedStack.stack.native_language,
-          card_count: originalCards?.length || 0,
-          completed_count: 0,
-          mastered_count: 0,
-          is_completed: false,
-          test_progress: 0,
-          test_notes: [],
-        })
-        .select()
-        .single();
+      const createStackResponse = await fetch(
+        `${supabaseUrl}/rest/v1/card_stacks`,
+        {
+          method: 'POST',
+          headers: { ...headers, 'Prefer': 'return=representation' },
+          body: JSON.stringify({
+            user_id: sessionUser.id,
+            title: sharedStack.stack.title,
+            description: sharedStack.stack.description,
+            target_language: sharedStack.stack.target_language,
+            native_language: sharedStack.stack.native_language,
+            card_count: originalCards?.length || 0,
+            completed_count: 0,
+            mastered_count: 0,
+            is_completed: false,
+            test_progress: 0,
+            test_notes: [],
+          }),
+        }
+      );
 
-      if (stackError) throw stackError;
+      if (!createStackResponse.ok) throw new Error('Failed to create stack');
+      const newStackData = await createStackResponse.json();
+      const newStack = newStackData?.[0];
 
       // Copy flashcards to the new stack
-      if (originalCards && originalCards.length > 0) {
-        const newCards = originalCards.map(card => ({
+      if (originalCards && originalCards.length > 0 && newStack) {
+        const newCards = originalCards.map((card: any) => ({
           stack_id: newStack.id,
           user_id: sessionUser.id,
           card_order: card.card_order,
@@ -172,22 +174,24 @@ function LibraryContent() {
           review_count: 0,
         }));
 
-        const { error: insertError } = await supabase
-          .from('flashcards')
-          .insert(newCards);
-
-        if (insertError) throw insertError;
+        await fetch(`${supabaseUrl}/rest/v1/flashcards`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(newCards),
+        });
       }
 
       // Update copy count
-      await supabase
-        .from('shared_stacks')
-        .update({ copy_count: (sharedStack.copy_count || 0) + 1 })
-        .eq('id', sharedStack.id);
+      await fetch(
+        `${supabaseUrl}/rest/v1/shared_stacks?id=eq.${sharedStack.id}`,
+        {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify({ copy_count: (sharedStack.copy_count || 0) + 1 }),
+        }
+      );
 
       setMessage({ type: 'success', text: 'Stack copied to your collection!' });
-      
-      // Refresh to show updated copy count
       loadSharedStacks();
     } catch (err: any) {
       console.error('Failed to copy stack:', err);
@@ -214,7 +218,6 @@ function LibraryContent() {
     return '?';
   };
 
-  // Loading state
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20">
@@ -302,19 +305,16 @@ function LibraryContent() {
                 className="bg-slate-800/50 border-slate-700 hover:bg-slate-800/70 transition-colors"
               >
                 <CardContent className="p-5">
-                  {/* Stack Title */}
                   <h3 className="font-semibold text-white text-lg mb-2 line-clamp-1">
                     {sharedStack.stack?.title || 'Untitled Stack'}
                   </h3>
 
-                  {/* Description */}
                   {sharedStack.stack?.description && (
                     <p className="text-sm text-slate-400 mb-3 line-clamp-2">
                       {sharedStack.stack.description}
                     </p>
                   )}
 
-                  {/* Badges */}
                   <div className="flex flex-wrap gap-2 mb-4">
                     <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
                       <Languages className="h-3 w-3 mr-1" />
@@ -325,7 +325,6 @@ function LibraryContent() {
                     </Badge>
                   </div>
 
-                  {/* Sharer Info */}
                   <div className="flex items-center justify-between pt-3 border-t border-slate-700/50">
                     <Link href={`/profile/${sharedStack.shared_by}`}>
                       <div className="flex items-center gap-2 hover:opacity-80">
@@ -346,7 +345,6 @@ function LibraryContent() {
                     </span>
                   </div>
 
-                  {/* Copy Button */}
                   <Button
                     onClick={() => handleCopyStack(sharedStack)}
                     disabled={copying === sharedStack.id || sharedStack.shared_by === sessionUser?.id}
@@ -387,4 +385,3 @@ export default function LibraryPage() {
     </Suspense>
   );
 }
-

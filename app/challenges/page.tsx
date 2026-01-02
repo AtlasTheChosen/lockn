@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
 import { useSession } from '@/hooks/use-session';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,15 @@ import {
 } from 'lucide-react';
 import type { Challenge, FriendProfile } from '@/lib/types';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+const headers = {
+  'apikey': supabaseKey,
+  'Authorization': `Bearer ${supabaseKey}`,
+  'Content-Type': 'application/json',
+};
+
 export default function ChallengesPage() {
   const router = useRouter();
   const { user: sessionUser, loading: sessionLoading } = useSession();
@@ -31,8 +39,6 @@ export default function ChallengesPage() {
   const [error, setError] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  const supabase = createClient();
-
   const loadChallenges = useCallback(async () => {
     if (!sessionUser) return;
 
@@ -41,20 +47,18 @@ export default function ChallengesPage() {
       setError(null);
 
       // Fetch all challenges where user is involved
-      const { data: challengesData, error: challengesError } = await supabase
-        .from('challenges')
-        .select('*')
-        .or(`challenger_id.eq.${sessionUser.id},challenged_id.eq.${sessionUser.id}`)
-        .order('created_at', { ascending: false });
+      const challengesResponse = await fetch(
+        `${supabaseUrl}/rest/v1/challenges?or=(challenger_id.eq.${sessionUser.id},challenged_id.eq.${sessionUser.id})&order=created_at.desc&select=*`,
+        { headers }
+      );
 
-      if (challengesError) {
-        if (challengesError.message?.includes('does not exist')) {
-          setChallenges([]);
-          setLoading(false);
-          return;
-        }
-        throw challengesError;
+      if (!challengesResponse.ok) {
+        setChallenges([]);
+        setLoading(false);
+        return;
       }
+
+      const challengesData = await challengesResponse.json();
 
       if (!challengesData || challengesData.length === 0) {
         setChallenges([]);
@@ -64,23 +68,24 @@ export default function ChallengesPage() {
 
       // Get all unique user IDs
       const userIds = new Set<string>();
-      challengesData.forEach(c => {
+      challengesData.forEach((c: any) => {
         userIds.add(c.challenger_id);
         userIds.add(c.challenged_id);
       });
 
       // Fetch profiles
-      const { data: profilesData } = await supabase
-        .from('user_profiles')
-        .select('id, display_name, avatar_url, email')
-        .in('id', Array.from(userIds));
+      const profilesResponse = await fetch(
+        `${supabaseUrl}/rest/v1/user_profiles?id=in.(${Array.from(userIds).join(',')})&select=id,display_name,avatar_url,email`,
+        { headers }
+      );
+      const profilesData = profilesResponse.ok ? await profilesResponse.json() : [];
 
       const profileMap = new Map<string, FriendProfile>(
-        profilesData?.map(p => [p.id, p]) || []
+        profilesData?.map((p: any) => [p.id, p]) || []
       );
 
       // Enrich challenges with profiles
-      const enrichedChallenges: Challenge[] = challengesData.map(challenge => ({
+      const enrichedChallenges: Challenge[] = challengesData.map((challenge: any) => ({
         ...challenge,
         challenger_profile: profileMap.get(challenge.challenger_id),
         challenged_profile: profileMap.get(challenge.challenged_id),
@@ -93,30 +98,26 @@ export default function ChallengesPage() {
     } finally {
       setLoading(false);
     }
-  }, [sessionUser, supabase]);
+  }, [sessionUser]);
 
-  // Handle authentication
   useEffect(() => {
     if (!sessionLoading && !sessionUser) {
       router.push('/auth/login');
     }
   }, [sessionUser, sessionLoading, router]);
 
-  // Load challenges
   useEffect(() => {
     if (sessionUser) {
       loadChallenges();
     }
   }, [sessionUser, loadChallenges]);
 
-  // Filter challenges by status
   const activeChallenges = challenges.filter(c => c.status === 'active');
   const pendingChallenges = challenges.filter(c => c.status === 'pending');
   const completedChallenges = challenges.filter(c => 
     c.status === 'completed' || c.status === 'declined' || c.status === 'cancelled'
   );
 
-  // Loading state
   if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20">
@@ -169,7 +170,6 @@ export default function ChallengesPage() {
           </Button>
         </div>
 
-        {/* Error state */}
         {error && (
           <Card className="bg-red-900/20 border-red-800 mb-6">
             <CardContent className="py-4 text-center text-red-400">
@@ -178,7 +178,6 @@ export default function ChallengesPage() {
           </Card>
         )}
 
-        {/* Tabs */}
         <Tabs defaultValue="active" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-slate-800/50 mb-6">
             <TabsTrigger value="active" className="gap-2">
@@ -272,7 +271,6 @@ export default function ChallengesPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Create Challenge Modal */}
         <CreateChallengeModal
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
@@ -283,9 +281,3 @@ export default function ChallengesPage() {
     </div>
   );
 }
-
-
-
-
-
-

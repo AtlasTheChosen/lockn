@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase/client';
+import { useSession } from '@/hooks/use-session';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,64 +11,82 @@ import { ArrowLeft, AlertCircle, RefreshCw } from 'lucide-react';
 import ProfileSettings from '@/components/dashboard/ProfileSettings';
 import type { UserProfile } from '@/lib/types';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
 export default function ProfilePage() {
   const router = useRouter();
+  const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const loadData = useCallback(async () => {
+    if (!sessionUser) return;
+
     try {
       setError(null);
-      const supabase = createClient();
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        router.push('/auth/login');
+      
+      // Use session profile if available
+      if (sessionProfile) {
+        setProfile(sessionProfile);
+        setLoading(false);
         return;
       }
 
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      if (!profileData) {
-        // Create profile if it doesn't exist
-        const { data: newProfile, error: insertError } = await supabase
-          .from('user_profiles')
-          .insert({
-            id: user.id,
-            email: user.email,
-          })
-          .select()
-          .single();
-
-        if (insertError && !insertError.message?.includes('duplicate key')) {
-          throw insertError;
+      const profileResponse = await fetch(
+        `${supabaseUrl}/rest/v1/user_profiles?id=eq.${sessionUser.id}&select=*`,
+        {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
         }
-        setProfile(newProfile);
+      );
+      
+      const profileData = profileResponse.ok ? await profileResponse.json() : [];
+
+      if (!profileData || profileData.length === 0) {
+        // Create profile if it doesn't exist
+        const createResponse = await fetch(
+          `${supabaseUrl}/rest/v1/user_profiles`,
+          {
+            method: 'POST',
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify({
+              id: sessionUser.id,
+              email: sessionUser.email,
+            }),
+          }
+        );
+        const newProfile = createResponse.ok ? await createResponse.json() : [];
+        setProfile(newProfile?.[0] || null);
       } else {
-        setProfile(profileData);
+        setProfile(profileData[0]);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load profile');
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [sessionUser, sessionProfile]);
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!sessionUser) {
+      router.push('/auth/login');
+      return;
+    }
     loadData();
-  }, [loadData]);
+  }, [sessionUser, sessionLoading, router, loadData]);
 
-  if (loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -160,4 +178,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

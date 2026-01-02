@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from '@/hooks/use-session';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,70 +38,81 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { UserProfile } from '@/lib/types';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
 export default function AccountSettingsPage() {
   const router = useRouter();
+  const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [pauseTracking, setPauseTracking] = useState(false);
   const [savingPause, setSavingPause] = useState(false);
 
   const loadData = useCallback(async () => {
+    if (!sessionUser) return;
+    
     try {
       setError(null);
-      const supabase = createClient();
-
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-      if (userError || !user) {
-        router.push('/auth/login');
-        return;
+      
+      // Use session profile if available
+      if (sessionProfile) {
+        setProfile(sessionProfile);
+      } else {
+        const profileResponse = await fetch(
+          `${supabaseUrl}/rest/v1/user_profiles?id=eq.${sessionUser.id}&select=*`,
+          {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+        const profileData = profileResponse.ok ? await profileResponse.json() : [];
+        setProfile(profileData?.[0] || null);
       }
-
-      setUser(user);
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        throw profileError;
-      }
-
-      setProfile(profileData);
 
       // Load pause tracking state from user_stats
-      const { data: statsData } = await supabase
-        .from('user_stats')
-        .select('pause_weekly_tracking')
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (statsData) {
-        setPauseTracking(statsData.pause_weekly_tracking || false);
+      const statsResponse = await fetch(
+        `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${sessionUser.id}&select=pause_weekly_tracking`,
+        {
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      const statsData = statsResponse.ok ? await statsResponse.json() : [];
+      if (statsData?.[0]) {
+        setPauseTracking(statsData[0].pause_weekly_tracking || false);
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load account data');
     } finally {
       setLoading(false);
     }
-  }, [router]);
+  }, [sessionUser, sessionProfile]);
 
   const handleTogglePause = async (paused: boolean) => {
-    if (!user) return;
+    if (!sessionUser) return;
     
     setSavingPause(true);
     try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('user_stats')
-        .update({ pause_weekly_tracking: paused })
-        .eq('user_id', user.id);
-
-      if (error) throw error;
+      await fetch(
+        `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${sessionUser.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ pause_weekly_tracking: paused }),
+        }
+      );
       setPauseTracking(paused);
     } catch (err) {
       console.error('Failed to update pause setting:', err);
@@ -110,8 +122,13 @@ export default function AccountSettingsPage() {
   };
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!sessionUser) {
+      router.push('/auth/login');
+      return;
+    }
     loadData();
-  }, [loadData]);
+  }, [sessionUser, sessionLoading, router, loadData]);
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -120,7 +137,7 @@ export default function AccountSettingsPage() {
     router.refresh();
   };
 
-  if (loading) {
+  if (sessionLoading || loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -212,7 +229,7 @@ export default function AccountSettingsPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between items-center py-2 border-b border-slate-700">
                 <span className="text-slate-400">Email</span>
-                <span className="text-white">{user?.email}</span>
+                <span className="text-white">{sessionUser?.email}</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-slate-700">
                 <span className="text-slate-400">Account Created</span>
