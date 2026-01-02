@@ -201,6 +201,7 @@ export default function AchievementsPage() {
       return;
     }
 
+    const userId = sessionUser.id; // Capture for TypeScript
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -211,7 +212,7 @@ export default function AchievementsPage() {
         
         if (!profile) {
           const profileResponse = await fetch(
-            `${supabaseUrl}/rest/v1/user_profiles?id=eq.${sessionUser.id}&select=badges,is_premium,languages_learning`,
+            `${supabaseUrl}/rest/v1/user_profiles?id=eq.${userId}&select=badges,is_premium,languages_learning`,
             {
               headers: {
                 'apikey': supabaseKey!,
@@ -226,7 +227,7 @@ export default function AchievementsPage() {
 
         // Fetch user stats
         const statsResponse = await fetch(
-          `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${sessionUser.id}&select=current_streak,longest_streak,total_cards_mastered,total_stacks_completed,daily_cards_learned,tests_completed,perfect_test_streak,daily_goal_streak,ice_breaker_count`,
+          `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}&select=current_streak,longest_streak,total_cards_mastered,total_stacks_completed,daily_cards_learned,tests_completed,perfect_test_streak,daily_goal_streak,ice_breaker_count`,
           {
             headers: {
               'apikey': supabaseKey!,
@@ -240,7 +241,7 @@ export default function AchievementsPage() {
 
         // Fetch friends count
         const friendsResponse = await fetch(
-          `${supabaseUrl}/rest/v1/friendships?status=eq.accepted&or=(user_id.eq.${sessionUser.id},friend_id.eq.${sessionUser.id})&select=id`,
+          `${supabaseUrl}/rest/v1/friendships?status=eq.accepted&or=(user_id.eq.${userId},friend_id.eq.${userId})&select=id`,
           {
             headers: {
               'apikey': supabaseKey!,
@@ -263,7 +264,7 @@ export default function AchievementsPage() {
         setStats(badgeStats);
 
         if (userStats) {
-          await checkAndAwardBadges(sessionUser.id, badgeStats, earnedBadges);
+          await checkAndAwardBadges(userId, badgeStats, earnedBadges);
         }
       } catch (error) {
         console.error('Error loading achievements:', error);
