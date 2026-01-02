@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { TopNav, BottomNav } from '@/components/navigation';
+
+// Custom event name for profile updates
+export const PROFILE_UPDATED_EVENT = 'profile-updated';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -16,44 +19,54 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  useEffect(() => {
-    const loadUserData = async () => {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
+  const loadUserData = useCallback(async () => {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session?.user) {
+      setIsLoggedIn(true);
       
-      if (session?.user) {
-        setIsLoggedIn(true);
-        
-        // Get user profile
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('display_name, avatar_url')
-          .eq('id', session.user.id)
-          .single();
-        
-        if (profile?.display_name) {
-          setDisplayName(profile.display_name);
-        }
-        if (profile?.avatar_url) {
-          setAvatarUrl(profile.avatar_url);
-        }
-        
-        // Get user stats for streak
-        const { data: stats } = await supabase
-          .from('user_stats')
-          .select('current_streak, streak_frozen')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        if (stats) {
-          setStreak(stats.current_streak || 0);
-          setStreakFrozen(stats.streak_frozen || false);
-        }
+      // Get user profile
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('display_name, avatar_url')
+        .eq('id', session.user.id)
+        .single();
+      
+      if (profile?.display_name) {
+        setDisplayName(profile.display_name);
       }
+      if (profile?.avatar_url) {
+        setAvatarUrl(profile.avatar_url);
+      }
+      
+      // Get user stats for streak
+      const { data: stats } = await supabase
+        .from('user_stats')
+        .select('current_streak, streak_frozen')
+        .eq('user_id', session.user.id)
+        .single();
+      
+      if (stats) {
+        setStreak(stats.current_streak || 0);
+        setStreakFrozen(stats.streak_frozen || false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUserData();
+    
+    // Listen for profile update events to refresh nav data
+    const handleProfileUpdate = () => {
+      loadUserData();
     };
     
-    loadUserData();
-  }, []);
+    window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdate);
+    return () => {
+      window.removeEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdate);
+    };
+  }, [loadUserData]);
 
   if (hideNav) {
     return <>{children}</>;

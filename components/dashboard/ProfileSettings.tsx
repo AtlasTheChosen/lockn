@@ -22,6 +22,7 @@ import {
 import type { UserProfile, Badge as BadgeType } from '@/lib/types';
 import Link from 'next/link';
 import { AVATAR_COUNT, getAvatarUrl } from '@/lib/avatars';
+import { PROFILE_UPDATED_EVENT } from '@/components/layout/AppLayout';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -124,6 +125,8 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
 
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       onUpdate();
+      // Dispatch event to update nav bars immediately
+      window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
     } finally {
@@ -189,19 +192,37 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
                   <button
                     key={id}
                     onClick={async () => {
-                      // Update local state immediately
+                      // Update local state immediately for responsive UI
+                      const previousUrl = avatarUrl;
                       setAvatarUrl(url);
                       setShowAvatarPicker(false);
-                      // Save to database using native fetch
-                      fetch(`${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`, {
-                        method: 'PATCH',
-                        headers: {
-                          'apikey': supabaseKey,
-                          'Authorization': `Bearer ${supabaseKey}`,
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({ avatar_url: url }),
-                      }).catch(() => {});
+                      
+                      try {
+                        // Save to database
+                        const response = await fetch(`${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`, {
+                          method: 'PATCH',
+                          headers: {
+                            'apikey': supabaseKey,
+                            'Authorization': `Bearer ${supabaseKey}`,
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({ avatar_url: url }),
+                        });
+                        
+                        if (!response.ok) {
+                          throw new Error('Failed to save avatar');
+                        }
+                        
+                        // Notify parent to refresh data
+                        onUpdate();
+                        // Dispatch event to update nav bars immediately
+                        window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
+                        setMessage({ type: 'success', text: 'Avatar updated!' });
+                      } catch (error) {
+                        // Revert on error
+                        setAvatarUrl(previousUrl);
+                        setMessage({ type: 'error', text: 'Failed to save avatar. Please try again.' });
+                      }
                     }}
                     className={`w-12 h-12 rounded-full overflow-hidden transition-all hover:scale-110 ${
                       isSelected 
