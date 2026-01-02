@@ -38,6 +38,8 @@ export default function LeaderboardPage() {
     try {
       setError(null);
       
+      console.log('[Leaderboard] Loading data...');
+      
       // Fetch profiles using native fetch
       const profilesResponse = await fetch(
         `${supabaseUrl}/rest/v1/user_profiles?select=id,display_name,avatar_url&limit=50`,
@@ -50,11 +52,16 @@ export default function LeaderboardPage() {
         }
       );
       
+      console.log('[Leaderboard] Profiles response:', profilesResponse.status);
+      
       if (!profilesResponse.ok) {
+        const errorText = await profilesResponse.text();
+        console.error('[Leaderboard] Profiles error:', errorText);
         throw new Error(`Failed to fetch profiles: ${profilesResponse.status}`);
       }
       
       const profilesData = await profilesResponse.json();
+      console.log('[Leaderboard] Profiles count:', profilesData?.length || 0);
 
       // Fetch stats using native fetch
       const statsResponse = await fetch(
@@ -68,7 +75,10 @@ export default function LeaderboardPage() {
         }
       );
       
+      console.log('[Leaderboard] Stats response:', statsResponse.status);
       const statsData = statsResponse.ok ? await statsResponse.json() : [];
+      console.log('[Leaderboard] Stats count:', statsData?.length || 0);
+      
       const statsMap = new Map(statsData?.map((s: any) => [s.user_id, s]) || []);
       
       const combinedUsers: LeaderboardUser[] = (profilesData || []).map((profile: any) => {
@@ -84,6 +94,7 @@ export default function LeaderboardPage() {
         };
       });
 
+      console.log('[Leaderboard] Combined users:', combinedUsers.length);
       setUsers(combinedUsers);
       
     } catch (err: any) {
