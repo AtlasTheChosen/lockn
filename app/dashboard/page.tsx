@@ -40,8 +40,10 @@ export default function DashboardPage() {
 
   const loadDashboardData = useCallback(async (userId: string, userEmail?: string) => {
     const supabase = createClient();
-    
-    console.log('[Dashboard] Loading data for user:', userId);
+    console.log('[DBG] loadDashboardData start', { userId, hasSessionProfile: !!sessionProfile });
+    // #region agent log
+    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H1',location:'app/dashboard/page.tsx:loadDashboardData',message:'start loadDashboardData',data:{userId,hasSessionProfile:!!sessionProfile},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail start', e?.message);});
+    // #endregion
     
     try {
       setError(null);
@@ -84,6 +86,11 @@ export default function DashboardPage() {
         }
       }
 
+      console.log('[DBG] after profile', { hasProfile: !!profile });
+      // #region agent log
+      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after profile',data:{hasProfile:!!profile},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after profile', e?.message);});
+      // #endregion
+
       // Fetch stacks
       const { data: stacksData, error: stacksError } = await supabase
         .from('card_stacks')
@@ -94,6 +101,11 @@ export default function DashboardPage() {
       if (stacksError) {
         console.error('[Dashboard] Stacks error:', stacksError.message);
       }
+
+      console.log('[DBG] after stacks', { stacksCount: stacksData?.length ?? null, stacksError: stacksError?.message ?? null });
+      // #region agent log
+      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stacks',data:{stacksCount:stacksData?.length ?? null,stacksError:stacksError?.message ?? null},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stacks', e?.message);});
+      // #endregion
 
       // Fetch stats
       let stats = null;
@@ -117,6 +129,11 @@ export default function DashboardPage() {
       } else {
         stats = statsData;
       }
+
+      console.log('[DBG] after stats', { hasStats: !!stats, statsError: statsError?.message ?? null });
+      // #region agent log
+      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H3',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stats',data:{hasStats:!!stats,statsError:statsError?.message ?? null},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stats', e?.message);});
+      // #endregion
 
       const userName = profile?.display_name || userEmail?.split('@')[0] || 'Guest';
 
@@ -224,10 +241,22 @@ export default function DashboardPage() {
     } catch (err: any) {
       console.error('[Dashboard] Error loading data:', err);
       setError(err.message || 'Failed to load dashboard data');
+      console.log('[DBG] catch loadDashboardData', { error: err?.message ?? 'unknown' });
+      // #region agent log
+      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H4',location:'app/dashboard/page.tsx:loadDashboardData',message:'catch loadDashboardData',data:{error:err?.message ?? 'unknown'},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail catch', e?.message);});
+      // #endregion
     } finally {
       setDataLoading(false);
+      console.log('[DBG] finally loadDashboardData setDataLoading false');
+      // #region agent log
+      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H1',location:'app/dashboard/page.tsx:loadDashboardData',message:'finally loadDashboardData',data:{dataLoading:false},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail finally', e?.message);});
+      // #endregion
     }
   }, [sessionProfile, checkAndAwardBadges]);
+
+  useEffect(() => {
+    console.log('[DBG] render state', { sessionLoading, dataLoading, error, hasUser: !!sessionUser, hasProfile: !!sessionProfile });
+  }, [sessionLoading, dataLoading, error, sessionUser, sessionProfile]);
 
   useEffect(() => {
     if (sessionLoading) return;
