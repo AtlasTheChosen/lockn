@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { TopNav, BottomNav } from '@/components/navigation';
 
-// Custom event name for profile updates
+// Custom event names for updates
 export const PROFILE_UPDATED_EVENT = 'profile-updated';
+export const STATS_UPDATED_EVENT = 'stats-updated';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -79,14 +80,16 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   useEffect(() => {
     loadUserData();
     
-    // Listen for profile update events to refresh nav data
-    const handleProfileUpdate = () => {
+    // Listen for profile and stats update events to refresh nav data
+    const handleUpdate = () => {
       loadUserData();
     };
     
-    window.addEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdate);
+    window.addEventListener(PROFILE_UPDATED_EVENT, handleUpdate);
+    window.addEventListener(STATS_UPDATED_EVENT, handleUpdate);
     return () => {
-      window.removeEventListener(PROFILE_UPDATED_EVENT, handleProfileUpdate);
+      window.removeEventListener(PROFILE_UPDATED_EVENT, handleUpdate);
+      window.removeEventListener(STATS_UPDATED_EVENT, handleUpdate);
     };
   }, [loadUserData]);
 

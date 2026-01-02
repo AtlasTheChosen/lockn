@@ -17,6 +17,7 @@ import { shouldResetWeek, archiveWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '
 import { isNewDay, getTodayDate, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
 import { useBadgeChecker, buildBadgeStats } from '@/hooks/useBadgeChecker';
 import type { Badge as BadgeType } from '@/lib/types';
+import { STATS_UPDATED_EVENT } from '@/components/layout/AppLayout';
 
 interface Props {
   stack: CardStack;
@@ -233,6 +234,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
               last_activity_date: today,
             })
             .eq('user_id', stack.user_id);
+          
+          // Notify nav to update streak display
+          window.dispatchEvent(new Event(STATS_UPDATED_EVENT));
         }
       } catch (e) {
         console.error('Daily streak tracking error:', e);
@@ -1116,6 +1120,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                 ice_breaker_count: newIceBreakerCount,
               })
               .eq('user_id', stack.user_id);
+            
+            // Notify nav to update streak display
+            window.dispatchEvent(new Event(STATS_UPDATED_EVENT));
 
             // Check for new badges after test completion
             try {
@@ -1184,6 +1191,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   : (userStats.ice_breaker_count || 0),
               })
               .eq('user_id', stack.user_id);
+            
+            // Notify nav to update streak display
+            window.dispatchEvent(new Event(STATS_UPDATED_EVENT));
           }
         } catch (e) {
           console.error('Streak unfreeze error:', e);
