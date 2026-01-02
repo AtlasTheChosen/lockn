@@ -47,43 +47,30 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
   const [authModalMode, setAuthModalMode] = useState<'signup' | 'login'>('login');
   const supabase = createClient();
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     // Close mobile menu if open
     setMobileMenuOpen(false);
     
-    // 1. Clear ALL storage (localStorage, sessionStorage, cookies)
+    // Clear storage synchronously
     try {
-      // Clear localStorage
-      const localKeys = Object.keys(localStorage);
-      localKeys.forEach(key => {
+      Object.keys(localStorage).forEach(key => {
         if (key.includes('supabase') || key.includes('sb-') || key.includes('auth') || key.includes('token')) {
           localStorage.removeItem(key);
         }
       });
-      
-      // Clear sessionStorage
-      const sessionKeys = Object.keys(sessionStorage);
-      sessionKeys.forEach(key => {
+      Object.keys(sessionStorage).forEach(key => {
         if (key.includes('supabase') || key.includes('sb-') || key.includes('auth') || key.includes('token')) {
           sessionStorage.removeItem(key);
         }
       });
-      
-      // Clear ALL cookies for current domain
       document.cookie.split(';').forEach(cookie => {
         const name = cookie.split('=')[0].trim();
         document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
-        document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${window.location.hostname}`;
       });
-    } catch (e) {
-      // Ignore errors
-    }
+    } catch (e) {}
     
-    // 2. Fire signOut in background
-    supabase.auth.signOut({ scope: 'global' }).catch(() => {});
-    
-    // 3. Hard redirect to home (with cache bust)
-    window.location.replace('/');
+    // Redirect IMMEDIATELY to home - don't call signOut (it triggers events that cause race condition)
+    window.location.href = '/';
   };
 
   const getInitials = () => {

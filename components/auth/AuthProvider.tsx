@@ -35,10 +35,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       }
 
       if (event === 'SIGNED_OUT') {
-        // Redirect to home if not already there or on auth pages
-        if (!pathname?.startsWith('/auth') && pathname !== '/') {
-          router.push('/');
-        }
+        // Don't do anything - the logout handler does the redirect
+        // Calling router.push/refresh here causes race conditions
         router.refresh();
       }
     });
