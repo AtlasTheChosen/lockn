@@ -200,6 +200,10 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
                       
                       try {
                         // Save to database using user's access token for RLS
+                        console.log('[Avatar] Saving avatar, token length:', accessToken?.length);
+                        console.log('[Avatar] Profile ID:', profile.id);
+                        console.log('[Avatar] New URL:', url);
+                        
                         const response = await fetch(`${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`, {
                           method: 'PATCH',
                           headers: {
@@ -210,19 +214,25 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
                           body: JSON.stringify({ avatar_url: url }),
                         });
                         
+                        console.log('[Avatar] Response status:', response.status);
+                        
                         if (!response.ok) {
-                          throw new Error('Failed to save avatar');
+                          const errorText = await response.text();
+                          console.error('[Avatar] Error response:', errorText);
+                          throw new Error(`Failed to save avatar: ${response.status}`);
                         }
                         
+                        console.log('[Avatar] Save successful!');
                         // Notify parent to refresh data
                         onUpdate();
                         // Dispatch event to update nav bars immediately
                         window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
                         setMessage({ type: 'success', text: 'Avatar updated!' });
-                      } catch (error) {
+                      } catch (error: any) {
                         // Revert on error
+                        console.error('[Avatar] Error:', error);
                         setAvatarUrl(previousUrl);
-                        setMessage({ type: 'error', text: 'Failed to save avatar. Please try again.' });
+                        setMessage({ type: 'error', text: error.message || 'Failed to save avatar. Please try again.' });
                       }
                     }}
                     className={`w-12 h-12 rounded-full overflow-hidden transition-all hover:scale-110 ${
