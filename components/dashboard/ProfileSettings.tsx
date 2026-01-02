@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,6 +22,9 @@ import {
 import type { UserProfile, Badge as BadgeType } from '@/lib/types';
 import Link from 'next/link';
 import { AVATAR_COUNT, getAvatarUrl } from '@/lib/avatars';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const AVAILABLE_LANGUAGES = [
   { code: 'es', name: 'Spanish', emoji: '🇪🇸' },
@@ -75,8 +77,6 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
 
-  const supabase = createClient();
-
   useEffect(() => {
     if (profile.badges) {
       setBadges(profile.badges);
@@ -99,20 +99,28 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
       setSaving(true);
       setMessage(null);
 
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          display_name: displayName || null,
-          bio: bio || null,
-          avatar_url: avatarUrl,
-          profile_public: profilePublic,
-          languages_learning: languagesLearning,
-          theme_preference: theme,
-          notification_prefs: notificationPrefs,
-        })
-        .eq('id', profile.id);
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            display_name: displayName || null,
+            bio: bio || null,
+            avatar_url: avatarUrl,
+            profile_public: profilePublic,
+            languages_learning: languagesLearning,
+            theme_preference: theme,
+            notification_prefs: notificationPrefs,
+          }),
+        }
+      );
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to update profile');
 
       setMessage({ type: 'success', text: 'Profile updated successfully!' });
       onUpdate();
@@ -184,11 +192,16 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
                       // Update local state immediately
                       setAvatarUrl(url);
                       setShowAvatarPicker(false);
-                      // Save to database (don't call onUpdate to avoid state reset)
-                      await supabase
-                        .from('user_profiles')
-                        .update({ avatar_url: url })
-                        .eq('id', profile.id);
+                      // Save to database using native fetch
+                      fetch(`${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`, {
+                        method: 'PATCH',
+                        headers: {
+                          'apikey': supabaseKey,
+                          'Authorization': `Bearer ${supabaseKey}`,
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ avatar_url: url }),
+                      }).catch(() => {});
                     }}
                     className={`w-12 h-12 rounded-full overflow-hidden transition-all hover:scale-110 ${
                       isSelected 

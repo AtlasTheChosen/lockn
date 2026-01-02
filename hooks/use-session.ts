@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User } from '@supabase/supabase-js';
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
 export function useSession() {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -16,59 +19,64 @@ export function useSession() {
   useEffect(() => {
     // Prevent double initialization
     if (initialized.current) {
-      console.log('[useSession] Already initialized, skipping');
       return;
     }
     initialized.current = true;
 
-    console.log('[useSession] Initializing (once)...');
-
-    // Helper to fetch profile
+    // Helper to fetch profile using native fetch (avoids Supabase client hanging)
     const fetchProfile = async (userId: string) => {
       try {
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
         
-        if (error) {
-          console.warn('[useSession] Profile error:', error.message);
+        const response = await fetch(
+          `${supabaseUrl}/rest/v1/user_profiles?id=eq.${userId}&select=*`,
+          {
+            headers: {
+              'apikey': supabaseKey,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+            signal: controller.signal,
+          }
+        );
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          console.warn('[useSession] Profile fetch failed:', response.status);
           return null;
         }
-        return data;
-      } catch (e) {
-        console.warn('[useSession] Profile exception:', e);
+        
+        const data = await response.json();
+        return data?.[0] || null;
+      } catch (e: any) {
+        if (e.name === 'AbortError') {
+          console.warn('[useSession] Profile fetch timed out');
+        } else {
+          console.warn('[useSession] Profile exception:', e);
+        }
         return null;
       }
     };
 
     // Helper to handle session
     const handleSession = async (session: any, source: string) => {
-      console.log(`[useSession] ${source}:`, { 
-        hasSession: !!session, 
-        userId: session?.user?.id 
-      });
-
       if (session?.user) {
         setUser(session.user);
         const profileData = await fetchProfile(session.user.id);
         setProfile(profileData);
-        console.log(`[useSession] ${source} - User set:`, session.user.id);
       } else {
         setUser(null);
         setProfile(null);
-        console.log(`[useSession] ${source} - No user`);
       }
       
       setLoading(false);
-      console.log(`[useSession] ${source} - Loading: false`);
     };
 
     // Get initial session
     const initSession = async () => {
       try {
-        console.log('[useSession] Calling getSession...');
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
@@ -92,13 +100,11 @@ export function useSession() {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[useSession] Auth event:', event);
       await handleSession(session, `Event: ${event}`);
     });
 
     return () => {
       subscription.unsubscribe();
-      console.log('[useSession] Unsubscribed');
     };
   }, []); // Empty deps - run once only
 
