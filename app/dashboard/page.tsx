@@ -110,20 +110,29 @@ export default function DashboardPage() {
 
       // Fetch stacks with timeout
       log('stacks fetch start');
+      
+      // Check Supabase client auth state
+      const { data: { session: clientSession } } = await supabase.auth.getSession();
+      log('stacks pre-check auth', { hasClientSession: !!clientSession, clientUserId: clientSession?.user?.id });
+      
       let stacksData: any[] | null = null;
       let stacksError: any = null;
       try {
+        log('stacks creating promise');
         const stacksPromise = supabase
           .from('card_stacks')
           .select('*')
           .eq('user_id', userId)
           .order('created_at', { ascending: false });
         
+        log('stacks promise created, starting race');
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Stacks query timeout (10s)')), 10000)
         );
         
+        log('stacks awaiting race');
         const result = await Promise.race([stacksPromise, timeoutPromise]) as any;
+        log('stacks race resolved');
         stacksData = result.data;
         stacksError = result.error;
         log('stacks fetch completed', { stacksCount: stacksData?.length ?? 0 });
