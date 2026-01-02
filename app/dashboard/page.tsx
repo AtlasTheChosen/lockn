@@ -40,7 +40,8 @@ export default function DashboardPage() {
 
   const loadDashboardData = useCallback(async (userId: string, userEmail?: string) => {
     const supabase = createClient();
-    console.log('[DBG] loadDashboardData start', { userId, hasSessionProfile: !!sessionProfile });
+    const log = (msg: string, data?: any) => console.log('[DBG] dashboard', msg, data ?? '');
+    log('start loadDashboardData', { userId, hasSessionProfile: !!sessionProfile });
     // #region agent log
     fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H1',location:'app/dashboard/page.tsx:loadDashboardData',message:'start loadDashboardData',data:{userId,hasSessionProfile:!!sessionProfile},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail start', e?.message);});
     // #endregion
@@ -49,26 +50,34 @@ export default function DashboardPage() {
       setError(null);
       
       // Fetch profile
-      // Fetch profile
       let profile = sessionProfile;
       if (!profile) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
+        log('profile fetch start', { userId });
+        try {
+          const { data: profileData, error: profileError } = await supabase
+            .from('user_profiles')
+            .select('*')
+            .eq('id', userId)
+            .maybeSingle();
 
-        if (profileError) {
-          if (profileError.code === 'PGRST116' || !profileData) {
-            const { data: newProfile } = await supabase
-              .from('user_profiles')
-              .insert({ id: userId, email: userEmail })
-              .select()
-              .single();
-            profile = newProfile;
+          if (profileError) {
+            log('profile fetch error', { message: profileError.message, code: profileError.code });
+            if (profileError.code === 'PGRST116' || !profileData) {
+              const { data: newProfile } = await supabase
+                .from('user_profiles')
+                .insert({ id: userId, email: userEmail })
+                .select()
+                .single();
+              profile = newProfile;
+              log('profile created', { hasProfile: !!profile });
+            }
+          } else {
+            profile = profileData;
+            log('profile fetch success', { hasProfile: !!profile });
           }
-        } else {
-          profile = profileData;
+        } catch (e: any) {
+          log('profile fetch exception', { error: e?.message });
+          throw e;
         }
       }
 
@@ -92,6 +101,7 @@ export default function DashboardPage() {
       // #endregion
 
       // Fetch stacks
+      log('stacks fetch start');
       const { data: stacksData, error: stacksError } = await supabase
         .from('card_stacks')
         .select('*')
@@ -100,15 +110,18 @@ export default function DashboardPage() {
 
       if (stacksError) {
         console.error('[Dashboard] Stacks error:', stacksError.message);
+        log('stacks fetch error', { message: stacksError.message });
       }
 
       console.log('[DBG] after stacks', { stacksCount: stacksData?.length ?? null, stacksError: stacksError?.message ?? null });
+      log('after stacks', { stacksCount: stacksData?.length ?? null, stacksError: stacksError?.message ?? null });
       // #region agent log
       fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stacks',data:{stacksCount:stacksData?.length ?? null,stacksError:stacksError?.message ?? null},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stacks', e?.message);});
       // #endregion
 
       // Fetch stats
       let stats = null;
+      log('stats fetch start');
       const { data: statsData, error: statsError } = await supabase
         .from('user_stats')
         .select('*')
@@ -116,6 +129,7 @@ export default function DashboardPage() {
         .maybeSingle();
 
       if (statsError) {
+        log('stats fetch error', { message: statsError.message });
         try {
           const { data: newStats } = await supabase
             .from('user_stats')
@@ -123,6 +137,7 @@ export default function DashboardPage() {
             .select()
             .single();
           stats = newStats;
+          log('stats created', { hasStats: !!stats });
         } catch (e) {
           console.warn('[Dashboard] Could not create stats:', e);
         }
@@ -131,6 +146,7 @@ export default function DashboardPage() {
       }
 
       console.log('[DBG] after stats', { hasStats: !!stats, statsError: statsError?.message ?? null });
+      log('after stats', { hasStats: !!stats, statsError: statsError?.message ?? null });
       // #region agent log
       fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H3',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stats',data:{hasStats:!!stats,statsError:statsError?.message ?? null},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stats', e?.message);});
       // #endregion
