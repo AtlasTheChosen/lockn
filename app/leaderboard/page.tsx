@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 import { useSession } from '@/hooks/use-session';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, RefreshCw, Trophy, TrendingUp, Calendar, Target, ArrowLeft, Crown, Medal } from 'lucide-react';
@@ -33,26 +32,47 @@ export default function LeaderboardPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('weekly_avg');
 
   const loadLeaderboardData = useCallback(async () => {
-    const supabase = createClient();
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
     try {
       setError(null);
       
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('user_profiles')
-        .select('id, display_name, avatar_url')
-        .limit(50);
-
-      if (profilesError) throw profilesError;
-
-      const { data: statsData } = await supabase
-        .from('user_stats')
-        .select('user_id, current_week_cards, weekly_cards_history, total_stacks_completed');
-
-      const statsMap = new Map(statsData?.map(s => [s.user_id, s]) || []);
+      // Fetch profiles using native fetch
+      const profilesResponse = await fetch(
+        `${supabaseUrl}/rest/v1/user_profiles?select=id,display_name,avatar_url&limit=50`,
+        {
+          headers: {
+            'apikey': supabaseKey!,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
       
-      const combinedUsers: LeaderboardUser[] = (profilesData || []).map(profile => {
-        const userStats = statsMap.get(profile.id);
+      if (!profilesResponse.ok) {
+        throw new Error(`Failed to fetch profiles: ${profilesResponse.status}`);
+      }
+      
+      const profilesData = await profilesResponse.json();
+
+      // Fetch stats using native fetch
+      const statsResponse = await fetch(
+        `${supabaseUrl}/rest/v1/user_stats?select=user_id,current_week_cards,weekly_cards_history,total_stacks_completed`,
+        {
+          headers: {
+            'apikey': supabaseKey!,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      
+      const statsData = statsResponse.ok ? await statsResponse.json() : [];
+      const statsMap = new Map(statsData?.map((s: any) => [s.user_id, s]) || []);
+      
+      const combinedUsers: LeaderboardUser[] = (profilesData || []).map((profile: any) => {
+        const userStats = statsMap.get(profile.id) as any;
         const weeklyHistory = userStats?.weekly_cards_history || [];
         return {
           id: profile.id,

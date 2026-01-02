@@ -20,7 +20,7 @@ export default function DashboardPage() {
   const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
   const { checkAndAwardBadges } = useBadgeChecker();
   
-  const loadingRef = useRef(false); // Prevent double invocation
+  const loadingRef = useRef(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsDisplayName, setNeedsDisplayName] = useState(false);
@@ -41,51 +41,34 @@ export default function DashboardPage() {
 
   const loadDashboardData = useCallback(async (userId: string, userEmail?: string) => {
     // Prevent double invocation
-    if (loadingRef.current) {
-      console.log('[DBG] dashboard loadDashboardData SKIPPED (already loading)');
-      return;
-    }
+    if (loadingRef.current) return;
     loadingRef.current = true;
 
     const supabase = createClient();
-    const log = (msg: string, data?: any) => console.log('[DBG] dashboard', msg, data ?? '');
-    log('start loadDashboardData', { userId, hasSessionProfile: !!sessionProfile });
-    // #region agent log
-    fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H1',location:'app/dashboard/page.tsx:loadDashboardData',message:'start loadDashboardData',data:{userId,hasSessionProfile:!!sessionProfile},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail start', e?.message);});
-    // #endregion
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
     try {
       setError(null);
       
-      // Fetch profile
+      // Use profile from session if available
       let profile = sessionProfile;
       if (!profile) {
-        log('profile fetch start', { userId });
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('user_profiles')
-            .select('*')
-            .eq('id', userId)
-            .maybeSingle();
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
 
-          if (profileError) {
-            log('profile fetch error', { message: profileError.message, code: profileError.code });
-            if (profileError.code === 'PGRST116' || !profileData) {
-              const { data: newProfile } = await supabase
-                .from('user_profiles')
-                .insert({ id: userId, email: userEmail })
-                .select()
-                .single();
-              profile = newProfile;
-              log('profile created', { hasProfile: !!profile });
-            }
-          } else {
-            profile = profileData;
-            log('profile fetch success', { hasProfile: !!profile });
-          }
-        } catch (e: any) {
-          log('profile fetch exception', { error: e?.message });
-          throw e;
+        if (profileError && (profileError.code === 'PGRST116' || !profileData)) {
+          const { data: newProfile } = await supabase
+            .from('user_profiles')
+            .insert({ id: userId, email: userEmail })
+            .select()
+            .single();
+          profile = newProfile;
+        } else {
+          profile = profileData;
         }
       }
 
@@ -103,31 +86,14 @@ export default function DashboardPage() {
         }
       }
 
-      console.log('[DBG] after profile', { hasProfile: !!profile });
-      // #region agent log
-      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after profile',data:{hasProfile:!!profile},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after profile', e?.message);});
-      // #endregion
-
-      // Fetch stacks using native fetch (bypass Supabase client)
-      log('stacks fetch start - native fetch');
-      
+      // Fetch stacks using native fetch (Supabase client hangs on Vercel)
       let stacksData: any[] | null = null;
-      let stacksError: any = null;
-      
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-      log('stacks env check', { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey });
       
       const abortController = new AbortController();
-      const timeoutId = setTimeout(() => {
-        log('stacks TIMEOUT - aborting fetch');
-        abortController.abort();
-      }, 8000);
+      const timeoutId = setTimeout(() => abortController.abort(), 10000);
       
       try {
         const url = `${supabaseUrl}/rest/v1/card_stacks?user_id=eq.${userId}&order=created_at.desc&select=*`;
-        log('stacks fetching URL', { url: url.substring(0, 80) + '...' });
-        
         const response = await fetch(url, {
           method: 'GET',
           headers: {
@@ -139,36 +105,19 @@ export default function DashboardPage() {
         });
         
         clearTimeout(timeoutId);
-        log('stacks fetch response', { status: response.status, ok: response.ok });
         
         if (response.ok) {
           stacksData = await response.json();
-          log('stacks data received', { count: stacksData?.length ?? 0 });
         } else {
-          const errorText = await response.text();
-          log('stacks error response', { status: response.status, error: errorText.substring(0, 100) });
-          stacksError = { message: `HTTP ${response.status}: ${errorText}` };
+          console.error('[Dashboard] Stacks fetch error:', response.status);
         }
       } catch (e: any) {
         clearTimeout(timeoutId);
-        log('stacks EXCEPTION', { message: e?.message, name: e?.name });
-        stacksError = { message: e?.message || 'Fetch failed' };
+        console.error('[Dashboard] Stacks fetch exception:', e?.message);
       }
-
-      if (stacksError) {
-        console.error('[Dashboard] Stacks error:', stacksError.message);
-        log('stacks fetch error', { message: stacksError.message });
-      }
-
-      console.log('[DBG] after stacks', { stacksCount: stacksData?.length ?? null, stacksError: stacksError?.message ?? null });
-      log('after stacks', { stacksCount: stacksData?.length ?? null, stacksError: stacksError?.message ?? null });
-      // #region agent log
-      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H2',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stacks',data:{stacksCount:stacksData?.length ?? null,stacksError:stacksError?.message ?? null},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stacks', e?.message);});
-      // #endregion
 
       // Fetch stats using native fetch
       let stats: any = null;
-      log('stats fetch start - native fetch');
       
       try {
         const statsUrl = `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}&select=*`;
@@ -181,16 +130,12 @@ export default function DashboardPage() {
           },
         });
         
-        log('stats fetch response', { status: statsResponse.status });
-        
         if (statsResponse.ok) {
           const statsArray = await statsResponse.json();
           stats = statsArray?.[0] || null;
-          log('stats data received', { hasStats: !!stats });
           
           // Create stats if not exists
           if (!stats) {
-            log('stats not found, creating...');
             const createResponse = await fetch(`${supabaseUrl}/rest/v1/user_stats`, {
               method: 'POST',
               headers: {
@@ -204,19 +149,12 @@ export default function DashboardPage() {
             if (createResponse.ok) {
               const created = await createResponse.json();
               stats = created?.[0] || null;
-              log('stats created', { hasStats: !!stats });
             }
           }
         }
       } catch (e: any) {
-        log('stats EXCEPTION', { message: e?.message });
+        console.error('[Dashboard] Stats fetch exception:', e?.message);
       }
-
-      console.log('[DBG] after stats', { hasStats: !!stats });
-      log('after stats', { hasStats: !!stats });
-      // #region agent log
-      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H3',location:'app/dashboard/page.tsx:loadDashboardData',message:'after stats',data:{hasStats:!!stats},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail after stats', e?.message);});
-      // #endregion
 
       const userName = profile?.display_name || userEmail?.split('@')[0] || 'Guest';
 
@@ -240,18 +178,22 @@ export default function DashboardPage() {
         if (newOverdueStacks.length > 0 || (overdueStackIds.length > 0 && !stats.streak_frozen)) {
           const updatedFrozenStacks = Array.from(new Set([...currentFrozenStacks, ...overdueStackIds]));
           
-          const { error: freezeError } = await supabase
-            .from('user_stats')
-            .update({
+          // Use native fetch for update
+          await fetch(`${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': supabaseKey!,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
               streak_frozen: true,
               streak_frozen_stacks: updatedFrozenStacks,
-            })
-            .eq('user_id', userId);
+            }),
+          });
 
-          if (!freezeError) {
-            stats.streak_frozen = true;
-            stats.streak_frozen_stacks = updatedFrozenStacks;
-          }
+          stats.streak_frozen = true;
+          stats.streak_frozen_stacks = updatedFrozenStacks;
         }
       }
 
@@ -263,35 +205,21 @@ export default function DashboardPage() {
         if (lastActiveDate && lastActiveDate !== today) {
           const yesterdayCards = stats.daily_cards_learned || 0;
           
-          if (yesterdayCards < STREAK_DAILY_REQUIREMENT) {
-            const { error: resetError } = await supabase
-              .from('user_stats')
-              .update({
-                current_streak: 0,
-                daily_cards_learned: 0,
-                daily_cards_date: today,
-              })
-              .eq('user_id', userId);
+          const updates = yesterdayCards < STREAK_DAILY_REQUIREMENT
+            ? { current_streak: 0, daily_cards_learned: 0, daily_cards_date: today }
+            : { daily_cards_learned: 0, daily_cards_date: today };
+          
+          await fetch(`${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}`, {
+            method: 'PATCH',
+            headers: {
+              'apikey': supabaseKey!,
+              'Authorization': `Bearer ${supabaseKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updates),
+          });
 
-            if (!resetError) {
-              stats.current_streak = 0;
-              stats.daily_cards_learned = 0;
-              stats.daily_cards_date = today;
-            }
-          } else {
-            const { error: resetError } = await supabase
-              .from('user_stats')
-              .update({
-                daily_cards_learned: 0,
-                daily_cards_date: today,
-              })
-              .eq('user_id', userId);
-
-            if (!resetError) {
-              stats.daily_cards_learned = 0;
-              stats.daily_cards_date = today;
-            }
-          }
+          Object.assign(stats, updates);
         }
       }
 
@@ -324,49 +252,27 @@ export default function DashboardPage() {
     } catch (err: any) {
       console.error('[Dashboard] Error loading data:', err);
       setError(err.message || 'Failed to load dashboard data');
-      console.log('[DBG] catch loadDashboardData', { error: err?.message ?? 'unknown' });
-      // #region agent log
-      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H4',location:'app/dashboard/page.tsx:loadDashboardData',message:'catch loadDashboardData',data:{error:err?.message ?? 'unknown'},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail catch', e?.message);});
-      // #endregion
     } finally {
-      loadingRef.current = false; // Reset guard
+      loadingRef.current = false;
       setDataLoading(false);
-      console.log('[DBG] finally loadDashboardData setDataLoading false');
-      // #region agent log
-      fetch('/api/debug-log',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:'debug-session',runId:'pre-fix-1',hypothesisId:'H1',location:'app/dashboard/page.tsx:loadDashboardData',message:'finally loadDashboardData',data:{dataLoading:false},timestamp:Date.now()})}).catch((e)=>{console.warn('[DBG] log fail finally', e?.message);});
-      // #endregion
     }
   }, [sessionProfile, checkAndAwardBadges]);
 
   useEffect(() => {
-    console.log('[DBG] render state vals', 'sessionLoading', sessionLoading, 'dataLoading', dataLoading, 'hasUser', !!sessionUser, 'hasProfile', !!sessionProfile, 'error', error);
-  }, [sessionLoading, dataLoading, error, sessionUser, sessionProfile]);
-
-  // Prevent server bailout: always render client pathway when authenticated is detected
-  if (!sessionLoading && sessionUser) {
-    // if client-side and we already have user, ensure dataLoading triggers client fetch
-  }
-
-  useEffect(() => {
-    // Wait for session to finish loading before making any decisions
-    if (sessionLoading) {
-      console.log('[DBG] load effect: session still loading, waiting...');
-      return;
-    }
+    if (sessionLoading) return;
 
     if (!sessionUser) {
-      console.log('[DBG] load effect: session loaded, no user, redirect login');
       router.push('/auth/login');
       return;
     }
 
-    console.log('[DBG] load effect: invoking loadDashboardData');
     setDataLoading(true);
     loadDashboardData(sessionUser.id, sessionUser.email);
   }, [sessionUser, sessionLoading, router, loadDashboardData]);
 
   const handleRefresh = useCallback(() => {
     if (sessionUser) {
+      loadingRef.current = false; // Allow refresh
       setDataLoading(true);
       loadDashboardData(sessionUser.id, sessionUser.email);
     }
