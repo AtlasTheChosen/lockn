@@ -41,8 +41,16 @@ export default function DashboardPage() {
   const loadDashboardData = useCallback(async (userId: string, userEmail?: string) => {
     const supabase = createClient();
     
+    // #region agent log
+    console.log('[DEBUG] loadDashboardData START', { userId, userEmail, timestamp: Date.now() });
+    // #endregion
+    
     try {
       setError(null);
+      
+      // #region agent log
+      console.log('[DEBUG] Fetching profile...');
+      // #endregion
       
       // Fetch profile
       let profile = sessionProfile;
@@ -52,6 +60,10 @@ export default function DashboardPage() {
           .select('*')
           .eq('id', userId)
           .maybeSingle();
+
+        // #region agent log
+        console.log('[DEBUG] Profile query result:', { profileData: !!profileData, profileError: profileError?.message });
+        // #endregion
 
         if (profileError) {
           if (profileError.code === 'PGRST116' || !profileData) {
@@ -81,12 +93,22 @@ export default function DashboardPage() {
         }
       }
 
+      // #region agent log
+      console.log('[DEBUG] Profile loaded:', { hasProfile: !!profile });
+      console.log('[DEBUG] Fetching stacks...');
+      // #endregion
+
       // Fetch stacks
       const { data: stacksData, error: stacksError } = await supabase
         .from('card_stacks')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
+
+      // #region agent log
+      console.log('[DEBUG] Stacks query result:', { count: stacksData?.length, error: stacksError?.message });
+      console.log('[DEBUG] Fetching stats...');
+      // #endregion
 
       // Fetch stats
       let stats = null;
@@ -95,6 +117,10 @@ export default function DashboardPage() {
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
+      
+      // #region agent log
+      console.log('[DEBUG] Stats query result:', { hasStats: !!statsData, error: statsError?.message });
+      // #endregion
 
       if (statsError) {
         try {
@@ -188,6 +214,10 @@ export default function DashboardPage() {
         }
       }
 
+      // #region agent log
+      console.log('[DEBUG] Setting data state...');
+      // #endregion
+
       setData({
         user: { id: userId, email: userEmail },
         profile,
@@ -195,6 +225,10 @@ export default function DashboardPage() {
         stats,
         userName,
       });
+
+      // #region agent log
+      console.log('[DEBUG] Data state set, checking badges...');
+      // #endregion
 
       // Check for new badges
       if (stats && profile) {
@@ -210,14 +244,28 @@ export default function DashboardPage() {
         await checkAndAwardBadges(userId, badgeStats, existingBadges);
       }
 
+      // #region agent log
+      console.log('[DEBUG] Badge check complete');
+      // #endregion
+
       if (!profile?.display_name) {
         setNeedsDisplayName(true);
       }
       
+      // #region agent log
+      console.log('[DEBUG] loadDashboardData SUCCESS');
+      // #endregion
+      
     } catch (err: any) {
+      // #region agent log
+      console.error('[DEBUG] loadDashboardData ERROR:', err);
+      // #endregion
       console.error('[Dashboard] Error loading data:', err);
       setError(err.message || 'Failed to load dashboard data');
     } finally {
+      // #region agent log
+      console.log('[DEBUG] loadDashboardData FINALLY - setting dataLoading to false');
+      // #endregion
       setDataLoading(false);
     }
   }, [sessionProfile]);
