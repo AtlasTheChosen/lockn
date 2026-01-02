@@ -9,17 +9,18 @@ import Logo from '@/components/ui/Logo';
 
 interface TopNavProps {
   streak?: number;
+  streakFrozen?: boolean;
   displayName?: string;
+  avatarUrl?: string;
 }
 
 const navLinks = [
   { href: '/', label: 'Home' },
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/friends', label: 'Friends' },
   { href: '/leaderboard', label: 'Leaderboards' },
 ];
 
-export default function TopNav({ streak = 0, displayName = 'U' }: TopNavProps) {
+export default function TopNav({ streak = 0, streakFrozen = false, displayName = 'U', avatarUrl }: TopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -34,10 +35,10 @@ export default function TopNav({ streak = 0, displayName = 'U' }: TopNavProps) {
   };
 
   return (
-    <nav className="hidden md:flex bg-white px-8 py-5 shadow-talka-sm sticky top-0 z-50 justify-between items-center">
+    <nav className="hidden md:flex bg-white px-8 py-5 shadow-talka-sm sticky top-0 z-[100] justify-between items-center">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2">
-        <Logo size="md" />
+        <Logo size="lg" />
         <span className="font-display text-3xl font-semibold gradient-text">
           LOCKN
         </span>
@@ -69,16 +70,38 @@ export default function TopNav({ streak = 0, displayName = 'U' }: TopNavProps) {
       {/* User Section */}
       <div className="flex items-center gap-4">
         {/* Streak Badge */}
-        <div className="flex items-center gap-2 px-4 py-2 bg-gradient-orange-yellow rounded-[20px] font-bold text-white shadow-orange animate-pulse-soft">
-          🔥 {streak}
+        <div 
+          className={cn(
+            "flex items-center gap-2 px-4 py-2 rounded-[20px] font-bold text-white",
+            streakFrozen 
+              ? "bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_4px_14px_rgba(34,211,238,0.4)]" 
+              : "bg-gradient-orange-yellow shadow-orange animate-pulse-soft"
+          )}
+          title={streakFrozen ? "Streak frozen! Complete pending tests to unfreeze." : `${streak} day streak`}
+        >
+          {streakFrozen ? '❄️' : '🔥'} {streak}
+          {streakFrozen && <span className="text-xs opacity-90">FROZEN</span>}
         </div>
         
-        {/* Avatar */}
+        {/* Avatar + Username */}
         <Link 
           href="/dashboard?tab=profile"
-          className="w-12 h-12 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-lg text-white cursor-pointer transition-all duration-300 hover:scale-110 hover:rotate-[10deg] shadow-blue"
+          className="flex items-center gap-3 cursor-pointer transition-all duration-300 hover:scale-105"
         >
-          {getInitials(displayName)}
+          <div className="w-12 h-12 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-lg text-white shadow-blue overflow-hidden">
+            {avatarUrl ? (
+              <img 
+                src={avatarUrl} 
+                alt={displayName} 
+                className="w-full h-full object-cover scale-110"
+              />
+            ) : (
+              getInitials(displayName)
+            )}
+          </div>
+          <span className="font-semibold text-slate-700 hidden lg:inline">
+            {displayName}
+          </span>
         </Link>
 
         {/* Logout Button */}

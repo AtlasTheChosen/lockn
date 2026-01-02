@@ -60,18 +60,10 @@ export default function FriendsSection({ userId }: Props) {
       setLoading(true);
       setMessage(null);
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FriendsSection.tsx:loadFriends',message:'Loading friendships for user',data:{userId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-
       const { data: friendshipsData, error: friendshipsError } = await supabase
         .from('friendships')
         .select('*')
         .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FriendsSection.tsx:loadFriends',message:'Friendships query result',data:{friendshipsData,friendshipsError:friendshipsError?.message,count:friendshipsData?.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
 
       if (friendshipsError) {
         console.error('[FriendsSection] Error loading friendships:', friendshipsError);
@@ -107,7 +99,7 @@ export default function FriendsSection({ userId }: Props) {
 
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
-        .select('id, email, display_name, avatar_url')
+        .select('id, display_name, avatar_url')
         .in('id', Array.from(userIds));
 
       if (profilesError) {
@@ -129,6 +121,18 @@ export default function FriendsSection({ userId }: Props) {
       const incoming: FriendWithProfile[] = []; // Requests TO me (I'm friend_id)
       const outgoing: FriendWithProfile[] = []; // Requests FROM me (I'm user_id)
       const blocked: FriendWithProfile[] = [];
+      
+      // First pass: collect all accepted friend IDs to filter out stale pending requests
+      const acceptedFriendIds = new Set<string>();
+      friendshipsData.forEach((friendship) => {
+        if (friendship.status === 'accepted') {
+          const friendId = friendship.user_id === userId ? friendship.friend_id : friendship.user_id;
+          acceptedFriendIds.add(friendId);
+        }
+      });
+
+      // Track pending requests to clean up (duplicates where friendship already exists)
+      const pendingToDelete: string[] = [];
 
       friendshipsData.forEach((friendship) => {
         const friendId = friendship.user_id === userId ? friendship.friend_id : friendship.user_id;
@@ -147,26 +151,36 @@ export default function FriendsSection({ userId }: Props) {
           },
         };
 
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FriendsSection.tsx:forEach',message:'Processing friendship',data:{friendshipId:friendship.id,status:friendship.status,user_id:friendship.user_id,friend_id:friendship.friend_id,currentUserId:userId,isIncoming:friendship.status==='pending'&&friendship.friend_id===userId,isOutgoing:friendship.status==='pending'&&friendship.user_id===userId},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'RLS'})}).catch(()=>{});
-        // #endregion
-
         if (friendship.status === 'accepted') {
           accepted.push(withProfile);
-        } else if (friendship.status === 'pending' && friendship.friend_id === userId) {
-          // Incoming request - someone sent me a request
-          incoming.push(withProfile);
-        } else if (friendship.status === 'pending' && friendship.user_id === userId) {
-          // Outgoing request - I sent this request
-          outgoing.push(withProfile);
+        } else if (friendship.status === 'pending') {
+          // Skip pending requests if already friends with this person
+          if (acceptedFriendIds.has(friendId)) {
+            // Mark for cleanup
+            pendingToDelete.push(friendship.id);
+            return;
+          }
+          
+          if (friendship.friend_id === userId) {
+            // Incoming request - someone sent me a request
+            incoming.push(withProfile);
+          } else if (friendship.user_id === userId) {
+            // Outgoing request - I sent this request
+            outgoing.push(withProfile);
+          }
         } else if (friendship.status === 'blocked') {
           blocked.push(withProfile);
         }
       });
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'FriendsSection.tsx:loadFriends',message:'Categorized friendships',data:{acceptedCount:accepted.length,incomingCount:incoming.length,outgoingCount:outgoing.length,blockedCount:blocked.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
+      
+      // Clean up stale pending requests in the background
+      if (pendingToDelete.length > 0) {
+        supabase
+          .from('friendships')
+          .delete()
+          .in('id', pendingToDelete)
+          .then(() => console.log('Cleaned up stale pending requests'));
+      }
 
       setFriends(accepted);
       setPendingRequests(incoming);
@@ -214,7 +228,29 @@ export default function FriendsSection({ userId }: Props) {
         .maybeSingle();
 
       if (existing) {
-        setMessage({ type: 'error', text: `Friendship already exists (status: ${existing.status})` });
+        // If there's a pending request FROM the target user TO us, accept it instead
+        if (existing.status === 'pending' && existing.user_id === targetProfile.id && existing.friend_id === userId) {
+          const { error: acceptError } = await supabase
+            .from('friendships')
+            .update({ status: 'accepted' })
+            .eq('id', existing.id);
+          
+          if (acceptError) throw acceptError;
+          
+          setMessage({ type: 'success', text: `You are now friends with ${targetProfile.display_name}!` });
+          setSearchDisplayName('');
+          loadFriends();
+          return;
+        }
+        
+        // Otherwise show appropriate message based on status
+        if (existing.status === 'accepted') {
+          setMessage({ type: 'error', text: `You are already friends with ${targetProfile.display_name}` });
+        } else if (existing.status === 'pending') {
+          setMessage({ type: 'error', text: `Friend request already sent to ${targetProfile.display_name}` });
+        } else if (existing.status === 'blocked') {
+          setMessage({ type: 'error', text: 'Cannot send friend request to this user' });
+        }
         return;
       }
 
@@ -239,12 +275,34 @@ export default function FriendsSection({ userId }: Props) {
   const handleAcceptRequest = async (friendshipId: string) => {
     try {
       setActionLoading(friendshipId);
+      
+      // First, get the friendship details to know who sent it
+      const { data: friendship } = await supabase
+        .from('friendships')
+        .select('user_id, friend_id')
+        .eq('id', friendshipId)
+        .single();
+      
+      if (!friendship) {
+        throw new Error('Friendship not found');
+      }
+      
+      // Accept this request
       const { error } = await supabase
         .from('friendships')
         .update({ status: 'accepted' })
         .eq('id', friendshipId);
 
       if (error) throw error;
+      
+      // Clean up any reverse pending request (if user B also sent a request to user A)
+      // Delete any pending request where the roles are reversed
+      await supabase
+        .from('friendships')
+        .delete()
+        .eq('user_id', friendship.friend_id)
+        .eq('friend_id', friendship.user_id)
+        .eq('status', 'pending');
 
       setMessage({ type: 'success', text: 'Friend request accepted!' });
       loadFriends();
@@ -324,7 +382,6 @@ export default function FriendsSection({ userId }: Props) {
 
   const getInitials = (profile?: FriendProfile) => {
     if (profile?.display_name) return profile.display_name.substring(0, 2).toUpperCase();
-    if (profile?.email) return profile.email.substring(0, 2).toUpperCase();
     return 'U';
   };
 
@@ -337,30 +394,30 @@ export default function FriendsSection({ userId }: Props) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Add Friend Card */}
-      <div className="bg-white rounded-3xl p-6 shadow-talka-md animate-fade-in">
-        <h3 className="font-display text-xl font-semibold mb-2 flex items-center gap-2">
+      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-md animate-fade-in">
+        <h3 className="font-display text-lg sm:text-xl font-semibold mb-1 sm:mb-2 flex items-center gap-2">
           ✨ Add Friend
         </h3>
-        <p className="text-slate-500 text-sm font-medium mb-6">
+        <p className="text-slate-500 text-sm font-medium mb-4 sm:mb-6">
           Search for users by display name
         </p>
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
             <Input
               value={searchDisplayName}
               onChange={(e) => setSearchDisplayName(e.target.value)}
               placeholder="Enter display name..."
-              className="bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 py-4 font-medium focus:border-talka-purple focus:ring-0"
+              className="bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 h-14 font-medium focus:border-talka-purple focus:ring-0"
               onKeyDown={(e) => e.key === 'Enter' && handleSendRequest()}
             />
           </div>
           <Button
             onClick={handleSendRequest}
             disabled={actionLoading === 'send'}
-            className="bg-gradient-purple-pink text-white font-bold rounded-2xl px-6 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            className="w-full sm:w-auto bg-gradient-purple-pink text-white font-bold rounded-2xl px-6 min-h-[52px] sm:min-h-0 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all active:scale-[0.98]"
           >
             {actionLoading === 'send' ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -390,37 +447,37 @@ export default function FriendsSection({ userId }: Props) {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 bg-white p-2 rounded-[20px] shadow-talka-sm">
+      <div className="flex gap-1 sm:gap-2 bg-white p-1.5 sm:p-2 rounded-2xl sm:rounded-[20px] shadow-talka-sm overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab('friends')}
-          className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[80px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base active:scale-95 ${
             activeTab === 'friends'
               ? 'bg-gradient-purple-pink text-white shadow-purple'
               : 'text-slate-500 hover:bg-slate-50'
           }`}
         >
           <Users className="h-4 w-4" />
-          Friends ({friends.length})
+          <span className="hidden sm:inline">Friends</span> ({friends.length})
         </button>
         <button
           onClick={() => setActiveTab('requests')}
-          className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[80px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base active:scale-95 ${
             activeTab === 'requests'
               ? 'bg-gradient-purple-pink text-white shadow-purple'
               : 'text-slate-500 hover:bg-slate-50'
           }`}
         >
-          📬 Requests ({pendingRequests.length + sentRequests.length})
+          📬 <span className="hidden sm:inline">Requests</span> ({pendingRequests.length + sentRequests.length})
         </button>
         <button
           onClick={() => setActiveTab('blocked')}
-          className={`flex-1 px-6 py-3 rounded-2xl font-semibold transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 min-w-[80px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base active:scale-95 ${
             activeTab === 'blocked'
               ? 'bg-gradient-purple-pink text-white shadow-purple'
               : 'text-slate-500 hover:bg-slate-50'
           }`}
         >
-          🚫 Blocked ({blockedUsers.length})
+          🚫 <span className="hidden sm:inline">Blocked</span> ({blockedUsers.length})
         </button>
       </div>
 
@@ -438,9 +495,17 @@ export default function FriendsSection({ userId }: Props) {
               <div key={friendship.id} className="bg-white rounded-3xl p-6 shadow-talka-sm hover:shadow-talka-md transition-all">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-lg text-white shadow-blue">
-                      {getInitials(friendship.profile)}
-                    </div>
+                    {friendship.profile?.avatar_url ? (
+                      <img 
+                        src={friendship.profile.avatar_url} 
+                        alt={friendship.profile?.display_name || 'User'} 
+                        className="w-14 h-14 rounded-full object-cover shadow-blue"
+                      />
+                    ) : (
+                      <div className="w-14 h-14 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-lg text-white shadow-blue">
+                        {getInitials(friendship.profile)}
+                      </div>
+                    )}
                     <div>
                       <p className="font-display text-lg font-semibold text-slate-800">
                         {friendship.profile?.display_name || 'User'}
@@ -449,24 +514,24 @@ export default function FriendsSection({ userId }: Props) {
                   </div>
                   <div className="flex gap-2">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleBlockUser(friendship.id)}
                       disabled={actionLoading === friendship.id}
-                      className="border-2 border-slate-200 rounded-xl hover:border-slate-300"
+                      className="rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
                     >
                       {actionLoading === friendship.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
                       ) : (
-                        <Ban className="h-4 w-4 text-slate-500" />
+                        <Ban className="h-4 w-4" />
                       )}
                     </Button>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleRemoveFriend(friendship.id)}
                       disabled={actionLoading === friendship.id}
-                      className="border-2 border-red-200 text-red-500 rounded-xl hover:bg-red-50"
+                      className="rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50"
                     >
                       {actionLoading === friendship.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -523,14 +588,21 @@ export default function FriendsSection({ userId }: Props) {
                 {pendingRequests.map((friendship) => (
                   <div key={friendship.id} className="bg-white rounded-2xl p-5 shadow-talka-sm flex items-center justify-between border-2 border-green-100">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-white shadow-blue">
-                        {getInitials(friendship.profile)}
-                      </div>
+                      {friendship.profile?.avatar_url ? (
+                        <img 
+                          src={friendship.profile.avatar_url} 
+                          alt={friendship.profile?.display_name || 'User'} 
+                          className="w-12 h-12 rounded-full object-cover shadow-blue"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-white shadow-blue">
+                          {getInitials(friendship.profile)}
+                        </div>
+                      )}
                       <div>
                         <p className="font-display font-semibold text-slate-800">
                           {friendship.profile?.display_name || 'User'}
                         </p>
-                        <p className="text-xs text-slate-500">{friendship.profile?.email}</p>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -547,11 +619,11 @@ export default function FriendsSection({ userId }: Props) {
                         )}
                       </Button>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => handleDeclineRequest(friendship.id)}
                         disabled={actionLoading === friendship.id}
-                        className="border-2 border-red-200 text-red-500 rounded-xl hover:bg-red-50"
+                        className="rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50"
                       >
                         {actionLoading === friendship.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -580,9 +652,17 @@ export default function FriendsSection({ userId }: Props) {
                 {sentRequests.map((friendship) => (
                   <div key={friendship.id} className="bg-white rounded-2xl p-5 shadow-talka-sm flex items-center justify-between border-2 border-amber-100">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-gradient-purple-pink flex items-center justify-center font-bold text-white shadow-purple">
-                        {getInitials(friendship.profile)}
-                      </div>
+                      {friendship.profile?.avatar_url ? (
+                        <img 
+                          src={friendship.profile.avatar_url} 
+                          alt={friendship.profile?.display_name || 'User'} 
+                          className="w-12 h-12 rounded-full object-cover shadow-purple"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-purple-pink flex items-center justify-center font-bold text-white shadow-purple">
+                          {getInitials(friendship.profile)}
+                        </div>
+                      )}
                       <div>
                         <p className="font-display font-semibold text-slate-800">
                           {friendship.profile?.display_name || 'User'}
@@ -591,11 +671,11 @@ export default function FriendsSection({ userId }: Props) {
                       </div>
                     </div>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => handleDeclineRequest(friendship.id)}
                       disabled={actionLoading === friendship.id}
-                      className="border-2 border-slate-200 text-slate-500 rounded-xl hover:bg-slate-50"
+                      className="rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 font-semibold"
                     >
                       {actionLoading === friendship.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -624,9 +704,17 @@ export default function FriendsSection({ userId }: Props) {
             blockedUsers.map((friendship) => (
               <div key={friendship.id} className="bg-white rounded-3xl p-6 shadow-talka-sm flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-slate-300 flex items-center justify-center font-bold text-lg text-white">
-                    {getInitials(friendship.profile)}
-                  </div>
+                  {friendship.profile?.avatar_url ? (
+                    <img 
+                      src={friendship.profile.avatar_url} 
+                      alt={friendship.profile?.display_name || 'User'} 
+                      className="w-14 h-14 rounded-full object-cover grayscale opacity-60"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-slate-300 flex items-center justify-center font-bold text-lg text-white">
+                      {getInitials(friendship.profile)}
+                    </div>
+                  )}
                   <div>
                     <p className="font-display text-lg font-semibold text-slate-800">
                       {friendship.profile?.display_name || 'User'}
@@ -637,11 +725,10 @@ export default function FriendsSection({ userId }: Props) {
                   </div>
                 </div>
                 <Button
-                  variant="outline"
                   size="sm"
                   onClick={() => handleUnblockUser(friendship.id)}
                   disabled={actionLoading === friendship.id}
-                  className="border-2 border-slate-200 rounded-xl hover:border-slate-300 font-semibold"
+                  className="bg-gradient-purple-pink text-white rounded-xl font-semibold shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all"
                 >
                   {actionLoading === friendship.id ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

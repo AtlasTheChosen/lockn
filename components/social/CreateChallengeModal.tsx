@@ -237,7 +237,7 @@ export default function CreateChallengeModal({ open, onOpenChange, userId, onSuc
                             {getInitials(friend)}
                           </AvatarFallback>
                         </Avatar>
-                        <span>{friend.display_name || friend.email}</span>
+                        <span>{friend.display_name || 'Anonymous'}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -349,5 +349,8 @@ export default function CreateChallengeModal({ open, onOpenChange, userId, onSuc
     </Dialog>
   );
 }
+
+
+
 
 

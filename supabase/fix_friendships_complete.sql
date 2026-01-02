@@ -90,3 +90,6 @@ SELECT
   (SELECT COUNT(*) FROM friendships) as total_friendships,
   (SELECT COUNT(*) FROM pg_policies WHERE tablename = 'friendships') as policy_count;
 
+
+
+

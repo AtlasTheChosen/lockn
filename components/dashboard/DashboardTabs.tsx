@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { Home, User, Users } from 'lucide-react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import DashboardMain from './DashboardMain';
 import ProfileSettings from './ProfileSettings';
 import FriendsSection from './FriendsSection';
+import GradientIcon from '@/components/ui/GradientIcons';
 import type { CardStack, UserStats, UserProfile } from '@/lib/types';
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
   userId: string;
   userName?: string;
   onUpdate: () => void;
+  onShowTutorial?: () => void;
 }
 
 export default function DashboardTabs({
@@ -24,6 +25,7 @@ export default function DashboardTabs({
   userId,
   userName,
   onUpdate,
+  onShowTutorial,
 }: Props) {
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
@@ -109,33 +111,48 @@ export default function DashboardTabs({
       }
     : null;
 
+  const router = useRouter();
+  
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: Home },
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'friends', label: 'Friends', icon: Users },
+    { id: 'overview', label: 'Overview', mobileLabel: 'Overview', icon: 'chartUp' as const },
+    { id: 'profile', label: 'Profile', mobileLabel: 'Profile', icon: 'user' as const },
+    { id: 'friends', label: 'Friends', mobileLabel: 'Friends', icon: 'users' as const },
+    { id: 'achievements', label: 'Achievements', mobileLabel: 'Awards', icon: 'trophy' as const, href: '/dashboard/achievements' },
   ];
 
   return (
     <div className="min-h-screen">
-      {/* Tab Navigation */}
-      <div className="bg-white shadow-talka-sm sticky top-0 md:top-[76px] z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-2 py-3">
+      {/* Tab Navigation - extra padding for iPhone notch/Dynamic Island */}
+      <div 
+        className="bg-white/95 backdrop-blur-md shadow-talka-sm sticky top-0 md:top-[76px] z-30 pt-[max(1rem,calc(env(safe-area-inset-top,0px)+0.75rem))] md:pt-0"
+      >
+        <div className="max-w-7xl mx-auto px-[max(0.75rem,env(safe-area-inset-left,0px))] sm:px-4 lg:px-8 pr-[max(0.75rem,env(safe-area-inset-right,0px))]">
+          <div className="flex gap-2 sm:gap-2 py-2 sm:py-3">
             {tabs.map((tab) => {
-              const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold transition-all ${
+                  onClick={() => {
+                    if ('href' in tab && tab.href) {
+                      router.push(tab.href);
+                    } else {
+                      setActiveTab(tab.id);
+                    }
+                  }}
+                  className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex-1 active:scale-95 ${
                     isActive
                       ? 'bg-gradient-purple-pink text-white shadow-purple'
                       : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                   }`}
                 >
-                  <Icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <GradientIcon 
+                    name={tab.icon} 
+                    size={20} 
+                    colors={isActive ? ['#ffffff', '#ffffff'] : ['#a78bfa', '#fb7185']}
+                    className="flex-shrink-0"
+                  />
+                  <span className="text-[10px] sm:text-sm">{tab.mobileLabel}</span>
                 </button>
               );
             })}
@@ -145,7 +162,7 @@ export default function DashboardTabs({
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <DashboardMain stacks={displayStacks} stats={displayStats} userName={userName} />
+        <DashboardMain stacks={displayStacks} stats={displayStats} userName={userName} onShowTutorial={onShowTutorial} />
       )}
 
       {activeTab === 'profile' && (

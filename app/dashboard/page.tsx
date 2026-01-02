@@ -5,20 +5,25 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useSession } from '@/hooks/use-session';
 import DashboardTabs from '@/components/dashboard/DashboardTabs';
+import StreakTutorial from '@/components/tutorial/StreakTutorial';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DisplayNameModal from '@/components/auth/DisplayNameModal';
 import { AppLayout } from '@/components/layout';
 import { isDeadlinePassed, STREAK_DAILY_REQUIREMENT, getTodayDate } from '@/lib/streak';
+import { useBadgeChecker, buildBadgeStats } from '@/hooks/useBadgeChecker';
+import { Badge } from '@/lib/types';
 
 export default function DashboardPage() {
   const router = useRouter();
   const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
+  const { checkAndAwardBadges } = useBadgeChecker();
   
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsDisplayName, setNeedsDisplayName] = useState(false);
+  const [showStreakTutorial, setShowStreakTutorial] = useState(false);
   const [data, setData] = useState<{
     user: any;
     profile: any;
@@ -191,6 +196,20 @@ export default function DashboardPage() {
         userName,
       });
 
+      // Check for new badges
+      if (stats && profile) {
+        const completedStacks = (stacksData || []).filter((s: any) => s.is_completed);
+        const badgeStats = buildBadgeStats(stats, {
+          friends_count: 0, // Will be fetched separately if needed
+          languages_count: profile?.languages_learning?.length ?? 0,
+          is_premium: profile?.is_premium ?? false,
+          tests_completed: completedStacks.length,
+        });
+        
+        const existingBadges = (profile?.badges || []) as Badge[];
+        await checkAndAwardBadges(userId, badgeStats, existingBadges);
+      }
+
       if (!profile?.display_name) {
         setNeedsDisplayName(true);
       }
@@ -279,6 +298,14 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
+      {/* Streak Tutorial */}
+      {showStreakTutorial && (
+        <StreakTutorial 
+          onComplete={() => setShowStreakTutorial(false)}
+          onSkip={() => setShowStreakTutorial(false)}
+        />
+      )}
+
       {/* Display name modal */}
       {needsDisplayName && data.user?.id && (
         <DisplayNameModal 
@@ -294,6 +321,7 @@ export default function DashboardPage() {
         userId={data.user?.id || ''}
         userName={data.userName}
         onUpdate={handleRefresh}
+        onShowTutorial={() => setShowStreakTutorial(true)}
       />
     </AppLayout>
   );

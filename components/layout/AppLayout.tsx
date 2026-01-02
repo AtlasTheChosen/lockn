@@ -11,7 +11,9 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children, hideNav = false }: AppLayoutProps) {
   const [streak, setStreak] = useState(0);
+  const [streakFrozen, setStreakFrozen] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
@@ -25,23 +27,27 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
         // Get user profile
         const { data: profile } = await supabase
           .from('user_profiles')
-          .select('display_name')
+          .select('display_name, avatar_url')
           .eq('id', session.user.id)
           .single();
         
         if (profile?.display_name) {
           setDisplayName(profile.display_name);
         }
+        if (profile?.avatar_url) {
+          setAvatarUrl(profile.avatar_url);
+        }
         
         // Get user stats for streak
         const { data: stats } = await supabase
           .from('user_stats')
-          .select('current_streak')
+          .select('current_streak, streak_frozen')
           .eq('user_id', session.user.id)
           .single();
         
-        if (stats?.current_streak) {
-          setStreak(stats.current_streak);
+        if (stats) {
+          setStreak(stats.current_streak || 0);
+          setStreakFrozen(stats.streak_frozen || false);
         }
       }
     };
@@ -54,14 +60,17 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   }
 
   return (
-    <div className="min-h-screen relative z-10">
-      {isLoggedIn && <TopNav streak={streak} displayName={displayName} />}
-      <main className="pb-20 md:pb-0">
+    <div className="min-h-screen relative safe-area-x">
+      {isLoggedIn && <TopNav streak={streak} streakFrozen={streakFrozen} displayName={displayName} avatarUrl={avatarUrl} />}
+      <main className="pb-24 md:pb-0 safe-area-bottom relative z-0">
         {children}
       </main>
-      {isLoggedIn && <BottomNav />}
+      {isLoggedIn && <BottomNav streak={streak} streakFrozen={streakFrozen} />}
     </div>
   );
 }
+
+
+
 
 

@@ -6,8 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import CommandLanding from '@/components/landing/CommandLanding';
 import TrialFlow from '@/components/landing/TrialFlowNew';
 import ConversionOverlay from '@/components/landing/ConversionOverlay';
+import StreakTutorial from '@/components/tutorial/StreakTutorial';
 import { AppLayout } from '@/components/layout';
-import { Loader2, AlertTriangle, X } from 'lucide-react';
+import { Loader2, AlertTriangle, X, HelpCircle } from 'lucide-react';
 import { DEBUG } from '@/lib/debug';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -33,6 +34,7 @@ export default function LandingPage() {
   const [generatedCards, setGeneratedCards] = useState<Card[]>([]);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
+  const [showStreakTutorial, setShowStreakTutorial] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -161,6 +163,27 @@ export default function LandingPage() {
 
   return (
     <AppLayout>
+      {/* Streak Tutorial */}
+      {showStreakTutorial && (
+        <StreakTutorial 
+          onComplete={() => setShowStreakTutorial(false)}
+          onSkip={() => setShowStreakTutorial(false)}
+        />
+      )}
+
+      {/* Floating Help Button for Streak Rules - positioned to avoid mobile preview toggle */}
+      <motion.button
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 1 }}
+        onClick={() => setShowStreakTutorial(true)}
+        className="fixed bottom-6 right-20 z-40 flex items-center gap-2 bg-gradient-to-r from-orange-400 to-red-500 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all font-semibold"
+      >
+        <HelpCircle className="h-5 w-5" />
+        <span className="hidden sm:inline">Streak Rules</span>
+        <span className="sm:hidden">🔥</span>
+      </motion.button>
+
       <AnimatePresence mode="wait">
         {appState === 'command' && (
           <motion.div

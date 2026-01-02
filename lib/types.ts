@@ -14,6 +14,7 @@ export interface UserProfile {
     friend_requests: boolean;
     streak_reminders: boolean;
   };
+  has_seen_streak_tutorial?: boolean;
   is_premium: boolean;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
@@ -108,6 +109,11 @@ export interface UserStats {
   // Streak freeze for pending tests
   streak_frozen: boolean;
   streak_frozen_stacks: string[]; // Stack IDs with overdue tests
+  // Achievement tracking stats
+  tests_completed: number;
+  perfect_test_streak: number;
+  daily_goal_streak: number;
+  ice_breaker_count: number;
   created_at: string;
   updated_at: string;
 }
@@ -147,7 +153,6 @@ export interface Friendship {
 
 export interface FriendProfile {
   id: string;
-  email: string;
   display_name?: string;
   avatar_url?: string;
   is_online?: boolean;
@@ -163,7 +168,7 @@ export interface Badge {
   description: string;
   icon: string;
   earned_at: string;
-  category: 'streak' | 'cards' | 'stacks' | 'social' | 'special';
+  category: 'streak' | 'cards' | 'stacks' | 'social' | 'special' | 'recovery' | 'performance';
 }
 
 export interface ActivityFeedItem {

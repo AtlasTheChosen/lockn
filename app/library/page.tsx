@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import type { SharedStack, CardStack, FriendProfile } from '@/lib/types';
 
-export default function LibraryPage() {
+function LibraryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user: sessionUser, loading: sessionLoading } = useSession();
@@ -376,4 +376,15 @@ export default function LibraryPage() {
   );
 }
 
+export default function LibraryPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-talka-purple" />
+      </div>
+    }>
+      <LibraryContent />
+    </Suspense>
+  );
+}
 

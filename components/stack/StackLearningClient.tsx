@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trophy, ArrowLeftRight, MessageSquare, PenLine, Check, X, Loader2, RotateCcw, Lightbulb, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Trophy, ArrowLeftRight, PenLine, Check, X, Loader2, RotateCcw, Lightbulb, ChevronDown, ChevronUp, Volume2, Sparkles } from 'lucide-react';
+import { useSpeech, TTSProvider, VoiceGender } from '@/hooks/use-speech';
 import { Input } from '@/components/ui/input';
 import type { CardStack, Flashcard, TestNote } from '@/lib/types';
 import Confetti from 'react-confetti';
@@ -14,6 +15,8 @@ import { CARD_RATINGS } from '@/lib/constants';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
 import { shouldResetWeek, archiveWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
 import { isNewDay, getTodayDate, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
+import { useBadgeChecker, buildBadgeStats } from '@/hooks/useBadgeChecker';
+import type { Badge as BadgeType } from '@/lib/types';
 
 interface Props {
   stack: CardStack;
@@ -29,6 +32,7 @@ const RATING_OPTIONS = [
 ];
 
 export default function StackLearningClient({ stack: initialStack, cards: initialCards }: Props) {
+  const { checkAndAwardBadges, awardEventBasedBadge, checkTimeBadge } = useBadgeChecker();
   const [stack, setStack] = useState(initialStack);
   const [originalCards] = useState(initialCards);
   const [cards, setCards] = useState(initialCards);
@@ -52,8 +56,11 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [breakdownData, setBreakdownData] = useState<Record<string, any>>({});
   const [isLoadingBreakdown, setIsLoadingBreakdown] = useState(false);
+  const [ttsProvider, setTtsProvider] = useState<TTSProvider>('browser');
+  const [voiceGender, setVoiceGender] = useState<VoiceGender>('female');
   
   const supabase = createClient();
+  const { speak, isSpeaking, isLoading: isTTSLoading } = useSpeech({ provider: ttsProvider, gender: voiceGender });
 
   const currentCard = cards[currentIndex];
   const progress = ((currentIndex + 1) / cards.length) * 100;
@@ -107,17 +114,10 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     if (currentCard) {
       const targetLang = stack.target_language || 'Spanish';
       
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StackLearningClient.tsx:useEffect-translations',message:'Card content for translations',data:{cardId:currentCard.id,targetPhrase:currentCard.target_phrase,nativeTranslation:currentCard.native_translation,exampleSentence:currentCard.example_sentence,targetLang},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A-E'})}).catch(()=>{});
-      // #endregion
-      
       // Fetch translations for target phrase
       const targetKey = `${currentCard.id}-target`;
       if (!wordTranslations[targetKey]) {
         getWordTranslations(currentCard.target_phrase, targetLang, 'English').then(translations => {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StackLearningClient.tsx:targetPhrase-translations',message:'Target phrase translations returned',data:{targetPhrase:currentCard.target_phrase,translationsCount:translations.length,translations},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
           setWordTranslations((prev: Record<string, any>) => ({
             ...prev,
             [targetKey]: translations
@@ -333,42 +333,51 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       </div>
 
       {/* Header */}
-      <div className="px-6 py-4 bg-white border-b-2 border-slate-100 flex justify-between items-center">
+      <div className="px-3 sm:px-6 py-3 sm:py-4 bg-white border-b-2 border-slate-100 flex justify-between items-center">
         <Link href="/dashboard">
-          <Button variant="ghost" className="text-slate-500 hover:text-slate-700 font-semibold rounded-xl">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+          <Button variant="ghost" className="text-slate-500 hover:text-slate-700 font-semibold rounded-xl px-2 sm:px-4">
+            <ArrowLeft className="h-5 w-5 sm:mr-2" />
+            <span className="hidden sm:inline">Back</span>
           </Button>
         </Link>
-        <div className="flex items-center gap-3">
-          <Button
-            onClick={async () => {
-              const newMode = !conversationalMode;
-              setConversationalMode(newMode);
-              setCurrentIndex(0);
-              setIsFlipped(false);
-              await supabase.from('card_stacks').update({ conversational_mode: newMode }).eq('id', stack.id);
-              setStack({ ...stack, conversational_mode: newMode });
-            }}
-            variant="ghost"
-            className={`font-semibold rounded-xl ${conversationalMode ? 'bg-talka-purple/10 text-talka-purple' : 'text-slate-500'}`}
-          >
-            <MessageSquare className="h-4 w-4 mr-1" />
-            Dialogue
-          </Button>
+        <div className="flex items-center gap-1 sm:gap-3">
           <Button
             onClick={() => { setReverseMode(!reverseMode); setIsFlipped(false); }}
             variant="ghost"
-            className={`font-semibold rounded-xl ${reverseMode ? 'bg-talka-purple/10 text-talka-purple' : 'text-slate-500'}`}
+            size="sm"
+            className={`font-semibold rounded-xl p-2 sm:px-3 ${reverseMode ? 'bg-talka-purple/10 text-talka-purple' : 'text-slate-500'}`}
+            title="Reverse Mode"
           >
-            <ArrowLeftRight className="h-4 w-4 mr-1" />
-            Reverse
+            <ArrowLeftRight className="h-5 w-5 sm:mr-1" />
+            <span className="hidden sm:inline">Reverse</span>
           </Button>
-          <span className="text-slate-500 font-semibold px-3 py-1 bg-slate-100 rounded-xl">
-            {currentIndex + 1} / {cards.length}
+          <Button
+            onClick={() => {
+              const newProvider = ttsProvider === 'browser' ? 'elevenlabs' : 'browser';
+              setTtsProvider(newProvider);
+            }}
+            variant="ghost"
+            size="sm"
+            className={`font-semibold rounded-xl p-2 sm:px-3 ${ttsProvider === 'elevenlabs' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' : 'text-slate-500'}`}
+            title={ttsProvider === 'elevenlabs' ? 'Using premium AI voices' : 'Using browser voices'}
+          >
+            <Sparkles className="h-5 w-5 sm:mr-1" />
+            <span className="hidden sm:inline">{ttsProvider === 'elevenlabs' ? 'Premium' : 'Voice'}</span>
+          </Button>
+          <Button
+            onClick={() => setVoiceGender(voiceGender === 'female' ? 'male' : 'female')}
+            variant="ghost"
+            size="sm"
+            className={`font-semibold rounded-xl p-2 sm:px-3 flex items-center gap-1 ${voiceGender === 'male' ? 'bg-blue-100 text-blue-600' : 'bg-pink-100 text-pink-600'}`}
+            title={`Click to switch to ${voiceGender === 'female' ? 'male' : 'female'} voice`}
+          >
+            <span className="text-lg">{voiceGender === 'female' ? '♀' : '♂'}</span>
+          </Button>
+          <span className="text-slate-500 font-semibold px-2 sm:px-3 py-1 bg-slate-100 rounded-xl text-sm">
+            {currentIndex + 1}/{cards.length}
           </span>
           {stack.is_completed && (
-            <span className="px-3 py-1 bg-gradient-green-cyan text-white font-bold rounded-xl text-sm flex items-center gap-1">
+            <span className="hidden sm:flex px-3 py-1 bg-gradient-green-cyan text-white font-bold rounded-xl text-sm items-center gap-1">
               <Trophy className="h-3 w-3" /> Complete
             </span>
           )}
@@ -376,11 +385,11 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       </div>
 
       {/* Card Area */}
-      <div className="flex-1 flex items-center justify-center px-6 py-8">
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 py-4 sm:py-8">
         <div className="w-full max-w-2xl">
           {/* Stack Title */}
-          <div className="text-center mb-6">
-            <h2 className="font-display text-2xl font-semibold text-slate-800">
+          <div className="text-center mb-4 sm:mb-6">
+            <h2 className="font-display text-xl sm:text-2xl font-semibold text-slate-800">
               {capitalizeTitle(stack.title)} {getLanguageEmoji(stack.target_language)}
             </h2>
           </div>
@@ -388,11 +397,11 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           {/* Flashcard */}
           <motion.div
             onClick={() => setIsFlipped(!isFlipped)}
-            className="bg-white border-2 border-slate-200 rounded-3xl p-8 min-h-[400px] flex flex-col justify-center cursor-pointer hover:shadow-talka-lg hover:border-talka-purple/30 transition-all duration-300 relative shadow-talka-md"
+            className="bg-white border-2 border-slate-200 rounded-3xl p-5 sm:p-8 pt-12 sm:pt-8 min-h-[300px] sm:min-h-[400px] flex flex-col justify-center cursor-pointer hover:shadow-talka-lg hover:border-talka-purple/30 transition-all duration-300 relative shadow-talka-md"
           >
             {/* Level Badge */}
             {stack.cefr_level && (
-              <span className="absolute top-4 right-4 px-3 py-1 bg-gradient-green-cyan text-white font-bold rounded-xl text-sm">
+              <span className="absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 sm:px-3 py-1 bg-gradient-green-cyan text-white font-bold rounded-xl text-xs sm:text-sm z-10">
                 {stack.cefr_level}
               </span>
             )}
@@ -408,16 +417,57 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   className="flex flex-col items-center justify-center space-y-6"
                 >
                   <div className="text-center space-y-4">
-                    <h3 className="font-display text-4xl md:text-5xl font-semibold text-slate-800 leading-tight">
-                      {reverseMode ? (
-                        currentCard.native_translation
-                      ) : (
-                        <WordHoverText
-                          text={currentCard.target_phrase}
-                          translations={wordTranslations[`${currentCard.id}-target`] || []}
-                        />
-                      )}
-                    </h3>
+                    <div className="flex items-center justify-center gap-3">
+                      <h3 className="font-display text-4xl md:text-5xl font-semibold text-slate-800 leading-tight">
+                        {reverseMode ? (
+                          currentCard.native_translation
+                        ) : (
+                          <WordHoverText
+                            text={currentCard.target_phrase}
+                            translations={wordTranslations[`${currentCard.id}-target`] || []}
+                            onWordSpeak={(word) => speak(word, stack.target_language)}
+                            language={stack.target_language}
+                          />
+                        )}
+                      </h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          speak(
+                            reverseMode ? currentCard.native_translation : currentCard.target_phrase,
+                            reverseMode ? 'English' : stack.target_language
+                          );
+                        }}
+                        disabled={isTTSLoading}
+                        className={`p-3 rounded-full transition-all hover:scale-110 active:scale-95 ${
+                          isSpeaking || isTTSLoading
+                            ? 'bg-talka-purple text-white animate-pulse'
+                            : 'bg-talka-purple/10 hover:bg-talka-purple/20 text-talka-purple'
+                        }`}
+                        title={ttsProvider === 'elevenlabs' ? 'Premium AI voice' : 'Listen to pronunciation'}
+                      >
+                        {isTTSLoading ? (
+                          <Loader2 className="w-6 h-6 animate-spin" />
+                        ) : (
+                          <Volume2 className="w-6 h-6" />
+                        )}
+                      </button>
+                      {/* Voice Gender Toggle on Card */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setVoiceGender(voiceGender === 'female' ? 'male' : 'female');
+                        }}
+                        className={`p-2 rounded-full transition-all hover:scale-110 active:scale-95 text-sm font-bold ${
+                          voiceGender === 'male' 
+                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' 
+                            : 'bg-pink-100 text-pink-600 hover:bg-pink-200'
+                        }`}
+                        title={`Switch to ${voiceGender === 'female' ? 'male' : 'female'} voice`}
+                      >
+                        {voiceGender === 'female' ? '♀' : '♂'}
+                      </button>
+                    </div>
                     {!reverseMode && (
                       <span className="inline-block px-4 py-2 bg-talka-purple/10 text-talka-purple font-semibold rounded-xl">
                         {currentCard.tone_advice}
@@ -438,41 +488,81 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   className="space-y-6"
                 >
                   <div className="text-center space-y-4">
-                    <h3 className="font-display text-3xl md:text-4xl font-semibold text-slate-800">
-                      {reverseMode ? (
-                        <WordHoverText
-                          text={currentCard.target_phrase}
-                          translations={wordTranslations[`${currentCard.id}-target`] || []}
-                        />
-                      ) : (
-                        currentCard.native_translation
-                      )}
-                    </h3>
-                    <p className="text-xl text-slate-500 font-medium">
-                      {reverseMode ? (
-                        currentCard.native_translation
-                      ) : (
-                        <WordHoverText
-                          text={currentCard.target_phrase}
-                          translations={wordTranslations[`${currentCard.id}-target`] || []}
-                        />
-                      )}
-                    </p>
+                    <div className="flex items-center justify-center gap-3">
+                      <h3 className="font-display text-3xl md:text-4xl font-semibold text-slate-800">
+                        {reverseMode ? (
+                          <WordHoverText
+                            text={currentCard.target_phrase}
+                            translations={wordTranslations[`${currentCard.id}-target`] || []}
+                            onWordSpeak={(word) => speak(word, stack.target_language)}
+                            language={stack.target_language}
+                          />
+                        ) : (
+                          currentCard.native_translation
+                        )}
+                      </h3>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          speak(
+                            reverseMode ? currentCard.target_phrase : currentCard.native_translation,
+                            reverseMode ? stack.target_language : 'English'
+                          );
+                        }}
+                        disabled={isTTSLoading}
+                        className={`p-2 rounded-full transition-all hover:scale-110 active:scale-95 ${
+                          isSpeaking ? 'bg-slate-300 text-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                        }`}
+                        title={ttsProvider === 'elevenlabs' ? 'Premium AI voice' : 'Listen to pronunciation'}
+                      >
+                        <Volume2 className="w-5 h-5" />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-center gap-2">
+                      <p className="text-xl text-slate-500 font-medium">
+                        {reverseMode ? (
+                          currentCard.native_translation
+                        ) : (
+                          <WordHoverText
+                            text={currentCard.target_phrase}
+                            translations={wordTranslations[`${currentCard.id}-target`] || []}
+                            onWordSpeak={(word) => speak(word, stack.target_language)}
+                            language={stack.target_language}
+                          />
+                        )}
+                      </p>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          speak(
+                            reverseMode ? currentCard.native_translation : currentCard.target_phrase,
+                            reverseMode ? 'English' : stack.target_language
+                          );
+                        }}
+                        disabled={isTTSLoading}
+                        className={`p-1.5 rounded-full transition-all hover:scale-110 active:scale-95 ${
+                          isSpeaking ? 'bg-talka-purple text-white' : 'bg-talka-purple/10 hover:bg-talka-purple/20 text-talka-purple'
+                        }`}
+                        title={ttsProvider === 'elevenlabs' ? 'Premium AI voice' : 'Listen to pronunciation'}
+                      >
+                        <Volume2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Breakdown Button */}
                   <button
                     onClick={(e) => { e.stopPropagation(); showBreakdown ? setShowBreakdown(false) : fetchBreakdown(currentCard); }}
                     disabled={isLoadingBreakdown}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-semibold rounded-2xl hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50"
+                    className="mx-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-amber-600 hover:text-amber-700 font-medium rounded-lg hover:bg-amber-50 transition-all disabled:opacity-50"
                   >
                     {isLoadingBreakdown ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Lightbulb className="w-5 h-5" />
+                      <Lightbulb className="w-3.5 h-3.5" />
                     )}
-                    {showBreakdown ? 'Hide Breakdown' : 'Show Breakdown'}
-                    {showBreakdown ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {showBreakdown ? 'Hide' : 'Breakdown'}
+                    {showBreakdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
                   </button>
 
                   {/* Breakdown Content */}
@@ -585,13 +675,15 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-6 flex flex-wrap justify-center gap-2"
+              className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3"
             >
-              {RATING_OPTIONS.map((option) => (
+              {RATING_OPTIONS.map((option, index) => (
                 <Button
                   key={option.value}
                   onClick={() => handleRating(option.value)}
-                  className={`bg-gradient-to-r ${option.gradient} text-white font-semibold rounded-xl px-4 py-3 text-sm flex-1 min-w-[100px] max-w-[140px] hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-md`}
+                  className={`bg-gradient-to-r ${option.gradient} text-white font-semibold rounded-xl px-3 sm:px-4 py-4 sm:py-3 text-sm min-h-[56px] sm:min-h-0 hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-md active:scale-95 ${
+                    index === RATING_OPTIONS.length - 1 ? 'col-span-2 sm:col-span-1 max-w-[200px] mx-auto sm:max-w-none' : ''
+                  }`}
                 >
                   {option.label}
                   {currentCard.user_rating === option.value && <Check className="ml-1 h-4 w-4" />}
@@ -619,12 +711,12 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-6 z-50"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50"
         >
           <motion.div 
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
-            className="bg-white rounded-3xl p-8 shadow-talka-lg max-w-md w-full text-center"
+            className="bg-white rounded-3xl p-6 sm:p-8 shadow-talka-lg max-w-md w-full text-center"
           >
             <div className="text-6xl mb-4">🏆</div>
             <h2 className="font-display text-3xl font-semibold gradient-text mb-4">Ready for the Test!</h2>
@@ -670,18 +762,18 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-6 z-50"
+          className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50"
         >
           <motion.div 
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
-            className="bg-white rounded-3xl p-8 shadow-talka-lg max-w-lg w-full"
+            className="bg-white rounded-3xl sm:rounded-3xl p-5 sm:p-8 shadow-talka-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
           >
             {/* Progress */}
-            <div className="mb-6">
+            <div className="mb-4 sm:mb-6">
               <div className="flex justify-between text-sm font-semibold text-slate-500 mb-2">
                 <span>Question {testCardIndex + 1} of {cards.length}</span>
-                <span>{Math.round((testCardIndex / cards.length) * 100)}% Complete</span>
+                <span>{Math.round((testCardIndex / cards.length) * 100)}%</span>
               </div>
               <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                 <div 
@@ -692,9 +784,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             </div>
 
             {/* Question */}
-            <div className="text-center mb-8">
-              <p className="text-slate-500 font-medium mb-2">Translate to {stack.target_language}:</p>
-              <h3 className="font-display text-2xl md:text-3xl font-semibold text-slate-800">
+            <div className="text-center mb-6 sm:mb-8">
+              <p className="text-slate-500 font-medium mb-2 text-sm sm:text-base">Translate to {stack.target_language}:</p>
+              <h3 className="font-display text-xl sm:text-2xl md:text-3xl font-semibold text-slate-800">
                 {cards[testCardIndex]?.native_translation}
               </h3>
             </div>
@@ -706,8 +798,10 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   value={testAnswer}
                   onChange={(e) => setTestAnswer(e.target.value)}
                   placeholder={`Type your answer in ${stack.target_language}...`}
-                  className="bg-slate-50 border-2 border-slate-200 rounded-2xl text-lg py-6 font-medium focus:border-talka-purple focus:ring-0"
+                  className="bg-slate-50 border-2 border-slate-200 rounded-2xl text-base sm:text-lg py-4 sm:py-6 h-14 sm:h-16 font-medium focus:border-talka-purple focus:ring-0"
                   disabled={isGrading}
+                  autoComplete="off"
+                  autoCapitalize="off"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && testAnswer.trim() && !isGrading) {
                       handleGradeAnswer();
@@ -717,7 +811,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                 <Button
                   onClick={handleGradeAnswer}
                   disabled={!testAnswer.trim() || isGrading}
-                  className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 shadow-purple disabled:opacity-50"
+                  className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 min-h-[56px] shadow-purple disabled:opacity-50 active:scale-[0.98]"
                 >
                   {isGrading ? (
                     <>
@@ -938,7 +1032,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         try {
           const { data: userStats } = await supabase
             .from('user_stats')
-            .select('current_week_cards, current_week_start, weekly_cards_history, pause_weekly_tracking, daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen, streak_frozen_stacks, total_cards_mastered')
+            .select('current_week_cards, current_week_start, weekly_cards_history, pause_weekly_tracking, daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen, streak_frozen_stacks, total_cards_mastered, tests_completed, perfect_test_streak, daily_goal_streak, ice_breaker_count')
             .eq('user_id', stack.user_id)
             .single();
 
@@ -979,6 +1073,26 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
 
             const frozenStacks = (userStats.streak_frozen_stacks || []).filter((id: string) => id !== stack.id);
             const shouldUnfreeze = frozenStacks.length === 0;
+            const wasStreakFrozen = userStats.streak_frozen && userStats.streak_frozen_stacks?.includes(stack.id);
+
+            // Achievement tracking stats
+            const newTestsCompleted = (userStats.tests_completed || 0) + 1;
+            const isPerfectScore = testProgress === 100;
+            const newPerfectTestStreak = isPerfectScore 
+              ? (userStats.perfect_test_streak || 0) + 1 
+              : 0; // Reset if not perfect
+            
+            // Daily goal streak: increment if we just hit the daily goal today
+            const previousDaily = needsReset ? 0 : (userStats.daily_cards_learned || 0);
+            const justMetDailyGoal = previousDaily < STREAK_DAILY_REQUIREMENT && newDailyCards >= STREAK_DAILY_REQUIREMENT;
+            const newDailyGoalStreak = justMetDailyGoal 
+              ? (userStats.daily_goal_streak || 0) + 1 
+              : (userStats.daily_goal_streak || 0);
+            
+            // Ice breaker: increment if we're unfreezing the streak by completing this test
+            const newIceBreakerCount = (wasStreakFrozen && shouldUnfreeze) 
+              ? (userStats.ice_breaker_count || 0) + 1 
+              : (userStats.ice_breaker_count || 0);
 
             await supabase
               .from('user_stats')
@@ -995,29 +1109,79 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                 last_card_learned_at: new Date().toISOString(),
                 streak_frozen_stacks: frozenStacks,
                 streak_frozen: shouldUnfreeze ? false : userStats.streak_frozen,
+                // Achievement tracking stats
+                tests_completed: newTestsCompleted,
+                perfect_test_streak: newPerfectTestStreak,
+                daily_goal_streak: newDailyGoalStreak,
+                ice_breaker_count: newIceBreakerCount,
               })
               .eq('user_id', stack.user_id);
+
+            // Check for new badges after test completion
+            try {
+              const { data: profile } = await supabase
+                .from('user_profiles')
+                .select('badges, is_premium, languages_learning')
+                .eq('id', stack.user_id)
+                .single();
+
+              if (profile) {
+                const badgeStats = buildBadgeStats(
+                  {
+                    current_streak: newStreak,
+                    longest_streak: newLongestStreak,
+                    total_cards_mastered: newTotalMastered,
+                    daily_cards_learned: newDailyCards,
+                  },
+                  {
+                    tests_completed: newTestsCompleted,
+                    perfect_test_streak: newPerfectTestStreak,
+                    daily_goal_streak: newDailyGoalStreak,
+                    ice_breaker_count: newIceBreakerCount,
+                    best_test_score: testProgress,
+                    languages_count: profile?.languages_learning?.length ?? 0,
+                    is_premium: profile?.is_premium ?? false,
+                  }
+                );
+                
+                const existingBadges = (profile?.badges || []) as BadgeType[];
+                await checkAndAwardBadges(stack.user_id, badgeStats, existingBadges);
+                
+                // Check for time-based badges (night owl, early bird)
+                await checkTimeBadge(stack.user_id, existingBadges);
+              }
+            } catch (badgeError) {
+              console.error('Badge check error:', badgeError);
+            }
           }
         } catch (e) {
           console.error('Test stats tracking error:', e);
         }
       } else {
+        // Test completed but no cards passed - still track test completion
         try {
           const { data: userStats } = await supabase
             .from('user_stats')
-            .select('streak_frozen_stacks, streak_frozen')
+            .select('streak_frozen_stacks, streak_frozen, tests_completed, perfect_test_streak, ice_breaker_count')
             .eq('user_id', stack.user_id)
             .single();
 
           if (userStats) {
             const frozenStacks = (userStats.streak_frozen_stacks || []).filter((id: string) => id !== stack.id);
             const shouldUnfreeze = frozenStacks.length === 0;
+            const wasStreakFrozen = userStats.streak_frozen && userStats.streak_frozen_stacks?.includes(stack.id);
 
             await supabase
               .from('user_stats')
               .update({
                 streak_frozen_stacks: frozenStacks,
                 streak_frozen: shouldUnfreeze ? false : userStats.streak_frozen,
+                // Track test completion even if no cards passed
+                tests_completed: (userStats.tests_completed || 0) + 1,
+                perfect_test_streak: 0, // Reset since not 100%
+                ice_breaker_count: (wasStreakFrozen && shouldUnfreeze) 
+                  ? (userStats.ice_breaker_count || 0) + 1 
+                  : (userStats.ice_breaker_count || 0),
               })
               .eq('user_id', stack.user_id);
           }

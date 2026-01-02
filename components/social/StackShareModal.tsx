@@ -334,7 +334,7 @@ export default function StackShareModal({ open, onOpenChange, stack, userId, onS
                                 {getInitials(friend)}
                               </AvatarFallback>
                             </Avatar>
-                            <span>{friend.display_name || friend.email}</span>
+                            <span>{friend.display_name || 'Anonymous'}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -374,5 +374,8 @@ export default function StackShareModal({ open, onOpenChange, stack, userId, onS
     </Dialog>
   );
 }
+
+
+
 
 

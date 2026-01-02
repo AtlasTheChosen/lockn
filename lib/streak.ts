@@ -69,3 +69,58 @@ export function formatDeadlineDisplay(deadline: string | Date | null): string {
   return `${days} Day${days === 1 ? '' : 's'} Left`;
 }
 
+// Get detailed time remaining (hours, minutes) for countdown display
+export function getTimeRemaining(deadline: string | Date | null): { 
+  days: number; 
+  hours: number; 
+  minutes: number; 
+  isOverdue: boolean;
+  totalHours: number;
+} {
+  if (!deadline) return { days: 0, hours: 0, minutes: 0, isOverdue: false, totalHours: 0 };
+  
+  const deadlineDate = new Date(deadline);
+  const now = new Date();
+  const diffMs = deadlineDate.getTime() - now.getTime();
+  
+  if (diffMs <= 0) {
+    return { days: 0, hours: 0, minutes: 0, isOverdue: true, totalHours: 0 };
+  }
+  
+  const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  return { days, hours, minutes, isOverdue: false, totalHours };
+}
+
+// Format countdown for display with more detail
+export function formatCountdown(deadline: string | Date | null): string {
+  const time = getTimeRemaining(deadline);
+  
+  if (time.isOverdue) {
+    return '⚠️ Overdue!';
+  }
+  
+  if (time.days > 0) {
+    return `${time.days}d ${time.hours}h left`;
+  }
+  
+  if (time.hours > 0) {
+    return `${time.hours}h ${time.minutes}m left`;
+  }
+  
+  return `${time.minutes}m left`;
+}
+
+// Get urgency level for styling (0 = overdue, 1 = urgent, 2 = warning, 3 = normal)
+export function getDeadlineUrgency(deadline: string | Date | null): 0 | 1 | 2 | 3 {
+  const time = getTimeRemaining(deadline);
+  
+  if (time.isOverdue) return 0; // Overdue
+  if (time.totalHours < 24) return 1; // Less than 24 hours - urgent
+  if (time.days <= 2) return 2; // 1-2 days - warning
+  return 3; // More than 2 days - normal
+}
+

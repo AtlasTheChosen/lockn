@@ -1,18 +1,22 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress-simple';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Trophy, Plus, Flame, BookOpen, Trash2, Loader2, FileText, TrendingUp, Calendar, AlertTriangle, Clock } from 'lucide-react';
+import { Trophy, Plus, Flame, BookOpen, Trash2, Loader2, FileText, TrendingUp, Calendar, AlertTriangle, Clock, HelpCircle, Search, ArrowUpDown } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 import { getCEFRBadgeColor } from '@/lib/cefr-ranking';
 import { formatWeekRange, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
-import { formatDeadlineDisplay, isDeadlinePassed, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
+import { formatDeadlineDisplay, isDeadlinePassed, STREAK_DAILY_REQUIREMENT, formatCountdown, getDeadlineUrgency, getTimeRemaining } from '@/lib/streak';
+
+type SortOption = 'newest' | 'oldest' | 'alpha-asc' | 'alpha-desc' | 'uncompleted' | 'completed' | 'progress-asc' | 'progress-desc';
 
 interface Stack {
   id: string;
@@ -43,7 +47,7 @@ interface Stats {
   weekly_cards_history?: { week: string; count: number; reset_at: string }[];
   pause_weekly_tracking?: boolean;
   daily_cards_learned?: number;
-  daily_cards_date?: string;
+  daily_cards_date?: string | null;
   streak_frozen?: boolean;
   streak_frozen_stacks?: string[];
 }
@@ -53,15 +57,18 @@ interface DashboardMainProps {
   stats: Stats | null;
   userName?: string;
   onUpdate?: () => void;
+  onShowTutorial?: () => void;
 }
 
-export default function DashboardMain({ stacks, stats, userName, onUpdate }: DashboardMainProps) {
+export default function DashboardMain({ stacks, stats, userName, onUpdate, onShowTutorial }: DashboardMainProps) {
   const router = useRouter();
   const [deletingStackId, setDeletingStackId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [stackToDelete, setStackToDelete] = useState<Stack | null>(null);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedStackNotes, setSelectedStackNotes] = useState<Stack | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
   const supabase = createClient();
 
   const completedStacks = stacks.filter(s => (s.test_progress ?? 0) === 100);
@@ -98,9 +105,66 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate }: Das
     }
   };
 
-  const sortedStacks = [...stacks].sort((a, b) => 
-    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
+  // Filter and sort stacks based on search query and sort option
+  const filteredAndSortedStacks = useMemo(() => {
+    let result = [...stacks];
+    
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter(s => 
+        s.title.toLowerCase().includes(q) ||
+        s.language.toLowerCase().includes(q) ||
+        s.scenario?.toLowerCase().includes(q)
+      );
+    }
+    
+    // Sort based on selected option
+    switch (sortBy) {
+      case 'newest':
+        result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        break;
+      case 'oldest':
+        result.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        break;
+      case 'alpha-asc':
+        result.sort((a, b) => a.title.toLowerCase().localeCompare(b.title.toLowerCase()));
+        break;
+      case 'alpha-desc':
+        result.sort((a, b) => b.title.toLowerCase().localeCompare(a.title.toLowerCase()));
+        break;
+      case 'uncompleted':
+        result.sort((a, b) => {
+          const aComplete = (a.test_progress ?? 0) === 100 ? 1 : 0;
+          const bComplete = (b.test_progress ?? 0) === 100 ? 1 : 0;
+          return aComplete - bComplete;
+        });
+        break;
+      case 'completed':
+        result.sort((a, b) => {
+          const aComplete = (a.test_progress ?? 0) === 100 ? 1 : 0;
+          const bComplete = (b.test_progress ?? 0) === 100 ? 1 : 0;
+          return bComplete - aComplete;
+        });
+        break;
+      case 'progress-asc':
+        result.sort((a, b) => {
+          const aProgress = a.total_cards ? (a.mastered_count / a.total_cards) : 0;
+          const bProgress = b.total_cards ? (b.mastered_count / b.total_cards) : 0;
+          return aProgress - bProgress;
+        });
+        break;
+      case 'progress-desc':
+        result.sort((a, b) => {
+          const aProgress = a.total_cards ? (a.mastered_count / a.total_cards) : 0;
+          const bProgress = b.total_cards ? (b.mastered_count / b.total_cards) : 0;
+          return bProgress - aProgress;
+        });
+        break;
+    }
+    
+    return result;
+  }, [stacks, searchQuery, sortBy]);
 
   const capitalizeTitle = (title: string) => {
     return title.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
@@ -123,43 +187,57 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate }: Das
   const hasOverdue = pendingTests.some(s => isDeadlinePassed(s.test_deadline!));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* Header */}
-      <div className="mb-8 animate-fade-in">
-        <h1 className="font-display text-4xl font-semibold gradient-text-warm mb-2">
+      <div className="mb-6 sm:mb-8 animate-fade-in">
+        <h1 className="font-display text-2xl sm:text-4xl font-semibold gradient-text-warm mb-1 sm:mb-2">
           Welcome back, {userName || 'Friend'}! 🎉
         </h1>
-        <p className="text-slate-500 font-medium text-lg">
+        <p className="text-slate-500 font-medium text-sm sm:text-lg">
           You're on fire! Keep the momentum going! 🚀
         </p>
       </div>
 
       {/* Weekly Progress Card */}
       {stats && (
-        <div className="bg-gradient-purple-pink rounded-3xl p-8 shadow-purple text-white mb-8 relative overflow-hidden animate-fade-in stagger-1">
+        <div className="bg-gradient-purple-pink rounded-3xl p-5 sm:p-8 shadow-purple text-white mb-6 sm:mb-8 relative overflow-hidden animate-fade-in stagger-1">
           {/* Background decoration */}
           <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-white/10 rounded-full pointer-events-none" />
-          <div className="absolute bottom-0 right-8 text-8xl opacity-20">✨</div>
+          <div className="absolute bottom-0 right-8 text-6xl sm:text-8xl opacity-20 hidden sm:block">✨</div>
+          
+          {/* Streak Rules Tutorial Button */}
+          {onShowTutorial && (
+            <button
+              onClick={onShowTutorial}
+              className="absolute top-3 right-3 sm:top-6 sm:right-6 z-20 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 sm:px-4 sm:py-2 flex items-center gap-2 transition-all hover:scale-105 border border-white/30"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="text-sm font-semibold hidden sm:inline">Streak Rules</span>
+            </button>
+          )}
           
           <div className="relative z-10">
-            <h3 className="font-display text-2xl font-semibold mb-2">Your Week in Review 📊</h3>
-            <p className="opacity-90 font-medium mb-6 flex items-center gap-2">
+            <h3 className="font-display text-lg sm:text-2xl font-semibold mb-1 sm:mb-2">Your Week in Review 📊</h3>
+            <p className="opacity-90 font-medium mb-4 sm:mb-6 flex items-center gap-2 text-sm sm:text-base">
               <Calendar className="h-4 w-4" />
               {formatWeekRange()}
             </p>
             
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-5 text-center border-2 border-white/20">
-                <p className="font-display text-4xl font-bold mb-1">{stats.current_week_cards || 0}</p>
-                <p className="text-sm font-semibold opacity-95">This Week</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
+                <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats.current_week_cards || 0}</p>
+                <p className="text-xs sm:text-sm font-semibold opacity-95">This Week</p>
+                <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Cards passed in tests</p>
               </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-5 text-center border-2 border-white/20">
-                <p className="font-display text-4xl font-bold mb-1">{stats.weekly_average || 0}</p>
-                <p className="text-sm font-semibold opacity-95">Weekly Avg</p>
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
+                <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats.weekly_average || 0}</p>
+                <p className="text-xs sm:text-sm font-semibold opacity-95">Weekly Avg</p>
+                <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Average cards per week</p>
               </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-5 text-center border-2 border-white/20">
-                <p className="font-display text-4xl font-bold mb-1">{stats.total_mastered || 0}</p>
-                <p className="text-sm font-semibold opacity-95">All Time</p>
+              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
+                <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats.total_mastered || 0}</p>
+                <p className="text-xs sm:text-sm font-semibold opacity-95">Mastered</p>
+                <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Total cards passed</p>
               </div>
             </div>
           </div>
@@ -168,19 +246,19 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate }: Das
 
       {/* Streak Frozen / Pending Tests Alert */}
       {pendingTests.length > 0 && (
-        <div className={`rounded-3xl p-6 mb-8 flex items-center gap-6 animate-fade-in stagger-2 ${
+        <div className={`rounded-3xl p-4 sm:p-6 mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-6 animate-fade-in stagger-2 ${
           hasOverdue 
             ? 'bg-gradient-orange-yellow text-white' 
             : 'bg-amber-50 border-2 border-amber-200 text-amber-800'
         }`}>
-          <div className="text-5xl animate-wiggle">
+          <div className="text-4xl sm:text-5xl animate-wiggle">
             {hasOverdue ? '❄️' : '⏰'}
           </div>
           <div className="flex-1">
-            <h4 className="font-display text-xl font-semibold mb-1">
+            <h4 className="font-display text-lg sm:text-xl font-semibold mb-1">
               {hasOverdue ? 'Streak Frozen! Time to Thaw!' : 'Pending Tests'}
             </h4>
-            <p className="font-medium opacity-95">
+            <p className="font-medium opacity-95 text-sm sm:text-base">
               {hasOverdue 
                 ? `Complete your pending tests to get that streak blazing again! You've got ${stats?.daily_cards_learned || 0}/${STREAK_DAILY_REQUIREMENT} cards mastered today!`
                 : 'Complete your tests to maintain your streak!'}
@@ -188,7 +266,7 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate }: Das
           </div>
           <Button
             onClick={() => pendingTests[0] && router.push(`/stack/${pendingTests[0].id}`)}
-            className={`font-bold rounded-2xl px-6 py-3 ${
+            className={`w-full sm:w-auto font-bold rounded-2xl px-6 py-3 min-h-[48px] ${
               hasOverdue 
                 ? 'bg-white text-orange-500 hover:bg-white/90' 
                 : 'bg-gradient-orange-yellow text-white'
@@ -200,82 +278,155 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate }: Das
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div className="bg-white rounded-3xl p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-3">
-          <div className="text-4xl mb-3">📚</div>
-          <p className="text-sm font-semibold text-slate-500 mb-2">Total Stacks</p>
-          <p className="font-display text-3xl font-bold gradient-text">{stacks.length}</p>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-3">
+          <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">📚</div>
+          <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-1 sm:mb-2">Total Stacks</p>
+          <p className="font-display text-2xl sm:text-3xl font-bold gradient-text">{stacks.length}</p>
         </div>
-        <div className="bg-white rounded-3xl p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-4">
-          <div className="text-4xl mb-3">🏆</div>
-          <p className="text-sm font-semibold text-slate-500 mb-2">Completed</p>
-          <p className="font-display text-3xl font-bold gradient-text">{completedStacks.length}</p>
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-4">
+          <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">🏆</div>
+          <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-1 sm:mb-2">Completed</p>
+          <p className="font-display text-2xl sm:text-3xl font-bold gradient-text">{completedStacks.length}</p>
         </div>
-        <div className="bg-white rounded-3xl p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-5">
-          <div className="text-4xl mb-3">🎴</div>
-          <p className="text-sm font-semibold text-slate-500 mb-2">Cards Mastered</p>
-          <p className="font-display text-3xl font-bold gradient-text">{totalMastered}</p>
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-5">
+          <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">🎴</div>
+          <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-1 sm:mb-2">Mastered</p>
+          <p className="font-display text-2xl sm:text-3xl font-bold gradient-text">{totalMastered}</p>
         </div>
-        <div className="bg-white rounded-3xl p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-6">
-          <div className="text-4xl mb-3">🔥</div>
-          <p className="text-sm font-semibold text-slate-500 mb-2">Day Streak</p>
-          <p className="font-display text-3xl font-bold gradient-text">{stats?.current_streak || 0}</p>
+        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-6">
+          <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">🔥</div>
+          <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-1 sm:mb-2">Streak</p>
+          <p className="font-display text-2xl sm:text-3xl font-bold gradient-text">{stats?.current_streak || 0}</p>
         </div>
       </div>
 
       {/* Stacks Section */}
-      <div className="flex justify-between items-center mb-6 animate-fade-in stagger-7">
-        <h2 className="font-display text-2xl font-semibold text-slate-800">
-          Your Learning Stacks 📖
-        </h2>
-        <Button
-          onClick={() => router.push('/')}
-          className="bg-gradient-green-cyan text-white font-bold rounded-2xl px-6 py-3 shadow-green hover:shadow-lg hover:-translate-y-0.5 transition-all"
-        >
-          ✨ Create New Stack
-        </Button>
+      <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6 animate-fade-in stagger-8">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+          <h2 className="font-display text-xl sm:text-2xl font-semibold text-slate-800">
+            Your Learning Stacks 📖
+          </h2>
+          <Button
+            onClick={() => router.push('/')}
+            className="w-full sm:w-auto bg-gradient-green-cyan text-white font-bold rounded-2xl px-6 py-3 min-h-[48px] shadow-green hover:shadow-lg hover:-translate-y-0.5 transition-all"
+          >
+            ✨ Create New Stack
+          </Button>
+        </div>
+        
+        {/* Search and Sort Controls */}
+        {stacks.length > 0 && (
+          <div className="flex flex-col gap-3">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Input
+                type="text"
+                placeholder="Search stacks..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-12 h-14 sm:h-12 bg-white border-2 border-slate-200 rounded-2xl text-slate-800 placeholder:text-slate-400 focus:border-talka-purple focus:ring-talka-purple/20"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 text-slate-400 hover:text-slate-600 p-2"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            
+            {/* Sort Dropdown */}
+            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+              <SelectTrigger className="w-full h-14 sm:h-12 bg-white border-2 border-slate-200 rounded-2xl text-slate-800">
+                <div className="flex items-center gap-2">
+                  <ArrowUpDown className="h-4 w-4 text-slate-400" />
+                  <SelectValue placeholder="Sort by..." />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-white border-2 border-slate-200 rounded-2xl max-h-[50vh]">
+                <SelectItem value="newest" className="py-3">Newest First</SelectItem>
+                <SelectItem value="oldest" className="py-3">Oldest First</SelectItem>
+                <SelectItem value="alpha-asc" className="py-3">A → Z</SelectItem>
+                <SelectItem value="alpha-desc" className="py-3">Z → A</SelectItem>
+                <SelectItem value="uncompleted" className="py-3">Uncompleted First</SelectItem>
+                <SelectItem value="completed" className="py-3">Completed First</SelectItem>
+                <SelectItem value="progress-desc" className="py-3">Most Progress</SelectItem>
+                <SelectItem value="progress-asc" className="py-3">Least Progress</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        
+        {/* Results count when searching */}
+        {searchQuery && (
+          <p className="text-sm text-slate-500">
+            {filteredAndSortedStacks.length === 0 
+              ? 'No stacks match your search' 
+              : `Found ${filteredAndSortedStacks.length} stack${filteredAndSortedStacks.length === 1 ? '' : 's'}`}
+          </p>
+        )}
       </div>
 
       {/* Stack Cards */}
-      {sortedStacks.length === 0 ? (
-        <div className="bg-white rounded-3xl p-16 text-center shadow-talka-sm animate-fade-in">
-          <div className="text-6xl mb-6 opacity-50">📚</div>
-          <h3 className="font-display text-2xl font-semibold text-slate-700 mb-4">
+      {stacks.length === 0 ? (
+        <div className="bg-white rounded-3xl p-8 sm:p-16 text-center shadow-talka-sm animate-fade-in">
+          <div className="text-5xl sm:text-6xl mb-4 sm:mb-6 opacity-50">📚</div>
+          <h3 className="font-display text-xl sm:text-2xl font-semibold text-slate-700 mb-3 sm:mb-4">
             No stacks yet – let's create your first one!
           </h3>
           <Button
             onClick={() => router.push('/')}
-            className="bg-gradient-green-cyan text-white font-bold rounded-2xl px-8 py-4 shadow-green hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            className="w-full sm:w-auto bg-gradient-green-cyan text-white font-bold rounded-2xl px-8 py-4 min-h-[48px] shadow-green hover:shadow-lg hover:-translate-y-0.5 transition-all"
           >
             Create Your First Stack ✨
           </Button>
         </div>
+      ) : filteredAndSortedStacks.length === 0 ? (
+        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center shadow-talka-sm animate-fade-in">
+          <div className="text-4xl sm:text-5xl mb-3 sm:mb-4">🔍</div>
+          <h3 className="font-display text-lg sm:text-xl font-semibold text-slate-700 mb-2">
+            No stacks found
+          </h3>
+          <p className="text-slate-500 mb-4 text-sm sm:text-base">
+            Try a different search term or clear your search
+          </p>
+          <Button
+            onClick={() => setSearchQuery('')}
+            variant="outline"
+            className="rounded-2xl font-semibold min-h-[48px]"
+          >
+            Clear Search
+          </Button>
+        </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {sortedStacks.map((stack, idx) => {
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+          {filteredAndSortedStacks.map((stack, idx) => {
             const progress = getProgress(stack);
 
             return (
               <div
                 key={stack.id}
-                className="bg-white rounded-3xl p-6 shadow-talka-sm hover:shadow-talka-lg hover:-translate-y-1 transition-all cursor-pointer animate-fade-in"
+                className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-sm hover:shadow-talka-lg hover:-translate-y-1 transition-all cursor-pointer animate-fade-in active:scale-[0.98]"
                 style={{ animationDelay: `${0.8 + idx * 0.1}s` }}
                 onClick={() => router.push(`/stack/${stack.id}`)}
               >
                 {/* Header */}
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex gap-2 flex-wrap">
-                    <span className="px-3 py-1 bg-gradient-green-cyan text-white rounded-xl text-sm font-bold">
+                <div className="flex justify-between items-start mb-3 sm:mb-4">
+                  <div className="flex gap-1.5 sm:gap-2 flex-wrap">
+                    <span className="px-2 sm:px-3 py-1 bg-gradient-green-cyan text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold">
                       {stack.cefr_level || 'B1'}
                     </span>
-                    <span className="px-3 py-1 bg-gradient-blue-purple text-white rounded-xl text-sm font-bold">
+                    <span className="px-2 sm:px-3 py-1 bg-gradient-blue-purple text-white rounded-lg sm:rounded-xl text-xs sm:text-sm font-bold">
                       {stack.language} {getLanguageEmoji(stack.language)}
                     </span>
                   </div>
                   <div className="flex gap-1">
                     {stack.test_notes && stack.test_notes.length > 0 && (
                       <button
-                        className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-amber-100 text-amber-500 transition-colors"
+                        className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-amber-100 text-amber-500 transition-colors"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedStackNotes(stack);
@@ -286,7 +437,7 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate }: Das
                       </button>
                     )}
                     <button
-                      className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-500 transition-colors"
+                      className="w-9 h-9 sm:w-8 sm:h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-red-100 text-slate-500 hover:text-red-500 transition-colors"
                       onClick={(e) => handleDeleteClick(stack, e)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -295,10 +446,10 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate }: Das
                 </div>
 
                 {/* Title & Description */}
-                <h3 className="font-display text-xl font-semibold text-slate-800 mb-2">
+                <h3 className="font-display text-lg sm:text-xl font-semibold text-slate-800 mb-1 sm:mb-2">
                   {capitalizeTitle(stack.title)} 
                 </h3>
-                <p className="text-slate-500 mb-4 line-clamp-2">
+                <p className="text-slate-500 mb-3 sm:mb-4 line-clamp-2 text-sm sm:text-base">
                   {capitalizeTitle(stack.scenario)}
                 </p>
 
@@ -321,19 +472,43 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate }: Das
                   <span className="text-slate-500 text-sm font-semibold">
                     Test: {stack.test_progress ?? 0}%
                   </span>
-                  <span className={`px-3 py-1 rounded-xl text-sm font-bold ${
-                    (stack.test_progress ?? 0) === 100
-                      ? 'bg-gradient-green-cyan text-white'
-                      : progress === 100
-                        ? 'bg-gradient-orange-yellow text-white animate-pulse-soft'
-                        : 'bg-gradient-green-cyan text-white'
-                  }`}>
-                    {(stack.test_progress ?? 0) === 100
-                      ? 'Complete! 🎉'
-                      : progress === 100
-                        ? 'Ready to Test! 🎯'
-                        : 'Learning 📖'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {/* Countdown for stacks ready to test */}
+                    {progress === 100 && (stack.test_progress ?? 0) < 100 && stack.test_deadline && (
+                      (() => {
+                        const urgency = getDeadlineUrgency(stack.test_deadline);
+                        const urgencyStyles = {
+                          0: 'bg-red-100 text-red-600 border border-red-200', // Overdue
+                          1: 'bg-red-50 text-red-500 border border-red-200 animate-pulse', // < 24h
+                          2: 'bg-amber-50 text-amber-600 border border-amber-200', // 1-2 days
+                          3: 'bg-slate-100 text-slate-600 border border-slate-200', // > 2 days
+                        };
+                        return (
+                          <span className={`px-2 py-1 rounded-lg text-xs font-semibold flex items-center gap-1 ${urgencyStyles[urgency]}`}>
+                            <Clock className="h-3 w-3" />
+                            {formatCountdown(stack.test_deadline)}
+                          </span>
+                        );
+                      })()
+                    )}
+                    <span className={`px-3 py-1 rounded-xl text-sm font-bold ${
+                      (stack.test_progress ?? 0) === 100
+                        ? 'bg-gradient-green-cyan text-white'
+                        : progress === 100
+                          ? (stack.test_deadline && isDeadlinePassed(stack.test_deadline))
+                            ? 'bg-gradient-to-r from-cyan-400 to-blue-500 text-white'
+                            : 'bg-gradient-orange-yellow text-white animate-pulse-soft'
+                          : 'bg-gradient-green-cyan text-white'
+                    }`}>
+                      {(stack.test_progress ?? 0) === 100
+                        ? 'Complete! 🎉'
+                        : progress === 100
+                          ? (stack.test_deadline && isDeadlinePassed(stack.test_deadline))
+                            ? '❄️ Frozen!'
+                            : 'Ready to Test! 🎯'
+                          : 'Learning 📖'}
+                    </span>
+                  </div>
                 </div>
               </div>
             );

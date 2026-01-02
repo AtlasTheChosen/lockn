@@ -175,7 +175,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
       >
         {/* Backdrop */}
         <motion.div
@@ -188,24 +188,24 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
 
         {/* Modal */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, y: 100 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 100 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-md bg-white rounded-3xl p-8 shadow-talka-lg overflow-hidden"
+          className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-talka-lg overflow-hidden max-h-[90vh] overflow-y-auto"
         >
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
           >
             <X className="h-5 w-5" />
           </button>
 
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex justify-center mb-4">
-              <Logo size="lg" />
+          <div className="text-center mb-6 sm:mb-8 pt-4 sm:pt-0">
+            <div className="flex justify-center mb-3 sm:mb-4">
+              <Logo size="md" className="sm:w-16 sm:h-16" />
             </div>
             {showResetForm ? (
               <>
@@ -281,12 +281,12 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
           ) : (
             <>
               {/* OAuth Buttons */}
-              <div className="space-y-3 mb-6">
+              <div className="space-y-2 sm:space-y-3 mb-4 sm:mb-6">
                 <Button
                   type="button"
                   onClick={() => handleOAuthSignIn('google')}
                   disabled={loadingProvider !== null}
-                  className="w-full bg-slate-50 border-2 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 rounded-2xl py-5 font-semibold transition-all"
+                  className="w-full bg-slate-50 border-2 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-5 font-semibold transition-all active:scale-[0.98]"
                 >
                   {loadingProvider === 'google' ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -307,7 +307,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                   type="button"
                   onClick={() => handleOAuthSignIn('facebook')}
                   disabled={loadingProvider !== null}
-                  className="w-full bg-slate-50 border-2 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 rounded-2xl py-5 font-semibold transition-all"
+                  className="w-full bg-slate-50 border-2 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-5 font-semibold transition-all active:scale-[0.98]"
                 >
                   {loadingProvider === 'facebook' ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -325,7 +325,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                   type="button"
                   onClick={() => handleOAuthSignIn('apple')}
                   disabled={loadingProvider !== null}
-                  className="w-full bg-slate-50 border-2 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 rounded-2xl py-5 font-semibold transition-all"
+                  className="w-full bg-slate-50 border-2 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300 rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-5 font-semibold transition-all active:scale-[0.98]"
                 >
                   {loadingProvider === 'apple' ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -341,7 +341,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
               </div>
 
               {/* Divider */}
-              <div className="relative my-6">
+              <div className="relative my-4 sm:my-6">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t-2 border-slate-200"></div>
                 </div>
@@ -351,7 +351,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
               </div>
 
               {/* Email Form */}
-              <form onSubmit={handleEmailAuth} className="space-y-4">
+              <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-4">
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
                   <Input
@@ -360,7 +360,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 py-6 font-medium focus:border-talka-purple focus:ring-0"
+                    autoComplete="email"
+                    className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 h-14 sm:h-16 text-base font-medium focus:border-talka-purple focus:ring-0"
                   />
                 </div>
 
@@ -372,12 +373,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 pr-12 py-6 font-medium focus:border-talka-purple focus:ring-0"
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                    className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 pr-12 h-14 sm:h-16 text-base font-medium focus:border-talka-purple focus:ring-0"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -392,7 +394,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 py-6 font-medium focus:border-talka-purple focus:ring-0"
+                      autoComplete="new-password"
+                      className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 h-14 sm:h-16 text-base font-medium focus:border-talka-purple focus:ring-0"
                     />
                   </div>
                 )}
@@ -410,7 +413,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50"
+                  className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-4 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]"
                 >
                   {loading ? (
                     <>
@@ -426,7 +429,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                   <button
                     type="button"
                     onClick={() => setShowResetForm(true)}
-                    className="w-full text-slate-500 text-sm font-medium hover:text-talka-purple transition-colors"
+                    className="w-full text-slate-500 text-sm font-medium hover:text-talka-purple transition-colors py-2"
                   >
                     Forgot password?
                   </button>

@@ -19,7 +19,6 @@ import {
   Home,
   Sparkles,
   BookOpen,
-  Users,
   Trophy,
   User as UserIcon,
   LogOut,
@@ -153,7 +152,6 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
   const navItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/dashboard', label: 'Dashboard', icon: Sparkles },
-    { href: '/friends', label: 'Friends', icon: Users },
     { href: '/leaderboard', label: 'Leaderboards', icon: Trophy },
   ];
 
@@ -169,9 +167,9 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-1">
-            <Logo size="sm" />
-            <span className="text-xl font-bold gradient-text">LOCKN</span>
+          <Link href="/" className="flex items-center gap-2">
+            <Logo size="lg" />
+            <span className="text-2xl font-bold gradient-text">LOCKN</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -224,11 +222,20 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                 {/* User Menu */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-10 w-10 rounded-full">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={profile?.avatar_url} alt={profile?.display_name || 'User'} />
-                        <AvatarFallback>{getInitials()}</AvatarFallback>
-                      </Avatar>
+                    <Button variant="ghost" className="relative h-auto px-2 py-1 rounded-full flex items-center gap-2">
+                      <div className="h-9 w-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500">
+                        <img 
+                          src={profile?.avatar_url || '/images/avatars/avatar_fixed_01.png'} 
+                          alt={profile?.display_name || 'User'} 
+                          className="h-full w-full object-cover scale-110"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/images/avatars/avatar_fixed_01.png';
+                          }}
+                        />
+                      </div>
+                      <span className="hidden sm:inline text-sm font-medium">
+                        {profile?.display_name || profile?.email?.split('@')[0] || 'User'}
+                      </span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56">

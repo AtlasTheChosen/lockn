@@ -260,20 +260,20 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
         />
       </div>
 
-      <div className="flex-1 flex items-center justify-center px-4 md:px-6 py-8 md:py-12">
+      <div className="flex-1 flex items-center justify-center px-4 py-4 sm:px-6 sm:py-8 md:py-12">
         <div className="w-full max-w-2xl">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-6"
+            className="text-center mb-4 sm:mb-6"
           >
             {phase === 'learning' ? (
               <>
-                <span className="inline-block px-4 py-2 bg-gradient-purple-pink text-white font-bold rounded-full text-sm mb-4 shadow-purple">
+                <span className="inline-block px-3 sm:px-4 py-1.5 sm:py-2 bg-gradient-purple-pink text-white font-bold rounded-full text-xs sm:text-sm mb-3 sm:mb-4 shadow-purple">
                   ✨ Learning Phase
                 </span>
-                <p className="text-slate-500 text-sm font-semibold mb-2">
+                <p className="text-slate-500 text-xs sm:text-sm font-semibold mb-1 sm:mb-2">
                   Card {currentIndex + 1} of {cards.length}
                   {isLoggedIn && (
                     <span className="ml-2">
@@ -281,7 +281,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                     </span>
                   )}
                 </p>
-                <h2 className="font-display text-2xl font-semibold text-slate-800 capitalize">{scenario}</h2>
+                <h2 className="font-display text-xl sm:text-2xl font-semibold text-slate-800 capitalize">{scenario}</h2>
                 {isLoggedIn && !allCardsMastered && Object.keys(cardRatings).length === cards.length && (
                   <p className="text-amber-600 text-sm font-medium mt-2">
                     Rate all cards as "Kinda Know" or "Really Know" to unlock the test
@@ -314,68 +314,68 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
               {phase === 'learning' ? (
                 <div
                   onClick={handleFlip}
-                  className="bg-white border-2 border-slate-200 rounded-3xl p-8 min-h-[350px] flex flex-col justify-center cursor-pointer hover:border-talka-purple hover:shadow-talka-md transition-all duration-300 shadow-talka-sm"
+                  className="bg-white border-2 border-slate-200 rounded-2xl sm:rounded-3xl p-5 sm:p-8 min-h-[280px] sm:min-h-[350px] flex flex-col justify-center cursor-pointer hover:border-talka-purple hover:shadow-talka-md transition-all duration-300 shadow-talka-sm active:scale-[0.99]"
                 >
                   {!isFlipped ? (
-                    <div className="space-y-6">
-                      <div className="flex justify-center mb-4">
-                        <span className="px-4 py-2 bg-slate-100 text-slate-600 font-semibold rounded-full text-sm">
+                    <div className="space-y-4 sm:space-y-6">
+                      <div className="flex justify-center mb-3 sm:mb-4">
+                        <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 text-slate-600 font-semibold rounded-full text-xs sm:text-sm">
                           {currentCard.toneAdvice}
                         </span>
                       </div>
                       <div className="text-center">
-                        <h3 className="font-display text-4xl font-semibold text-slate-800 mb-6">{currentCard.targetPhrase}</h3>
+                        <h3 className="font-display text-2xl sm:text-4xl font-semibold text-slate-800 mb-4 sm:mb-6">{currentCard.targetPhrase}</h3>
                       </div>
-                      <p className="text-center text-slate-400 text-sm font-medium mt-8">
+                      <p className="text-center text-slate-400 text-xs sm:text-sm font-medium mt-6 sm:mt-8">
                         👆 Tap card to reveal meaning
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-6">
-                      <div className="text-center mb-4">
-                        <h3 className="font-display text-3xl font-semibold text-slate-800 mb-4">
+                    <div className="space-y-4 sm:space-y-6">
+                      <div className="text-center mb-3 sm:mb-4">
+                        <h3 className="font-display text-2xl sm:text-3xl font-semibold text-slate-800 mb-3 sm:mb-4">
                           <WordHoverText
                             text={currentCard.targetPhrase}
                             translations={wordTranslations[`${currentIndex}-target`] || []}
                           />
                         </h3>
                       </div>
-                      <div className="bg-slate-50 rounded-2xl p-6">
-                        <p className="text-slate-500 text-sm font-semibold mb-2">🔤 Translation:</p>
-                        <p className="text-xl font-semibold text-slate-800">{currentCard.nativeTranslation}</p>
+                      <div className="bg-slate-50 rounded-xl sm:rounded-2xl p-4 sm:p-6">
+                        <p className="text-slate-500 text-xs sm:text-sm font-semibold mb-1 sm:mb-2">🔤 Translation:</p>
+                        <p className="text-lg sm:text-xl font-semibold text-slate-800">{currentCard.nativeTranslation}</p>
                       </div>
-                      <p className="text-center text-slate-400 text-xs font-medium mt-4">
+                      <p className="text-center text-slate-400 text-[10px] sm:text-xs font-medium mt-3 sm:mt-4">
                         Hover over words in the target language to see meanings
                       </p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="bg-white border-2 border-slate-200 rounded-3xl p-8 min-h-[350px] flex flex-col justify-center shadow-talka-sm">
-                  <div className="space-y-6">
-                    <div className="flex justify-center mb-4">
-                      <span className="px-4 py-2 bg-slate-100 text-slate-600 font-semibold rounded-full text-sm">
+                <div className="bg-white border-2 border-slate-200 rounded-2xl sm:rounded-3xl p-5 sm:p-8 min-h-[280px] sm:min-h-[350px] flex flex-col justify-center shadow-talka-sm">
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="flex justify-center mb-3 sm:mb-4">
+                      <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 text-slate-600 font-semibold rounded-full text-xs sm:text-sm">
                         {currentCard.toneAdvice}
                       </span>
                     </div>
                     <div className="text-center">
-                      <h3 className="font-display text-4xl font-semibold text-slate-800 mb-8">{currentCard.targetPhrase}</h3>
+                      <h3 className="font-display text-2xl sm:text-4xl font-semibold text-slate-800 mb-5 sm:mb-8">{currentCard.targetPhrase}</h3>
                     </div>
 
                     {!feedback ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3 sm:space-y-4">
                         <Input
                           value={userAnswer}
                           onChange={(e) => setUserAnswer(e.target.value)}
                           onKeyPress={handleKeyPress}
                           placeholder="Type the English translation..."
-                          className="bg-slate-50 border-2 border-slate-200 text-slate-800 text-lg py-6 rounded-2xl placeholder:text-slate-400 focus:border-talka-purple focus:ring-0 font-medium"
+                          className="bg-slate-50 border-2 border-slate-200 text-slate-800 text-base sm:text-lg h-14 sm:h-16 rounded-xl sm:rounded-2xl placeholder:text-slate-400 focus:border-talka-purple focus:ring-0 font-medium"
                           autoFocus
                         />
                         <Button
                           onClick={handleSubmitAnswer}
                           disabled={!userAnswer.trim()}
-                          className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-6 text-base shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50"
+                          className="w-full bg-gradient-purple-pink text-white font-bold rounded-xl sm:rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-4 text-base shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]"
                         >
                           Submit Answer ✨
                         </Button>
@@ -432,39 +432,39 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-6 space-y-3"
+                  className="mt-4 sm:mt-6 space-y-2 sm:space-y-3"
                 >
-                  <p className="text-center text-slate-500 text-sm font-semibold mb-3">
+                  <p className="text-center text-slate-500 text-xs sm:text-sm font-semibold mb-2 sm:mb-3">
                     Rate your knowledge:
                   </p>
-                  <div className="grid grid-cols-1 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
                     {RATING_OPTIONS.map((option) => (
                       <Button
                         key={option.value}
                         onClick={() => handleRating(option.value)}
-                        className={`w-full ${option.gradient} hover:opacity-90 text-white rounded-2xl py-4 text-base font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all`}
+                        className={`w-full ${option.gradient} hover:opacity-90 text-white rounded-xl sm:rounded-2xl py-3 sm:py-4 text-sm sm:text-base font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all min-h-[48px] active:scale-[0.98]`}
                       >
-                        {option.emoji} {option.label}
-                        {cardRatings[currentIndex] === option.value && <Check className="ml-2 h-5 w-5" />}
+                        {option.emoji} <span className="hidden sm:inline">{option.label}</span><span className="sm:hidden">{option.label.split(' ').slice(-1)}</span>
+                        {cardRatings[currentIndex] === option.value && <Check className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />}
                       </Button>
                     ))}
                   </div>
                 </motion.div>
               )}
               {!isFlipped && (
-                <div className="mt-8 flex justify-center items-center">
+                <div className="mt-6 sm:mt-8 flex flex-col sm:flex-row justify-center items-center gap-2">
                   {currentIndex > 0 && (
                     <Button
                       onClick={handlePrev}
                       variant="ghost"
-                      className="text-slate-500 hover:text-slate-800 font-semibold"
+                      className="text-slate-500 hover:text-slate-800 font-semibold min-h-[44px]"
                     >
                       <ChevronLeft className="h-5 w-5 mr-2" />
                       Previous
                     </Button>
                   )}
-                  <p className="text-slate-400 text-sm font-medium ml-4">
-                    👆 Tap card to flip, then rate your knowledge
+                  <p className="text-slate-400 text-xs sm:text-sm font-medium text-center sm:ml-4">
+                    👆 Tap card to flip, then rate
                   </p>
                 </div>
               )}

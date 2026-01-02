@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -12,8 +12,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress-simple';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Plus, LogOut, Crown, Flame, Trophy, BookOpen, Loader2, AlertCircle } from 'lucide-react';
+import { Sparkles, Plus, LogOut, Crown, Flame, Trophy, BookOpen, Loader2, AlertCircle, HelpCircle } from 'lucide-react';
 import ThemeSelector from '@/components/dashboard/ThemeSelector';
+import StreakTutorial from '@/components/tutorial/StreakTutorial';
 import { SUPPORTED_LANGUAGES, QUICK_START_SCENARIOS, FREE_TIER_LIMITS } from '@/lib/constants';
 import type { UserProfile, CardStack, UserStats } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
@@ -31,8 +32,29 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
   const [targetLanguage, setTargetLanguage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showStreakTutorial, setShowStreakTutorial] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+
+  // Auto-show streak tutorial for first-time users
+  useEffect(() => {
+    if (profile && !profile.has_seen_streak_tutorial) {
+      // Delay slightly to let the page render first
+      const timer = setTimeout(() => setShowStreakTutorial(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [profile]);
+
+  const handleTutorialComplete = async () => {
+    setShowStreakTutorial(false);
+    // Mark as seen in database
+    if (user?.id) {
+      await supabase
+        .from('user_profiles')
+        .update({ has_seen_streak_tutorial: true })
+        .eq('id', user.id);
+    }
+  };
 
   const incompleteStacks = stacks.filter((s) => !s.is_completed);
   const canGenerate = profile?.is_premium || incompleteStacks.length < FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS;
@@ -95,6 +117,14 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Streak Tutorial */}
+      {showStreakTutorial && (
+        <StreakTutorial 
+          onComplete={handleTutorialComplete}
+          onSkip={handleTutorialComplete}
+        />
+      )}
+
       <nav className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -135,9 +165,15 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
+          <Card 
+            className="cursor-pointer hover:shadow-md transition-shadow group"
+            onClick={() => setShowStreakTutorial(true)}
+          >
             <CardHeader className="pb-3">
-              <CardDescription>Current Streak</CardDescription>
+              <div className="flex items-center justify-between">
+                <CardDescription>Current Streak</CardDescription>
+                <HelpCircle className="h-4 w-4 text-slate-400 group-hover:text-blue-500 transition-colors" />
+              </div>
               <div className="flex items-center gap-2">
                 <Flame className="h-5 w-5 text-orange-500" />
                 <CardTitle className="text-2xl">{stats?.current_streak || 0} days</CardTitle>

@@ -15,7 +15,6 @@ interface LeaderboardUser {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
-  email: string | null;
   current_week_cards: number;
   weekly_average: number;
   total_stacks_completed: number;
@@ -41,7 +40,7 @@ export default function LeaderboardPage() {
       
       const { data: profilesData, error: profilesError } = await supabase
         .from('user_profiles')
-        .select('id, display_name, avatar_url, email')
+        .select('id, display_name, avatar_url')
         .limit(50);
 
       if (profilesError) throw profilesError;
@@ -59,7 +58,6 @@ export default function LeaderboardPage() {
           id: profile.id,
           display_name: profile.display_name,
           avatar_url: profile.avatar_url,
-          email: profile.email,
           current_week_cards: userStats?.current_week_cards || 0,
           weekly_average: calculateWeeklyAverage(weeklyHistory),
           total_stacks_completed: userStats?.total_stacks_completed || 0,
@@ -105,9 +103,6 @@ export default function LeaderboardPage() {
   const getInitials = (user: LeaderboardUser) => {
     if (user.display_name) {
       return user.display_name.substring(0, 1).toUpperCase();
-    }
-    if (user.email) {
-      return user.email[0].toUpperCase();
     }
     return '?';
   };
@@ -276,14 +271,22 @@ export default function LeaderboardPage() {
                   </div>
 
                   {/* Avatar */}
-                  <div className="w-14 h-14 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-xl text-white shadow-blue flex-shrink-0">
-                    {getInitials(user)}
+                  <div className="w-14 h-14 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-xl text-white shadow-blue flex-shrink-0 overflow-hidden">
+                    {user.avatar_url ? (
+                      <img 
+                        src={user.avatar_url} 
+                        alt={user.display_name || 'User'} 
+                        className="w-full h-full object-cover scale-110"
+                      />
+                    ) : (
+                      getInitials(user)
+                    )}
                   </div>
 
                   {/* User Info */}
                   <div className="flex-1 min-w-0">
                     <p className="font-display text-lg font-semibold text-slate-800 truncate">
-                      {user.display_name || user.email?.split('@')[0] || 'Anonymous'}
+                      {user.display_name || 'Anonymous'}
                       {isCurrentUser && (
                         <span className="ml-2 px-2 py-0.5 bg-gradient-purple-pink text-white text-xs font-bold rounded-lg">
                           You

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import type { UserProfile, Badge as BadgeType } from '@/lib/types';
 import Link from 'next/link';
+import { AVATAR_COUNT, getAvatarUrl } from '@/lib/avatars';
 
 const AVAILABLE_LANGUAGES = [
   { code: 'es', name: 'Spanish', emoji: '🇪🇸' },
@@ -56,6 +57,8 @@ interface Props {
 export default function ProfileSettings({ profile, onUpdate }: Props) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [bio, setBio] = useState(profile.bio || '');
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(1));
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [profilePublic, setProfilePublic] = useState(profile.profile_public ?? true);
   const [languagesLearning, setLanguagesLearning] = useState<string[]>(profile.languages_learning || []);
   const [theme, setTheme] = useState(profile.theme_preference || 'system');
@@ -101,6 +104,7 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
         .update({
           display_name: displayName || null,
           bio: bio || null,
+          avatar_url: avatarUrl,
           profile_public: profilePublic,
           languages_learning: languagesLearning,
           theme_preference: theme,
@@ -131,19 +135,29 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Profile Avatar Preview */}
+      {/* Profile Avatar Picker */}
       <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in">
         <div className="flex items-center gap-2 mb-4">
           <User className="h-5 w-5 text-talka-purple" />
           <h3 className="font-display text-xl font-semibold text-slate-800">Your Profile</h3>
         </div>
         <p className="text-slate-500 text-sm font-medium mb-6">
-          Your profile picture is generated automatically
+          Choose your avatar from 25 cute options!
         </p>
-        <div className="flex items-center gap-6">
-          <div className="w-24 h-24 rounded-full bg-gradient-cyan-blue flex items-center justify-center text-3xl font-bold text-white shadow-blue ring-4 ring-white">
-            {getInitials()}
-          </div>
+        <div className="flex items-center gap-6 mb-6">
+          <button
+            onClick={() => setShowAvatarPicker(!showAvatarPicker)}
+            className="w-24 h-24 rounded-full bg-gradient-cyan-blue flex items-center justify-center text-3xl font-bold text-white shadow-blue ring-4 ring-white overflow-hidden hover:ring-talka-purple transition-all cursor-pointer group relative"
+          >
+            <img 
+              src={avatarUrl} 
+              alt="Profile avatar" 
+              className="w-full h-full object-cover scale-110"
+            />
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <span className="text-white text-xs font-bold">Change</span>
+            </div>
+          </button>
           <div>
             <p className="font-display text-xl font-semibold text-slate-800">{displayName || 'Your Name'}</p>
             <p className="text-slate-500 font-medium">{profile.email}</p>
@@ -154,6 +168,45 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
             </Link>
           </div>
         </div>
+
+        {/* Avatar Picker Grid */}
+        {showAvatarPicker && (
+          <div className="border-t pt-6">
+            <p className="text-sm font-medium text-slate-600 mb-4">Select your avatar:</p>
+            <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3">
+              {Array.from({ length: AVATAR_COUNT }, (_, i) => i + 1).map((id) => {
+                const url = getAvatarUrl(id);
+                const isSelected = avatarUrl === url;
+                return (
+                  <button
+                    key={id}
+                    onClick={async () => {
+                      // Update local state immediately
+                      setAvatarUrl(url);
+                      setShowAvatarPicker(false);
+                      // Save to database (don't call onUpdate to avoid state reset)
+                      await supabase
+                        .from('user_profiles')
+                        .update({ avatar_url: url })
+                        .eq('id', profile.id);
+                    }}
+                    className={`w-12 h-12 rounded-full overflow-hidden transition-all hover:scale-110 ${
+                      isSelected 
+                        ? 'ring-4 ring-talka-purple scale-110' 
+                        : 'ring-2 ring-slate-200 hover:ring-talka-purple/50'
+                    }`}
+                  >
+                    <img 
+                      src={url} 
+                      alt={`Avatar ${id}`} 
+                      className="w-full h-full object-cover scale-110"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Profile Information */}
@@ -386,3 +439,5 @@ export default function ProfileSettings({ profile, onUpdate }: Props) {
     </div>
   );
 }
+
+

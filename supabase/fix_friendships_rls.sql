@@ -29,3 +29,6 @@ CREATE POLICY "Users can view own friendships"
 SELECT 'Friendships RLS policy fixed! Recipients can now see pending requests.' as status;
 
 
+
+
+

@@ -1,7 +1,8 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Quicksand, Fredoka } from 'next/font/google';
 import AuthProvider from '@/components/auth/AuthProvider';
+import { MobilePreviewProvider } from '@/components/shared/MobilePreview';
 
 const quicksand = Quicksand({ 
   subsets: ['latin'],
@@ -14,6 +15,13 @@ const fredoka = Fredoka({
   variable: '--font-fredoka',
   weight: ['300', '400', '500', '600', '700'],
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://talka.app'),
@@ -49,7 +57,9 @@ export default function RootLayout({
     <html lang="en" className={`${quicksand.variable} ${fredoka.variable}`}>
       <body className={quicksand.className}>
         <AuthProvider>
-          {children}
+          <MobilePreviewProvider>
+            {children}
+          </MobilePreviewProvider>
         </AuthProvider>
       </body>
     </html>

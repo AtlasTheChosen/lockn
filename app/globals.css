@@ -209,3 +209,100 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Mobile-specific utilities */
+@layer utilities {
+  /* Touch-friendly target (minimum 44x44px) */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  
+  /* Full width on mobile only */
+  .mobile-full {
+    @apply w-full sm:w-auto;
+  }
+  
+  /* Stack elements on mobile */
+  .mobile-stack {
+    @apply flex flex-col sm:flex-row;
+  }
+  
+  /* Hide on mobile, show on desktop */
+  .desktop-only {
+    @apply hidden sm:block;
+  }
+  
+  /* Show on mobile, hide on desktop */
+  .mobile-only {
+    @apply block sm:hidden;
+  }
+  
+  /* Safe area padding for notched devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .safe-area-y {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-all {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Prevent pull-to-refresh on mobile in certain areas */
+.no-pull-refresh {
+  overscroll-behavior-y: contain;
+}
+
+/* Smooth scrolling for touch devices */
+@supports (-webkit-touch-callout: none) {
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tap highlight removal for mobile */
+@media (hover: none) and (pointer: coarse) {
+  button, a, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Hide scrollbar but keep functionality */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

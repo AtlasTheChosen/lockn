@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getRandomAvatarId, getAvatarUrl } from '@/lib/avatars';
 
 export async function POST() {
   try {
@@ -22,11 +23,16 @@ export async function POST() {
       return NextResponse.json({ profile: existingProfile });
     }
 
+    // Assign a random avatar to new users
+    const avatarId = getRandomAvatarId();
+    const avatarUrl = getAvatarUrl(avatarId);
+
     const { data: profile, error } = await supabase
       .from('user_profiles')
       .insert({
         id: user.id,
         email: user.email,
+        avatar_url: avatarUrl,
         daily_generations_count: 0,
         daily_generations_reset_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       })
