@@ -41,28 +41,12 @@ export default function DashboardPage() {
   const loadDashboardData = useCallback(async (userId: string, userEmail?: string) => {
     const supabase = createClient();
     
-    // #region agent log
-    console.log('[DEBUG] loadDashboardData START', { userId, userEmail, timestamp: Date.now() });
-    console.log('[DEBUG] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-    // #endregion
+    console.log('[Dashboard] Loading data for user:', userId);
     
     try {
       setError(null);
       
-      // #region agent log - Test simple query first
-      console.log('[DEBUG] Testing simple count query on card_stacks...');
-      try {
-        const { count, error: countErr } = await supabase.from('card_stacks').select('*', { count: 'exact', head: true });
-        console.log('[DEBUG] Simple count result:', { count, error: countErr?.message });
-      } catch (testErr: any) {
-        console.log('[DEBUG] Simple count FAILED:', testErr.message);
-      }
-      // #endregion
-      
-      // #region agent log
-      console.log('[DEBUG] Fetching profile...');
-      // #endregion
-      
+      // Fetch profile
       // Fetch profile
       let profile = sessionProfile;
       if (!profile) {
@@ -71,10 +55,6 @@ export default function DashboardPage() {
           .select('*')
           .eq('id', userId)
           .maybeSingle();
-
-        // #region agent log
-        console.log('[DEBUG] Profile query result:', { profileData: !!profileData, profileError: profileError?.message });
-        // #endregion
 
         if (profileError) {
           if (profileError.code === 'PGRST116' || !profileData) {
@@ -104,57 +84,16 @@ export default function DashboardPage() {
         }
       }
 
-      // #region agent log
-      console.log('[DEBUG] Profile loaded:', { hasProfile: !!profile });
-      console.log('[DEBUG] Fetching stacks for user:', userId);
-      // #endregion
+      // Fetch stacks
+      const { data: stacksData, error: stacksError } = await supabase
+        .from('card_stacks')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
 
-      // Fetch stacks with timeout
-      let stacksData: any[] | null = null;
-      let stacksError: any = null;
-      try {
-        // #region agent log
-        console.log('[DEBUG] Creating stacks query promise...');
-        // #endregion
-        
-        const stacksPromise = supabase
-          .from('card_stacks')
-          .select('*')
-          .eq('user_id', userId)
-          .order('created_at', { ascending: false });
-        
-        // #region agent log
-        console.log('[DEBUG] Promise created, starting race with 10s timeout...');
-        // #endregion
-        
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => {
-            // #region agent log
-            console.log('[DEBUG] ⚠️ TIMEOUT TRIGGERED - 10s elapsed, query hung');
-            // #endregion
-            reject(new Error('Stacks query timeout after 10s'));
-          }, 10000)
-        );
-        
-        const result = await Promise.race([stacksPromise, timeoutPromise]) as any;
-        
-        // #region agent log
-        console.log('[DEBUG] ✅ Stacks query resolved:', { count: result?.data?.length, error: result?.error?.message });
-        // #endregion
-        
-        stacksData = result.data;
-        stacksError = result.error;
-      } catch (e: any) {
-        // #region agent log
-        console.error('[DEBUG] ❌ Stacks query EXCEPTION:', e.message);
-        // #endregion
-        stacksError = e;
+      if (stacksError) {
+        console.error('[Dashboard] Stacks error:', stacksError.message);
       }
-
-      // #region agent log
-      console.log('[DEBUG] Stacks query result:', { count: stacksData?.length, error: stacksError?.message });
-      console.log('[DEBUG] Fetching stats...');
-      // #endregion
 
       // Fetch stats
       let stats = null;
@@ -163,10 +102,6 @@ export default function DashboardPage() {
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
-      
-      // #region agent log
-      console.log('[DEBUG] Stats query result:', { hasStats: !!statsData, error: statsError?.message });
-      // #endregion
 
       if (statsError) {
         try {
@@ -260,10 +195,6 @@ export default function DashboardPage() {
         }
       }
 
-      // #region agent log
-      console.log('[DEBUG] Setting data state...');
-      // #endregion
-
       setData({
         user: { id: userId, email: userEmail },
         profile,
@@ -272,15 +203,11 @@ export default function DashboardPage() {
         userName,
       });
 
-      // #region agent log
-      console.log('[DEBUG] Data state set, checking badges...');
-      // #endregion
-
       // Check for new badges
       if (stats && profile) {
         const completedStacks = (stacksData || []).filter((s: any) => s.is_completed);
         const badgeStats = buildBadgeStats(stats, {
-          friends_count: 0, // Will be fetched separately if needed
+          friends_count: 0,
           languages_count: profile?.languages_learning?.length ?? 0,
           is_premium: profile?.is_premium ?? false,
           tests_completed: completedStacks.length,
@@ -290,31 +217,17 @@ export default function DashboardPage() {
         await checkAndAwardBadges(userId, badgeStats, existingBadges);
       }
 
-      // #region agent log
-      console.log('[DEBUG] Badge check complete');
-      // #endregion
-
       if (!profile?.display_name) {
         setNeedsDisplayName(true);
       }
       
-      // #region agent log
-      console.log('[DEBUG] loadDashboardData SUCCESS');
-      // #endregion
-      
     } catch (err: any) {
-      // #region agent log
-      console.error('[DEBUG] loadDashboardData ERROR:', err);
-      // #endregion
       console.error('[Dashboard] Error loading data:', err);
       setError(err.message || 'Failed to load dashboard data');
     } finally {
-      // #region agent log
-      console.log('[DEBUG] loadDashboardData FINALLY - setting dataLoading to false');
-      // #endregion
       setDataLoading(false);
     }
-  }, [sessionProfile]);
+  }, [sessionProfile, checkAndAwardBadges]);
 
   useEffect(() => {
     if (sessionLoading) return;
