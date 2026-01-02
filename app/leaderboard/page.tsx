@@ -23,7 +23,7 @@ type FilterType = 'weekly_avg' | 'this_week' | 'stacks';
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const { user: sessionUser, accessToken, loading: sessionLoading } = useSession();
+  const { user: sessionUser, loading: sessionLoading } = useSession();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,55 +31,18 @@ export default function LeaderboardPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('weekly_avg');
 
-  const loadLeaderboardData = useCallback(async (token: string) => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    console.log('[Leaderboard] Starting load, token length:', token?.length || 0);
-    
+  const loadLeaderboardData = useCallback(async () => {
     try {
       setError(null);
       
-      // Use user's access token for RLS
-      const authToken = token || supabaseKey!;
-      console.log('[Leaderboard] Using auth token, first 20 chars:', authToken?.substring(0, 20));
+      // Use server-side API route that bypasses RLS
+      const response = await fetch('/api/leaderboard');
       
-      // Fetch profiles using native fetch
-      const profilesUrl = `${supabaseUrl}/rest/v1/user_profiles?select=id,display_name,avatar_url&limit=50`;
-      console.log('[Leaderboard] Fetching profiles from:', profilesUrl);
-      
-      const profilesResponse = await fetch(profilesUrl, {
-        headers: {
-          'apikey': supabaseKey!,
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      console.log('[Leaderboard] Profiles response status:', profilesResponse.status);
-      
-      if (!profilesResponse.ok) {
-        const errorText = await profilesResponse.text();
-        console.error('[Leaderboard] Profiles error body:', errorText);
-        throw new Error(`Failed to fetch profiles: ${profilesResponse.status} - ${errorText}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch leaderboard: ${response.status}`);
       }
       
-      const profilesData = await profilesResponse.json();
-      console.log('[Leaderboard] Profiles received:', profilesData?.length || 0, profilesData);
-
-      // Fetch stats using native fetch
-      const statsResponse = await fetch(
-        `${supabaseUrl}/rest/v1/user_stats?select=user_id,current_week_cards,weekly_cards_history,total_stacks_completed`,
-        {
-          headers: {
-            'apikey': supabaseKey!,
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      
-      const statsData = statsResponse.ok ? await statsResponse.json() : [];
+      const { profiles: profilesData, stats: statsData } = await response.json();
       
       const statsMap = new Map(statsData?.map((s: any) => [s.user_id, s]) || []);
       
@@ -106,23 +69,16 @@ export default function LeaderboardPage() {
   }, []);
 
   useEffect(() => {
-    console.log('[Leaderboard] useEffect - sessionLoading:', sessionLoading, 'sessionUser:', !!sessionUser, 'accessToken:', !!accessToken);
-    
-    if (sessionLoading) {
-      console.log('[Leaderboard] Still loading session, waiting...');
-      return;
-    }
+    if (sessionLoading) return;
 
-    if (!sessionUser || !accessToken) {
-      console.log('[Leaderboard] No user or token, redirecting to login');
+    if (!sessionUser) {
       router.push('/auth/login');
       return;
     }
 
-    console.log('[Leaderboard] Loading data with user:', sessionUser.id);
     setCurrentUserId(sessionUser.id);
-    loadLeaderboardData(accessToken);
-  }, [sessionUser, accessToken, sessionLoading, router, loadLeaderboardData]);
+    loadLeaderboardData();
+  }, [sessionUser, sessionLoading, router, loadLeaderboardData]);
 
   const getSortedUsers = (metric: FilterType) => {
     return [...users].sort((a, b) => {
