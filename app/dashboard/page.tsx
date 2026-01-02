@@ -280,8 +280,14 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
+    // Wait for session to finish loading before making any decisions
+    if (sessionLoading) {
+      console.log('[DBG] load effect: session still loading, waiting...');
+      return;
+    }
+
     if (!sessionUser) {
-      console.log('[DBG] load effect: no user, redirect login');
+      console.log('[DBG] load effect: session loaded, no user, redirect login');
       router.push('/auth/login');
       return;
     }
@@ -289,7 +295,7 @@ export default function DashboardPage() {
     console.log('[DBG] load effect: invoking loadDashboardData');
     setDataLoading(true);
     loadDashboardData(sessionUser.id, sessionUser.email);
-  }, [sessionUser, router, loadDashboardData]);
+  }, [sessionUser, sessionLoading, router, loadDashboardData]);
 
   const handleRefresh = useCallback(() => {
     if (sessionUser) {
