@@ -1,26 +1,13 @@
 import { NextResponse } from 'next/server';
-import fs from 'fs/promises';
-import path from 'path';
 
-const LOG_PATH = path.join(process.cwd(), '.cursor', 'debug.log');
-
+// Debug-mode no-op logger for serverless (avoid FS writes)
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const line = JSON.stringify({
-      ...body,
-      timestamp: body?.timestamp ?? Date.now(),
-    }) + '\n';
-
-    await fs.mkdir(path.dirname(LOG_PATH), { recursive: true });
-    await fs.appendFile(LOG_PATH, line, 'utf8');
-
+    // Consume body to avoid stream warnings
+    await request.json().catch(() => ({}));
     return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: err?.message || 'write_failed' },
-      { status: 500 }
-    );
+  } catch {
+    return NextResponse.json({ ok: false }, { status: 200 });
   }
 }
 
