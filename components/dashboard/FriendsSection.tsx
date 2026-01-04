@@ -27,11 +27,9 @@ interface Props {
 }
 
 interface FriendStats {
-  current_week_cards: number;
+  daily_cards_learned: number;
   weekly_average: number;
-  total_stacks_completed: number;
-  current_week_stacks: number;
-  weekly_stacks_average: number;
+  total_cards_mastered: number;
 }
 
 interface FriendWithProfile extends Friendship {
@@ -145,7 +143,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       );
 
       const statsData = await supaFetch<any[]>(
-        `user_stats?user_id=in.(${Array.from(userIds).join(',')})&select=user_id,current_week_cards,weekly_cards_history,total_stacks_completed`,
+        `user_stats?user_id=in.(${Array.from(userIds).join(',')})&select=user_id,daily_cards_learned,weekly_cards_history,total_cards_mastered`,
         accessToken
       );
 
@@ -174,11 +172,9 @@ export default function FriendsSection({ userId, accessToken }: Props) {
           ...friendship,
           profile: profileMap.get(friendId),
           stats: {
-            current_week_cards: friendStats?.current_week_cards || 0,
+            daily_cards_learned: friendStats?.daily_cards_learned || 0,
             weekly_average: calculateWeeklyAverage(weeklyHistory),
-            total_stacks_completed: friendStats?.total_stacks_completed || 0,
-            current_week_stacks: 0,
-            weekly_stacks_average: 0,
+            total_cards_mastered: friendStats?.total_cards_mastered || 0,
           },
         };
 
@@ -531,25 +527,25 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                 {/* Friend Stats */}
                 <div className="grid grid-cols-3 gap-4 pt-4 border-t-2 border-slate-100">
                   <div className="text-center">
+                    <div className="flex items-center justify-center gap-1 text-orange-500 mb-1">
+                      <Calendar className="h-4 w-4" />
+                      <span className="text-xs font-semibold">Today</span>
+                    </div>
+                    <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.daily_cards_learned || 0}</p>
+                  </div>
+                  <div className="text-center">
                     <div className="flex items-center justify-center gap-1 text-indigo-500 mb-1">
                       <TrendingUp className="h-4 w-4" />
-                      <span className="text-xs font-semibold">Avg Passed</span>
+                      <span className="text-xs font-semibold">Avg/Week</span>
                     </div>
                     <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.weekly_average || 0}</p>
                   </div>
                   <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 text-cyan-500 mb-1">
-                      <Calendar className="h-4 w-4" />
-                      <span className="text-xs font-semibold">Passed/Week</span>
-                    </div>
-                    <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.current_week_cards || 0}</p>
-                  </div>
-                  <div className="text-center">
                     <div className="flex items-center justify-center gap-1 text-green-500 mb-1">
                       <Target className="h-4 w-4" />
-                      <span className="text-xs font-semibold">Stacks</span>
+                      <span className="text-xs font-semibold">Total</span>
                     </div>
-                    <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.total_stacks_completed || 0}</p>
+                    <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.total_cards_mastered || 0}</p>
                   </div>
                 </div>
               </div>
