@@ -259,7 +259,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       try {
         const { data: dailyStats } = await supabase
           .from('user_stats')
-          .select('daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen')
+          .select('daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen, total_cards_mastered')
           .eq('user_id', stack.user_id)
           .single();
 
@@ -268,6 +268,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           const needsReset = isNewDay(dailyStats.daily_cards_date);
           
           let newDailyCards = needsReset ? 1 : (dailyStats.daily_cards_learned || 0) + 1;
+          let newTotalMastered = (dailyStats.total_cards_mastered || 0) + 1;
           let newStreak = dailyStats.current_streak || 0;
           let newLongestStreak = dailyStats.longest_streak || 0;
 
@@ -288,6 +289,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
               current_streak: newStreak,
               longest_streak: newLongestStreak,
               last_activity_date: today,
+              total_cards_mastered: newTotalMastered,
             })
             .eq('user_id', stack.user_id);
           

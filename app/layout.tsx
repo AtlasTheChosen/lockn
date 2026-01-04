@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Quicksand, Fredoka } from 'next/font/google';
 import AuthProvider from '@/components/auth/AuthProvider';
 import { MobilePreviewProvider } from '@/components/shared/MobilePreview';
+import { Toaster } from '@/components/ui/sonner';
 
 const quicksand = Quicksand({ 
   subsets: ['latin'],
@@ -60,6 +61,7 @@ export default function RootLayout({
           <MobilePreviewProvider>
             {children}
           </MobilePreviewProvider>
+          <Toaster position="top-center" richColors />
         </AuthProvider>
       </body>
     </html>

@@ -151,7 +151,7 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
               size={22} 
               colors={['#ffffff', '#ffffff']}
             />
-            <span className="text-[10px] sm:text-xs font-semibold text-white">Sign In</span>
+            <span className="text-[10px] sm:text-xs font-semibold text-white">Sign Up</span>
           </button>
         )}
       </nav>
@@ -160,6 +160,7 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)}
+        initialMode="signup"
       />
     </>
   );

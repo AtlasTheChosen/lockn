@@ -17,6 +17,7 @@ import {
   Calendar,
   Target,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import type { Friendship, FriendProfile } from '@/lib/types';
 import { calculateWeeklyAverage } from '@/lib/weekly-stats';
 
@@ -269,10 +270,12 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       }, accessToken);
 
       setMessage({ type: 'success', text: `Friend request sent to ${targetProfile.display_name}!` });
+      toast.success(`Friend request sent to ${targetProfile.display_name}!`);
       setSearchDisplayName('');
       loadFriends();
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
+      toast.error(error.message);
     } finally {
       setActionLoading(null);
     }
@@ -327,9 +330,11 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       setActionLoading(friendshipId);
       await supaDelete('friendships', `id=eq.${friendshipId}`, accessToken);
       setMessage({ type: 'success', text: 'Friend removed' });
+      toast.success('Friend removed');
       loadFriends();
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
+      toast.error(error.message);
     } finally {
       setActionLoading(null);
     }
@@ -340,6 +345,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       setActionLoading(friendshipId);
       await supaUpdate('friendships', `id=eq.${friendshipId}`, { status: 'blocked' }, accessToken);
       setMessage({ type: 'success', text: 'User blocked' });
+      toast.success('User blocked');
       loadFriends();
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message });
