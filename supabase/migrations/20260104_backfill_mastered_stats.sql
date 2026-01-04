@@ -42,7 +42,7 @@ WITH week_cards AS (
 UPDATE user_stats
 SET 
   current_week_cards = COALESCE(wc.cards_this_week, 0),
-  current_week_start = date_trunc('week', CURRENT_DATE)::text
+  current_week_start = date_trunc('week', CURRENT_TIMESTAMP)
 FROM week_cards wc
 WHERE user_stats.user_id = wc.user_id;
 
@@ -91,7 +91,7 @@ SET
   total_cards_mastered = COALESCE(total_cards_mastered, 0),
   current_week_cards = COALESCE(current_week_cards, 0),
   weekly_cards_history = COALESCE(weekly_cards_history, '[]'::jsonb),
-  current_week_start = COALESCE(current_week_start, date_trunc('week', CURRENT_DATE)::text)
+  current_week_start = COALESCE(current_week_start, date_trunc('week', CURRENT_TIMESTAMP))
 WHERE total_cards_mastered IS NULL 
    OR current_week_cards IS NULL 
    OR weekly_cards_history IS NULL;

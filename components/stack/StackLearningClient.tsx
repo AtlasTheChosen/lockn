@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
@@ -61,7 +61,33 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [voiceGender, setVoiceGender] = useState<VoiceGender>('female');
   
   const supabase = createClient();
-  const { speak, isSpeaking, isLoading: isTTSLoading } = useSpeech({ provider: ttsProvider, gender: voiceGender });
+  
+  // Handle saving audio hash to flashcard for cross-user caching
+  const handleAudioHash = useCallback(async (hash: string, text: string) => {
+    // Find the card that matches this text
+    const matchingCard = cards.find(
+      c => c.target_phrase === text || c.native_translation === text
+    );
+    
+    if (matchingCard && !matchingCard.audio_hash) {
+      // Save hash to flashcard for future lookups
+      await supabase
+        .from('flashcards')
+        .update({ audio_hash: hash })
+        .eq('id', matchingCard.id);
+      
+      // Update local state
+      setCards(prev => prev.map(c => 
+        c.id === matchingCard.id ? { ...c, audio_hash: hash } : c
+      ));
+    }
+  }, [cards, supabase]);
+  
+  const { speak, isSpeaking, isLoading: isTTSLoading } = useSpeech({ 
+    provider: ttsProvider, 
+    gender: voiceGender,
+    onAudioHash: handleAudioHash,
+  });
 
   const currentCard = cards[currentIndex];
   const progress = ((currentIndex + 1) / cards.length) * 100;
