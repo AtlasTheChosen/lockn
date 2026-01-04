@@ -100,7 +100,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
 
   // Preload audio for next cards when using ElevenLabs (makes playback instant)
   useEffect(() => {
-    if (ttsProvider !== 'elevenlabs' || !stack.language) return;
+    if (ttsProvider !== 'elevenlabs' || !stack.target_language) return;
     
     // Preload next 2 cards' audio
     const cardsToPreload = cards.slice(currentIndex + 1, currentIndex + 3);
@@ -114,13 +114,13 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
             text: card.target_phrase, 
-            language: stack.language,
+            language: stack.target_language,
             voiceGender,
           }),
         }).catch(() => {}); // Ignore errors, this is just prefetching
       }
     });
-  }, [currentIndex, ttsProvider, cards, stack.language, voiceGender]);
+  }, [currentIndex, ttsProvider, cards, stack.target_language, voiceGender]);
   
   const getTestResultForCard = (cardId: string) => {
     if (!stack.test_notes || !Array.isArray(stack.test_notes)) return null;
