@@ -12,19 +12,30 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
  * deletes any files that are no longer referenced.
  * 
  * This endpoint is designed to be called:
- * - Manually via admin action
- * - Via Vercel cron job (weekly/monthly)
+ * - Manually via admin action (with CLEANUP_API_KEY)
+ * - Via Vercel cron job (with CRON_SECRET)
  * 
- * Security: Uses service role key, should be protected in production
+ * Security: Uses service role key, protected by API key or cron secret
  */
 export async function POST(request: NextRequest) {
   try {
-    // Optional: Add API key protection for production
+    // Check for Vercel cron secret (set automatically by Vercel for cron jobs)
+    const cronSecret = request.headers.get('x-vercel-cron-secret');
+    const expectedCronSecret = process.env.CRON_SECRET;
+    
+    // Check for manual API key
     const authHeader = request.headers.get('authorization');
     const expectedKey = process.env.CLEANUP_API_KEY;
     
-    if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Allow if: cron secret matches OR API key matches
+    const isValidCron = expectedCronSecret && cronSecret === expectedCronSecret;
+    const isValidApiKey = expectedKey && authHeader === `Bearer ${expectedKey}`;
+    
+    if (!isValidCron && !isValidApiKey) {
+      // If neither secret is configured, allow (for initial setup)
+      if (expectedCronSecret || expectedKey) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
