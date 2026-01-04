@@ -132,12 +132,12 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
 
   return (
     <div className="min-h-screen relative">
-      {/* Guest Header */}
+      {/* Guest Header - Only on mobile (TopNav handles desktop) */}
       {!isLoggedIn && (
         <motion.nav
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white px-4 sm:px-6 md:px-8 py-4 sm:py-5 shadow-talka-sm sticky top-0 z-40 flex justify-between items-center"
+          className="md:hidden bg-white px-4 sm:px-6 py-4 shadow-talka-sm sticky top-0 z-40 flex justify-between items-center"
         >
           <Link href="/" className="flex items-center gap-2">
             <Logo size="md" className="sm:w-12 sm:h-12" />

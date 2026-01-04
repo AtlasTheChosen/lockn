@@ -33,16 +33,21 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
     return name.substring(0, 2).toUpperCase();
   };
 
-  const handleLogout = () => {
-    // Clear auth storage immediately to avoid race conditions
+  const handleLogout = async () => {
     try {
+      // Actually sign out from Supabase
+      await supabase.auth.signOut();
+      
+      // Clear any remaining auth storage
       Object.keys(localStorage).forEach(key => {
         if (key.includes('supabase') || key.includes('sb-') || key.includes('auth')) {
           localStorage.removeItem(key);
         }
       });
-    } catch (e) {}
-    // Redirect immediately
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
+    // Redirect to home
     window.location.href = '/';
   };
 
