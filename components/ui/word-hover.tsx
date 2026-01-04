@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { Volume2, X, RotateCcw } from 'lucide-react';
+import { Volume2 } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -24,7 +24,7 @@ interface WordHoverTextProps {
   language?: string;
 }
 
-// Mobile word popup component
+// Mobile word popup component - compact version
 function MobileWordPopup({ 
   word, 
   translation, 
@@ -61,11 +61,11 @@ function MobileWordPopup({
     };
   }, [onClose]);
 
-  // Calculate position to keep popup on screen
+  // Calculate position - show above the word, compact
   const popupStyle: React.CSSProperties = {
     position: 'fixed',
-    left: Math.min(Math.max(position.x - 100, 10), window.innerWidth - 220),
-    top: Math.max(position.y - 120, 10),
+    left: Math.min(Math.max(position.x - 75, 8), window.innerWidth - 160),
+    top: Math.max(position.y - 70, 8),
     zIndex: 9999,
   };
 
@@ -73,52 +73,29 @@ function MobileWordPopup({
     <div 
       ref={popupRef}
       style={popupStyle}
-      className="bg-slate-800 border border-slate-600 text-white rounded-2xl shadow-2xl p-4 min-w-[200px] max-w-[280px] animate-in fade-in zoom-in-95 duration-200"
+      className="bg-slate-800/95 backdrop-blur-sm border border-slate-600 text-white rounded-xl shadow-lg px-3 py-2 min-w-[150px] max-w-[180px] animate-in fade-in zoom-in-95 duration-150"
     >
-      {/* Close button */}
-      <button 
-        onClick={onClose}
-        className="absolute top-2 right-2 p-1 rounded-full hover:bg-slate-700 transition-colors"
-      >
-        <X className="w-4 h-4 text-slate-400" />
-      </button>
+      {/* Compact layout: translation + speaker button inline */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] text-slate-400 truncate">{word}</p>
+          <p className="text-sm font-semibold text-talka-cyan truncate">{translation.translation}</p>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onSpeak();
+          }}
+          className="shrink-0 p-2 bg-talka-purple/30 hover:bg-talka-purple/50 text-white rounded-lg active:scale-90 transition-all"
+        >
+          <Volume2 className="w-4 h-4" />
+        </button>
+      </div>
       
-      {/* Word */}
-      <p className="text-lg font-bold text-white mb-1">{word}</p>
-      
-      {/* Translation */}
-      <p className="text-xl font-bold text-talka-cyan mb-3">{translation.translation}</p>
-      
-      {/* Play button - prominent for mobile */}
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onSpeak();
-        }}
-        className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-talka-purple to-talka-pink text-white font-semibold rounded-xl active:scale-95 transition-transform"
-      >
-        <Volume2 className="w-5 h-5" />
-        <span>Play Audio</span>
-        <RotateCcw className="w-4 h-4 opacity-60" />
-      </button>
-      
-      {/* Additional info */}
+      {/* Show conjugation only if present, very compact */}
       {translation.conjugation && (
-        <div className="text-xs text-green-400 mt-3 pt-3 border-t border-slate-600">
-          <p className="font-semibold">Verb Form:</p>
-          <p>{translation.conjugation}</p>
-        </div>
+        <p className="text-[10px] text-green-400 mt-1 truncate">{translation.conjugation}</p>
       )}
-      {translation.alternatives && translation.alternatives.length > 0 && (
-        <div className="text-xs text-slate-300 space-y-0.5 mt-3 pt-3 border-t border-slate-600">
-          <p className="font-semibold text-slate-400 mb-1">Also means:</p>
-          {translation.alternatives.map((alt, i) => (
-            <p key={i}>• {alt}</p>
-          ))}
-        </div>
-      )}
-      
-      <p className="text-[10px] text-slate-500 mt-3 text-center">Tap outside to close • Audio is cached</p>
     </div>
   );
 }
