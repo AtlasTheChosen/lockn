@@ -71,27 +71,32 @@ export async function POST(request: NextRequest) {
     // Initialize Supabase client for storage operations
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if audio already exists in Supabase Storage
-    const { data: existingFile } = await supabase.storage
+    // Check if audio already exists in Supabase Storage using public URL (faster than signed URL)
+    const { data: urlData } = supabase.storage
       .from('audio')
-      .createSignedUrl(fileName, 3600); // 1 hour signed URL
-
-    if (existingFile?.signedUrl) {
-      console.log(`[TTS Storage] HIT: "${text.substring(0, 30)}..." (${cacheKey.substring(0, 8)})`);
-      
-      // Fetch the cached audio and return it
-      const cachedResponse = await fetch(existingFile.signedUrl);
-      if (cachedResponse.ok) {
-        const cachedAudio = await cachedResponse.arrayBuffer();
-        return new NextResponse(cachedAudio, {
-          headers: {
-            'Content-Type': 'audio/mpeg',
-            'X-Cache': 'HIT',
-            'X-Audio-Hash': cacheKey, // Return hash for client-side tracking
-            'X-Audio-Url': existingFile.signedUrl,
-            'Cache-Control': 'public, max-age=86400',
-          },
-        });
+      .getPublicUrl(fileName);
+    
+    const publicUrl = urlData?.publicUrl;
+    
+    if (publicUrl) {
+      // Fetch directly from public URL (faster than signed URL flow)
+      try {
+        const cachedResponse = await fetch(publicUrl);
+        if (cachedResponse.ok) {
+          console.log(`[TTS Storage] HIT: "${text.substring(0, 30)}..." (${cacheKey.substring(0, 8)})`);
+          const cachedAudio = await cachedResponse.arrayBuffer();
+          return new NextResponse(cachedAudio, {
+            headers: {
+              'Content-Type': 'audio/mpeg',
+              'X-Cache': 'HIT',
+              'X-Audio-Hash': cacheKey,
+              'X-Audio-Url': publicUrl,
+              'Cache-Control': 'public, max-age=86400',
+            },
+          });
+        }
+      } catch (e) {
+        // File doesn't exist, continue to generate
       }
     }
 

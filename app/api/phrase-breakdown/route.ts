@@ -48,6 +48,8 @@ Return ONLY valid JSON:
   "memoryTrick": "ONLY include if genuinely clever - a memorable way to remember the grammar pattern or a tricky word. Leave empty string if nothing clever comes to mind."
 }
 
+CRITICAL: wordBreakdown MUST include EVERY word in the phrase - articles (the, a, le, la, el, un, une), pronouns (I, you, he, je, tu, il, yo, tú), prepositions (to, of, à, de, a), conjunctions (and, but, et, y), and contractions. NO word should be skipped. If a word is an article, explain its gender/number agreement. If it's a contraction, explain what words it combines.
+
 Focus on teaching PATTERNS that unlock many sentences, not just this one phrase. Connect to ${nativeLanguage} cognates when possible. Be concise.`;
 
     const completion = await openai.chat.completions.create({

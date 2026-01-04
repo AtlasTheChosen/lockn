@@ -97,6 +97,30 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   useEffect(() => {
     setShowBreakdown(false);
   }, [currentIndex]);
+
+  // Preload audio for next cards when using ElevenLabs (makes playback instant)
+  useEffect(() => {
+    if (ttsProvider !== 'elevenlabs' || !stack.language) return;
+    
+    // Preload next 2 cards' audio
+    const cardsToPreload = cards.slice(currentIndex + 1, currentIndex + 3);
+    
+    cardsToPreload.forEach(card => {
+      if (!card.audio_url) {
+        // Prefetch audio in background (browser will cache it)
+        const preloadUrl = `/api/text-to-speech`;
+        fetch(preloadUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            text: card.target_phrase, 
+            language: stack.language,
+            voiceGender,
+          }),
+        }).catch(() => {}); // Ignore errors, this is just prefetching
+      }
+    });
+  }, [currentIndex, ttsProvider, cards, stack.language, voiceGender]);
   
   const getTestResultForCard = (cardId: string) => {
     if (!stack.test_notes || !Array.isArray(stack.test_notes)) return null;
