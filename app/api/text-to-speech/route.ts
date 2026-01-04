@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
           headers: {
             'Content-Type': 'audio/mpeg',
             'X-Cache': 'HIT',
+            'X-Audio-Hash': cacheKey, // Return hash for client-side tracking
             'X-Audio-Url': existingFile.signedUrl,
             'Cache-Control': 'public, max-age=86400',
           },
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Cache': 'MISS',
+        'X-Audio-Hash': cacheKey, // Return hash for client-side tracking
         'X-Audio-Url': audioUrl || '',
         'Cache-Control': 'public, max-age=86400',
       },

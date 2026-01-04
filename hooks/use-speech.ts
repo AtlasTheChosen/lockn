@@ -43,6 +43,7 @@ export type VoiceGender = 'female' | 'male';
 interface UseSpeechOptions {
   provider?: TTSProvider;
   gender?: VoiceGender;
+  onAudioHash?: (hash: string, text: string) => void; // Callback when audio hash is received
 }
 
 // Client-side audio cache - persists across component remounts
@@ -54,13 +55,15 @@ function getCacheKey(text: string, language: string, gender: string): string {
 }
 
 export function useSpeech(options: UseSpeechOptions = {}) {
-  const { provider = 'browser', gender = 'female' } = options;
+  const { provider = 'browser', gender = 'female', onAudioHash } = options;
   
   // Use refs to always have access to current values
   const providerRef = useRef<TTSProvider>(provider);
   const genderRef = useRef<VoiceGender>(gender);
+  const onAudioHashRef = useRef(onAudioHash);
   providerRef.current = provider;
   genderRef.current = gender;
+  onAudioHashRef.current = onAudioHash;
   
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [isSupported, setIsSupported] = useState(true);
@@ -249,6 +252,12 @@ export function useSpeech(options: UseSpeechOptions = {}) {
 
       // Check if server returned a permanent URL (stored in Supabase)
       const serverAudioUrl = response.headers.get('X-Audio-Url');
+      
+      // Extract audio hash for tracking usage across users
+      const audioHash = response.headers.get('X-Audio-Hash');
+      if (audioHash && onAudioHashRef.current) {
+        onAudioHashRef.current(audioHash, text);
+      }
       
       const audioBlob = await response.blob();
       const blobUrl = URL.createObjectURL(audioBlob);
