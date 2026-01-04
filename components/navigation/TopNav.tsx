@@ -159,8 +159,8 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
 
       {/* Auth Modal for guests */}
       <AuthModal 
-        open={showAuthModal} 
-        onOpenChange={setShowAuthModal}
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)}
       />
     </nav>
   );
