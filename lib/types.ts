@@ -81,6 +81,7 @@ export interface Flashcard {
   created_at: string;
   user_rating?: number;
   audio_url?: string; // Cached TTS audio URL from Supabase Storage
+  audio_hash?: string; // Hash for audio cache lookup
 }
 
 export interface WeeklyCardEntry {
