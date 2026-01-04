@@ -58,9 +58,16 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
   const router = useRouter();
   const supabase = createClient();
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    // Use hard navigation to ensure clean logout
+  const handleSignOut = () => {
+    // Clear auth storage immediately to avoid race conditions
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('supabase') || key.includes('sb-') || key.includes('auth')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {}
+    // Redirect immediately
     window.location.href = '/';
   };
 

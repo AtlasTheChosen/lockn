@@ -33,9 +33,16 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
     return name.substring(0, 2).toUpperCase();
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    // Use hard navigation to ensure clean logout
+  const handleLogout = () => {
+    // Clear auth storage immediately to avoid race conditions
+    try {
+      Object.keys(localStorage).forEach(key => {
+        if (key.includes('supabase') || key.includes('sb-') || key.includes('auth')) {
+          localStorage.removeItem(key);
+        }
+      });
+    } catch (e) {}
+    // Redirect immediately
     window.location.href = '/';
   };
 
