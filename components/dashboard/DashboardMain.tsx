@@ -222,7 +222,8 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
             {formatWeekRange()}
           </p>
           
-          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+          {/* Top row: 3 stats */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-2 sm:mb-4">
             <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
               <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats?.current_week_cards ?? 0}</p>
               <p className="text-xs sm:text-sm font-semibold opacity-95">This Week</p>
@@ -237,6 +238,18 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
               <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats?.total_mastered ?? totalMastered}</p>
               <p className="text-xs sm:text-sm font-semibold opacity-95">Total Mastered</p>
               <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">All time</p>
+            </div>
+          </div>
+          
+          {/* Bottom row: 2 stats */}
+          <div className="grid grid-cols-2 gap-2 sm:gap-4">
+            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
+              <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">📚 {stacks.length}</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-95">Total Stacks</p>
+            </div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
+              <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">🔥 {stats?.current_streak || 0}</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-95">Day Streak</p>
             </div>
           </div>
         </div>
@@ -274,30 +287,6 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
           </Button>
         </div>
       )}
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-3">
-          <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">📚</div>
-          <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-1 sm:mb-2">Total Stacks</p>
-          <p className="font-display text-2xl sm:text-3xl font-bold gradient-text">{stacks.length}</p>
-        </div>
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-4">
-          <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">🏆</div>
-          <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-1 sm:mb-2">Completed</p>
-          <p className="font-display text-2xl sm:text-3xl font-bold gradient-text">{completedStacks.length}</p>
-        </div>
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-5">
-          <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">🎴</div>
-          <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-1 sm:mb-2">Mastered</p>
-          <p className="font-display text-2xl sm:text-3xl font-bold gradient-text">{totalMastered}</p>
-        </div>
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-sm text-center card-hover animate-fade-in stagger-6">
-          <div className="text-2xl sm:text-4xl mb-2 sm:mb-3">🔥</div>
-          <p className="text-xs sm:text-sm font-semibold text-slate-500 mb-1 sm:mb-2">Streak</p>
-          <p className="font-display text-2xl sm:text-3xl font-bold gradient-text">{stats?.current_streak || 0}</p>
-        </div>
-      </div>
 
       {/* Stacks Section */}
       <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6 animate-fade-in stagger-8">
