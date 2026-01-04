@@ -72,7 +72,7 @@ export default function LeaderboardPage() {
     if (sessionLoading) return;
 
     if (!sessionUser) {
-      router.push('/auth/login');
+      router.push('/');
       return;
     }
 

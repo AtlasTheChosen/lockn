@@ -103,11 +103,17 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
 
   return (
     <div className="min-h-screen relative safe-area-x">
-      {isLoggedIn && <TopNav streak={streak} streakFrozen={streakFrozen} displayName={displayName} avatarUrl={avatarUrl} />}
+      <TopNav 
+        streak={streak} 
+        streakFrozen={streakFrozen} 
+        displayName={displayName} 
+        avatarUrl={avatarUrl}
+        isLoggedIn={isLoggedIn}
+      />
       <main className="pb-24 md:pb-0 safe-area-bottom relative z-0">
         {children}
       </main>
-      {isLoggedIn && <BottomNav streak={streak} streakFrozen={streakFrozen} />}
+      <BottomNav streak={streak} streakFrozen={streakFrozen} isLoggedIn={isLoggedIn} />
     </div>
   );
 }

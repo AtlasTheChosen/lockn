@@ -67,5 +67,5 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.redirect(`${origin}/auth/login?error=auth`);
+  return NextResponse.redirect(`${origin}/?error=auth`);
 }

@@ -159,7 +159,7 @@ export default function PublicProfilePage() {
 
   const handleSendFriendRequest = async () => {
     if (!sessionUser) {
-      router.push('/auth/login');
+      router.push('/');
       return;
     }
 

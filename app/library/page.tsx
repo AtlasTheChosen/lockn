@@ -114,7 +114,7 @@ function LibraryContent() {
 
   const handleCopyStack = async (sharedStack: SharedStack) => {
     if (!sessionUser) {
-      router.push('/auth/login');
+      router.push('/');
       return;
     }
 

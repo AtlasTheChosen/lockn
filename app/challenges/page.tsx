@@ -102,7 +102,7 @@ export default function ChallengesPage() {
 
   useEffect(() => {
     if (!sessionLoading && !sessionUser) {
-      router.push('/auth/login');
+      router.push('/');
     }
   }, [sessionUser, sessionLoading, router]);
 

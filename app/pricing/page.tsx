@@ -38,7 +38,7 @@ export default function PricingPage() {
       } = await supabase.auth.getUser();
 
       if (!user) {
-        router.push('/auth/login');
+        router.push('/');
         return;
       }
 

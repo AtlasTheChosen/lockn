@@ -18,7 +18,7 @@ export default function FriendsPage() {
   useEffect(() => {
     if (sessionLoading) return;
     if (!sessionUser) {
-      router.push('/auth/login');
+      router.push('/');
       return;
     }
   }, [sessionUser, sessionLoading, router]);

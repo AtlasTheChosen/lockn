@@ -18,7 +18,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
         router.refresh(); // Forces Next.js to re-fetch server data
       }
       if (event === 'SIGNED_OUT') {
-        router.push('/auth/login');
+        router.push('/');
       }
     });
 

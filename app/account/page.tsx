@@ -124,7 +124,7 @@ export default function AccountSettingsPage() {
   useEffect(() => {
     if (sessionLoading) return;
     if (!sessionUser) {
-      router.push('/auth/login');
+      router.push('/');
       return;
     }
     loadData();

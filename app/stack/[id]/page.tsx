@@ -17,7 +17,7 @@ export default function StackPage({ params }: { params: { id: string } }) {
     if (sessionLoading) return;
     
     if (!sessionUser || !accessToken) {
-      router.push('/auth/login');
+      router.push('/');
       return;
     }
 

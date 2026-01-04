@@ -23,7 +23,7 @@ export default function ActivityPage() {
   // Handle authentication
   useEffect(() => {
     if (!sessionLoading && !sessionUser) {
-      router.push('/auth/login');
+      router.push('/');
     }
   }, [sessionUser, sessionLoading, router]);
 

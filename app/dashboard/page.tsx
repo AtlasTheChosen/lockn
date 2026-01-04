@@ -274,7 +274,7 @@ export default function DashboardPage() {
     if (sessionLoading) return;
 
     if (!sessionUser) {
-      router.push('/auth/login');
+      router.push('/');
       return;
     }
 

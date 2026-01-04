@@ -80,7 +80,7 @@ export default function ProfilePage() {
   useEffect(() => {
     if (sessionLoading) return;
     if (!sessionUser) {
-      router.push('/auth/login');
+      router.push('/');
       return;
     }
     loadData();
