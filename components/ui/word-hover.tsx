@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Volume2 } from 'lucide-react';
 import {
   Tooltip,
@@ -24,7 +24,7 @@ interface WordHoverTextProps {
   language?: string;
 }
 
-// Mobile word popup component - compact version
+// Mobile word popup component - compact version with overlay to prevent card flip
 function MobileWordPopup({ 
   word, 
   translation, 
@@ -38,29 +38,6 @@ function MobileWordPopup({
   onClose: () => void;
   position: { x: number; y: number };
 }) {
-  const popupRef = useRef<HTMLDivElement>(null);
-  
-  // Close on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-    
-    // Small delay to prevent immediate close from the same tap
-    const timer = setTimeout(() => {
-      document.addEventListener('touchstart', handleClickOutside);
-      document.addEventListener('mousedown', handleClickOutside);
-    }, 100);
-    
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener('touchstart', handleClickOutside);
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [onClose]);
-
   // Calculate position - show above the word, compact
   const popupStyle: React.CSSProperties = {
     position: 'fixed',
@@ -69,34 +46,53 @@ function MobileWordPopup({
     zIndex: 9999,
   };
 
+  // Handle overlay click - close popup and stop propagation to prevent card flip
+  const handleOverlayClick = (e: React.MouseEvent | React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClose();
+  };
+
   return (
-    <div 
-      ref={popupRef}
-      style={popupStyle}
-      className="bg-slate-800/95 backdrop-blur-sm border border-slate-600 text-white rounded-xl shadow-lg px-3 py-2 min-w-[150px] max-w-[180px] animate-in fade-in zoom-in-95 duration-150"
-    >
-      {/* Compact layout: translation + speaker button inline */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-[10px] text-slate-400 truncate">{word}</p>
-          <p className="text-sm font-semibold text-talka-cyan truncate">{translation.translation}</p>
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSpeak();
-          }}
-          className="shrink-0 p-2 bg-talka-purple/30 hover:bg-talka-purple/50 text-white rounded-lg active:scale-90 transition-all"
-        >
-          <Volume2 className="w-4 h-4" />
-        </button>
-      </div>
+    <>
+      {/* Invisible overlay to catch clicks and prevent card flip */}
+      <div 
+        className="fixed inset-0 z-[9998]"
+        onClick={handleOverlayClick}
+        onTouchEnd={handleOverlayClick}
+      />
       
-      {/* Show conjugation only if present, very compact */}
-      {translation.conjugation && (
-        <p className="text-[10px] text-green-400 mt-1 truncate">{translation.conjugation}</p>
-      )}
-    </div>
+      {/* Popup */}
+      <div 
+        style={popupStyle}
+        onClick={(e) => e.stopPropagation()}
+        onTouchEnd={(e) => e.stopPropagation()}
+        className="bg-slate-800/95 backdrop-blur-sm border border-slate-600 text-white rounded-xl shadow-lg px-3 py-2 min-w-[150px] max-w-[180px] animate-in fade-in zoom-in-95 duration-150"
+      >
+        {/* Compact layout: translation + speaker button inline */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] text-slate-400 truncate">{word}</p>
+            <p className="text-sm font-semibold text-talka-cyan truncate">{translation.translation}</p>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSpeak();
+            }}
+            onTouchEnd={(e) => e.stopPropagation()}
+            className="shrink-0 p-2 bg-talka-purple/30 hover:bg-talka-purple/50 text-white rounded-lg active:scale-90 transition-all"
+          >
+            <Volume2 className="w-4 h-4" />
+          </button>
+        </div>
+        
+        {/* Show conjugation only if present, very compact */}
+        {translation.conjugation && (
+          <p className="text-[10px] text-green-400 mt-1 truncate">{translation.conjugation}</p>
+        )}
+      </div>
+    </>
   );
 }
 
