@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getRandomAvatarId, getAvatarUrl } from '@/lib/avatars';
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -29,15 +30,16 @@ export async function GET(request: Request) {
                                     user.user_metadata?.name || 
                                     null;
 
+          // Get OAuth avatar or generate random one
+          const oauthAvatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
+          const avatarUrl = oauthAvatarUrl || getAvatarUrl(getRandomAvatarId());
+
           try {
             await supabase.from('user_profiles').insert({
               id: user.id,
               email: user.email,
               display_name: oauthDisplayName,
-              // Set avatar from OAuth if available
-              avatar_url: user.user_metadata?.avatar_url || 
-                          user.user_metadata?.picture || 
-                          null,
+              avatar_url: avatarUrl,
             });
           } catch (e) {
             console.error('Error creating profile:', e);

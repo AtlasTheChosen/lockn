@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import Logo from '@/components/ui/Logo';
+import { getRandomAvatarId, getAvatarUrl } from '@/lib/avatars';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -96,11 +97,15 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
         setError(signUpError.message);
         setLoading(false);
       } else if (data.user) {
-        // Create profile
+        // Create profile with random avatar
         try {
+          const avatarId = getRandomAvatarId();
+          const avatarUrl = getAvatarUrl(avatarId);
+          
           await supabase.from('user_profiles').insert({
             id: data.user.id,
             email: data.user.email,
+            avatar_url: avatarUrl,
           });
           await supabase.from('user_stats').insert({
             user_id: data.user.id,
