@@ -199,6 +199,9 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
       </div>
 
       {/* Weekly Progress Card */}
+      {/* #region agent log */}
+      {(() => { fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardMain.tsx:gradient-card-check',message:'Stats check for gradient card',data:{hasStats:!!stats,statsKeys:stats?Object.keys(stats):[],current_week_cards:stats?.current_week_cards,weekly_average:stats?.weekly_average,total_mastered:stats?.total_mastered},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{}); return null; })()}
+      {/* #endregion */}
       {stats && (
         <div className="bg-gradient-purple-pink rounded-3xl p-5 sm:p-8 shadow-purple text-white mb-6 sm:mb-8 relative overflow-hidden animate-fade-in stagger-1">
           {/* Background decoration */}
