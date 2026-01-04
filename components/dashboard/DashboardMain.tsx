@@ -222,22 +222,20 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
             {formatWeekRange()}
           </p>
           
-          {/* Top row: 3 stats */}
+          {/* Cards Mastered Section */}
+          <p className="text-xs sm:text-sm font-semibold opacity-80 mb-2 text-center uppercase tracking-wide">Cards Mastered</p>
           <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-2 sm:mb-4">
             <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
               <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats?.current_week_cards ?? 0}</p>
               <p className="text-xs sm:text-sm font-semibold opacity-95">This Week</p>
-              <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Cards mastered</p>
             </div>
             <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
               <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats?.weekly_average ?? 0}</p>
               <p className="text-xs sm:text-sm font-semibold opacity-95">Weekly Avg</p>
-              <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Average per week</p>
             </div>
             <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
               <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats?.total_mastered ?? totalMastered}</p>
-              <p className="text-xs sm:text-sm font-semibold opacity-95">Total Mastered</p>
-              <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">All time</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-95">Total</p>
             </div>
           </div>
           
