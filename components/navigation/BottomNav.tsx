@@ -153,8 +153,8 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
 
       {/* Auth Modal for guests */}
       <AuthModal 
-        open={showAuthModal} 
-        onOpenChange={setShowAuthModal}
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)}
       />
     </>
   );
