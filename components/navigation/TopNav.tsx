@@ -69,18 +69,24 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
 
       {/* User Section */}
       <div className="flex items-center gap-4">
-        {/* Streak Badge */}
-        <div 
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-[20px] font-bold text-white",
-            streakFrozen 
-              ? "bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_4px_14px_rgba(34,211,238,0.4)]" 
-              : "bg-gradient-orange-yellow shadow-orange animate-pulse-soft"
+        {/* Streak Badge - Always show streak, add frozen indicator when needed */}
+        <div className="flex items-center gap-2">
+          {/* Main Streak */}
+          <div 
+            className="flex items-center gap-2 px-4 py-2 rounded-[20px] font-bold text-white bg-gradient-orange-yellow shadow-orange"
+            title={`${streak} day streak`}
+          >
+            🔥 {streak}
+          </div>
+          {/* Frozen Indicator - Shows alongside streak when frozen */}
+          {streakFrozen && (
+            <div 
+              className="flex items-center gap-1 px-3 py-2 rounded-[20px] font-bold text-white bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_4px_14px_rgba(34,211,238,0.4)] animate-pulse"
+              title="Streak frozen! Complete pending tests to unfreeze."
+            >
+              ❄️ <span className="text-xs">FROZEN</span>
+            </div>
           )}
-          title={streakFrozen ? "Streak frozen! Complete pending tests to unfreeze." : `${streak} day streak`}
-        >
-          {streakFrozen ? '❄️' : '🔥'} {streak}
-          {streakFrozen && <span className="text-xs opacity-90">FROZEN</span>}
         </div>
         
         {/* Avatar + Username */}

@@ -159,7 +159,8 @@ export default function DashboardPage() {
       const userName = profile?.display_name || userEmail?.split('@')[0] || 'Guest';
 
       // Check for overdue test deadlines and freeze streak if needed
-      if (stacksData && stats) {
+      // Only freeze if there are NEW overdue stacks (not already tracked)
+      if (stacksData && stats && accessToken) {
         const overdueStacks = stacksData.filter(
           (stack: any) => 
             stack.test_deadline && 
@@ -171,19 +172,29 @@ export default function DashboardPage() {
         const overdueStackIds = overdueStacks.map((s: any) => s.id);
         const currentFrozenStacks = stats.streak_frozen_stacks || [];
         
+        // Only freeze for NEW overdue stacks that aren't already tracked
         const newOverdueStacks = overdueStackIds.filter(
           (id: string) => !currentFrozenStacks.includes(id)
         );
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:overdue-check',message:'Checking for overdue stacks',data:{totalStacks:stacksData.length,overdueCount:overdueStacks.length,newOverdueCount:newOverdueStacks.length,currentFrozen:stats.streak_frozen,currentFrozenStacks},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
 
-        if (newOverdueStacks.length > 0 || (overdueStackIds.length > 0 && !stats.streak_frozen)) {
+        // Only update if there are genuinely new overdue stacks
+        if (newOverdueStacks.length > 0) {
           const updatedFrozenStacks = Array.from(new Set([...currentFrozenStacks, ...overdueStackIds]));
           
-          // Use native fetch for update
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:freeze-streak',message:'Freezing streak due to new overdue stacks',data:{newOverdueStacks,overdueStackIds,currentFrozenStacks,willSetFrozen:true},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+          // #endregion
+          
+          // Use native fetch for update with proper accessToken
           await fetch(`${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}`, {
             method: 'PATCH',
             headers: {
               'apikey': supabaseKey!,
-              'Authorization': `Bearer ${supabaseKey}`,
+              'Authorization': `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
@@ -198,7 +209,7 @@ export default function DashboardPage() {
       }
 
       // Check if streak should be reset (new day and didn't meet yesterday's requirement)
-      if (stats && !stats.streak_frozen) {
+      if (stats && !stats.streak_frozen && accessToken) {
         const today = getTodayDate();
         const lastActiveDate = stats.daily_cards_date;
         
@@ -213,7 +224,7 @@ export default function DashboardPage() {
             method: 'PATCH',
             headers: {
               'apikey': supabaseKey!,
-              'Authorization': `Bearer ${supabaseKey}`,
+              'Authorization': `Bearer ${accessToken}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(updates),

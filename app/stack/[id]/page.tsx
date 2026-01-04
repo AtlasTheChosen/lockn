@@ -7,7 +7,7 @@ import StackLearningClient from '@/components/stack/StackLearningClient';
 
 export default function StackPage({ params }: { params: { id: string } }) {
   const router = useRouter();
-  const { user: sessionUser, loading: sessionLoading } = useSession();
+  const { user: sessionUser, accessToken, loading: sessionLoading } = useSession();
   const [loading, setLoading] = useState(true);
   const [stack, setStack] = useState<any>(null);
   const [cards, setCards] = useState<any[]>([]);
@@ -16,30 +16,32 @@ export default function StackPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     if (sessionLoading) return;
     
-    if (!sessionUser) {
+    if (!sessionUser || !accessToken) {
       router.push('/auth/login');
       return;
     }
 
-    const userId = sessionUser.id; // Capture for TypeScript
+    const userId = sessionUser.id;
+    const token = accessToken; // Capture for closure
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     async function loadStack() {
       try {
-        // Fetch stack using native fetch
+        // Fetch stack using native fetch with user's access token
         const stackResponse = await fetch(
           `${supabaseUrl}/rest/v1/card_stacks?id=eq.${params.id}&user_id=eq.${userId}&select=*`,
           {
             headers: {
               'apikey': supabaseKey!,
-              'Authorization': `Bearer ${supabaseKey}`,
+              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
           }
         );
 
         if (!stackResponse.ok) {
+          console.error('[Stack] Stack fetch failed:', stackResponse.status);
           setError('Stack not found or access denied');
           setLoading(false);
           return;
@@ -52,13 +54,13 @@ export default function StackPage({ params }: { params: { id: string } }) {
           return;
         }
 
-        // Fetch cards using native fetch
+        // Fetch cards using native fetch with user's access token
         const cardsResponse = await fetch(
           `${supabaseUrl}/rest/v1/flashcards?stack_id=eq.${params.id}&order=card_order&select=*`,
           {
             headers: {
               'apikey': supabaseKey!,
-              'Authorization': `Bearer ${supabaseKey}`,
+              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json',
             },
           }
@@ -77,7 +79,7 @@ export default function StackPage({ params }: { params: { id: string } }) {
     }
 
     loadStack();
-  }, [params.id, router, sessionUser, sessionLoading]);
+  }, [params.id, router, sessionUser, accessToken, sessionLoading]);
 
   if (sessionLoading || loading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">

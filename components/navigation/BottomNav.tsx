@@ -29,21 +29,34 @@ export default function BottomNav({ streak = 0, streakFrozen = false }: BottomNa
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-2 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] z-50 flex justify-around items-center safe-area-x">
-      {/* Streak Badge */}
-      <div 
-        className={cn(
-          "flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl font-bold text-white min-w-[48px] min-h-[48px] justify-center",
-          streakFrozen 
-            ? "bg-gradient-to-r from-cyan-400 to-blue-500" 
-            : "bg-gradient-orange-yellow"
+      {/* Streak Badge - Always show streak, add frozen indicator when needed */}
+      <div className="flex items-center gap-1">
+        {/* Main Streak */}
+        <div 
+          className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl font-bold text-white min-w-[48px] min-h-[48px] justify-center bg-gradient-orange-yellow"
+          title={`${streak} day streak`}
+        >
+          <GradientIcon 
+            name="fire" 
+            size={20} 
+            colors={['#ffffff', '#ffffff']}
+          />
+          <span className="text-xs">{streak}</span>
+        </div>
+        {/* Frozen Indicator */}
+        {streakFrozen && (
+          <div 
+            className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl font-bold text-white min-h-[48px] justify-center bg-gradient-to-r from-cyan-400 to-blue-500 animate-pulse"
+            title="Streak frozen!"
+          >
+            <GradientIcon 
+              name="snowflake" 
+              size={18} 
+              colors={['#ffffff', '#ffffff']}
+            />
+            <span className="text-[9px]">ICE</span>
+          </div>
         )}
-      >
-        <GradientIcon 
-          name={streakFrozen ? 'snowflake' : 'fire'} 
-          size={20} 
-          colors={['#ffffff', '#ffffff']}
-        />
-        <span className="text-xs">{streak}</span>
       </div>
       
       {navItems.map((item) => {
