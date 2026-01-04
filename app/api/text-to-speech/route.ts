@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createHash } from 'crypto';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
-import path from 'path';
+import { createClient } from '@supabase/supabase-js';
 
 // ElevenLabs voice IDs - Native accent voices for each language
 // Using eleven_multilingual_v2 model which produces authentic accents
@@ -45,14 +44,10 @@ const MALE_VOICES: Record<string, string> = {
 };
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1/text-to-speech';
-const CACHE_DIR = path.join(process.cwd(), '.audio-cache');
 
-// Create cache directory if it doesn't exist
-function ensureCacheDir() {
-  if (!existsSync(CACHE_DIR)) {
-    mkdirSync(CACHE_DIR, { recursive: true });
-  }
-}
+// Initialize Supabase client with service role for storage operations
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Generate a cache key from text, language, and voice settings
 function getCacheKey(text: string, language: string, voiceGender: string): string {
@@ -64,31 +59,42 @@ function getCacheKey(text: string, language: string, voiceGender: string): strin
 
 export async function POST(request: NextRequest) {
   try {
-    const { text, language, voiceGender = 'female' } = await request.json();
+    const { text, language, voiceGender = 'female', cardId } = await request.json();
 
     if (!text) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
-    // Check cache first
-    ensureCacheDir();
     const cacheKey = getCacheKey(text, language || 'default', voiceGender);
-    const cachePath = path.join(CACHE_DIR, `${cacheKey}.mp3`);
+    const fileName = `${cacheKey}.mp3`;
 
-    // Return cached audio if it exists
-    if (existsSync(cachePath)) {
-      console.log(`[TTS Cache] HIT: "${text.substring(0, 30)}..." (${cacheKey.substring(0, 8)})`);
-      const cachedAudio = readFileSync(cachePath);
-      return new NextResponse(cachedAudio, {
-        headers: {
-          'Content-Type': 'audio/mpeg',
-          'X-Cache': 'HIT',
-          'Cache-Control': 'public, max-age=86400',
-        },
-      });
+    // Initialize Supabase client for storage operations
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check if audio already exists in Supabase Storage
+    const { data: existingFile } = await supabase.storage
+      .from('audio')
+      .createSignedUrl(fileName, 3600); // 1 hour signed URL
+
+    if (existingFile?.signedUrl) {
+      console.log(`[TTS Storage] HIT: "${text.substring(0, 30)}..." (${cacheKey.substring(0, 8)})`);
+      
+      // Fetch the cached audio and return it
+      const cachedResponse = await fetch(existingFile.signedUrl);
+      if (cachedResponse.ok) {
+        const cachedAudio = await cachedResponse.arrayBuffer();
+        return new NextResponse(cachedAudio, {
+          headers: {
+            'Content-Type': 'audio/mpeg',
+            'X-Cache': 'HIT',
+            'X-Audio-Url': existingFile.signedUrl,
+            'Cache-Control': 'public, max-age=86400',
+          },
+        });
+      }
     }
 
-    console.log(`[TTS Cache] MISS: "${text.substring(0, 30)}..." - fetching from ElevenLabs`);
+    console.log(`[TTS Storage] MISS: "${text.substring(0, 30)}..." - fetching from ElevenLabs`);
 
     const apiKey = process.env.ELEVENLABS_API_KEY;
     
@@ -134,19 +140,51 @@ export async function POST(request: NextRequest) {
     // Get the audio buffer
     const audioBuffer = await response.arrayBuffer();
     
-    // Save to cache
+    // Upload to Supabase Storage for permanent caching
+    let audioUrl: string | null = null;
     try {
-      writeFileSync(cachePath, Buffer.from(audioBuffer));
-      console.log(`[TTS Cache] SAVED: ${cacheKey.substring(0, 8)} (${audioBuffer.byteLength} bytes)`);
-    } catch (cacheError) {
-      console.error('[TTS Cache] Failed to save:', cacheError);
-      // Continue even if caching fails
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('audio')
+        .upload(fileName, Buffer.from(audioBuffer), {
+          contentType: 'audio/mpeg',
+          upsert: true, // Overwrite if exists
+        });
+
+      if (uploadError) {
+        console.error('[TTS Storage] Upload error:', uploadError);
+      } else {
+        // Get public URL for the uploaded file
+        const { data: urlData } = supabase.storage
+          .from('audio')
+          .getPublicUrl(fileName);
+        
+        audioUrl = urlData?.publicUrl || null;
+        console.log(`[TTS Storage] SAVED: ${cacheKey.substring(0, 8)} (${audioBuffer.byteLength} bytes)`);
+
+        // If cardId provided, update the flashcard with the audio URL
+        if (cardId && audioUrl) {
+          const { error: updateError } = await supabase
+            .from('flashcards')
+            .update({ audio_url: audioUrl })
+            .eq('id', cardId);
+          
+          if (updateError) {
+            console.warn('[TTS Storage] Failed to update card audio_url:', updateError);
+          } else {
+            console.log(`[TTS Storage] Updated card ${cardId} with audio URL`);
+          }
+        }
+      }
+    } catch (storageError) {
+      console.error('[TTS Storage] Failed to save:', storageError);
+      // Continue even if storage fails - just return the audio
     }
     
     return new NextResponse(audioBuffer, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'X-Cache': 'MISS',
+        'X-Audio-Url': audioUrl || '',
         'Cache-Control': 'public, max-age=86400',
       },
     });
