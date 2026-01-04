@@ -67,12 +67,6 @@ export default function DashboardTabs({
     return Math.round(totalCards / history.length);
   };
 
-  // #region agent log
-  if (typeof window !== 'undefined') {
-    fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardTabs.tsx:stats-input',message:'Stats received from dashboard page',data:{hasStats:!!stats,statsType:typeof stats,statsKeys:stats?Object.keys(stats):[],total_cards_mastered:stats?.total_cards_mastered,current_week_cards:stats?.current_week_cards},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-  }
-  // #endregion
-
   // Use database values directly for accurate stats
   const displayStats = stats
     ? {

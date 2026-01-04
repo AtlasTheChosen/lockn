@@ -198,54 +198,49 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
         </p>
       </div>
 
-      {/* Weekly Progress Card */}
-      {/* #region agent log */}
-      {(() => { fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'DashboardMain.tsx:gradient-card-check',message:'Stats check for gradient card',data:{hasStats:!!stats,statsKeys:stats?Object.keys(stats):[],current_week_cards:stats?.current_week_cards,weekly_average:stats?.weekly_average,total_mastered:stats?.total_mastered},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{}); return null; })()}
-      {/* #endregion */}
-      {stats && (
-        <div className="bg-gradient-purple-pink rounded-3xl p-5 sm:p-8 shadow-purple text-white mb-6 sm:mb-8 relative overflow-hidden animate-fade-in stagger-1">
-          {/* Background decoration */}
-          <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-white/10 rounded-full pointer-events-none" />
-          <div className="absolute bottom-0 right-8 text-6xl sm:text-8xl opacity-20 hidden sm:block">✨</div>
+      {/* Weekly Progress Card - Always show with fallback values */}
+      <div className="bg-gradient-purple-pink rounded-3xl p-5 sm:p-8 shadow-purple text-white mb-6 sm:mb-8 relative overflow-hidden animate-fade-in stagger-1">
+        {/* Background decoration */}
+        <div className="absolute -top-1/2 -right-1/4 w-96 h-96 bg-white/10 rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 right-8 text-6xl sm:text-8xl opacity-20 hidden sm:block">✨</div>
+        
+        {/* Streak Rules Tutorial Button */}
+        {onShowTutorial && (
+          <button
+            onClick={onShowTutorial}
+            className="absolute top-3 right-3 sm:top-6 sm:right-6 z-20 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 sm:px-4 sm:py-2 flex items-center gap-2 transition-all hover:scale-105 border border-white/30"
+          >
+            <HelpCircle className="h-4 w-4" />
+            <span className="text-sm font-semibold hidden sm:inline">Streak Rules</span>
+          </button>
+        )}
+        
+        <div className="relative z-10">
+          <h3 className="font-display text-lg sm:text-2xl font-semibold mb-1 sm:mb-2">Your Week in Review 📊</h3>
+          <p className="opacity-90 font-medium mb-4 sm:mb-6 flex items-center gap-2 text-sm sm:text-base">
+            <Calendar className="h-4 w-4" />
+            {formatWeekRange()}
+          </p>
           
-          {/* Streak Rules Tutorial Button */}
-          {onShowTutorial && (
-            <button
-              onClick={onShowTutorial}
-              className="absolute top-3 right-3 sm:top-6 sm:right-6 z-20 bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full p-2 sm:px-4 sm:py-2 flex items-center gap-2 transition-all hover:scale-105 border border-white/30"
-            >
-              <HelpCircle className="h-4 w-4" />
-              <span className="text-sm font-semibold hidden sm:inline">Streak Rules</span>
-            </button>
-          )}
-          
-          <div className="relative z-10">
-            <h3 className="font-display text-lg sm:text-2xl font-semibold mb-1 sm:mb-2">Your Week in Review 📊</h3>
-            <p className="opacity-90 font-medium mb-4 sm:mb-6 flex items-center gap-2 text-sm sm:text-base">
-              <Calendar className="h-4 w-4" />
-              {formatWeekRange()}
-            </p>
-            
-            <div className="grid grid-cols-3 gap-2 sm:gap-4">
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
-                <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats.current_week_cards || 0}</p>
-                <p className="text-xs sm:text-sm font-semibold opacity-95">This Week</p>
-                <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Cards passed in tests</p>
-              </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
-                <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats.weekly_average || 0}</p>
-                <p className="text-xs sm:text-sm font-semibold opacity-95">Weekly Avg</p>
-                <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Average cards per week</p>
-              </div>
-              <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
-                <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats.total_mastered || 0}</p>
-                <p className="text-xs sm:text-sm font-semibold opacity-95">Mastered</p>
-                <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Total cards passed</p>
-              </div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
+              <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats?.current_week_cards ?? 0}</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-95">This Week</p>
+              <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Cards mastered</p>
+            </div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
+              <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats?.weekly_average ?? 0}</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-95">Weekly Avg</p>
+              <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">Average per week</p>
+            </div>
+            <div className="bg-white/15 backdrop-blur-sm rounded-2xl p-3 sm:p-5 text-center border-2 border-white/20">
+              <p className="font-display text-2xl sm:text-4xl font-bold mb-0.5">{stats?.total_mastered ?? totalMastered}</p>
+              <p className="text-xs sm:text-sm font-semibold opacity-95">Total Mastered</p>
+              <p className="text-[10px] sm:text-xs opacity-70 mt-1 hidden sm:block">All time</p>
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {/* Streak Frozen / Pending Tests Alert */}
       {pendingTests.length > 0 && (
