@@ -80,6 +80,7 @@ export interface Flashcard {
   last_reviewed_at: string | null;
   created_at: string;
   user_rating?: number;
+  audio_url?: string; // Cached TTS audio URL from Supabase Storage
 }
 
 export interface WeeklyCardEntry {

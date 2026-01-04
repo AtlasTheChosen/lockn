@@ -170,8 +170,16 @@ export function useSpeech(options: UseSpeechOptions = {}) {
     window.speechSynthesis.speak(utterance);
   }, [isSupported, findBestVoice]);
 
-  // ElevenLabs TTS (premium) with client-side caching
-  const speakWithElevenLabs = useCallback(async (text: string, language: string = 'English') => {
+  // ElevenLabs TTS (premium) with multi-tier caching:
+  // 1. Card audio_url (permanent, stored in DB) - FREE
+  // 2. Client-side memory cache (session-based) - FREE
+  // 3. Supabase Storage (server-side persistent) - FREE
+  // 4. Generate new with ElevenLabs (costs credits) - only if all caches miss
+  const speakWithElevenLabs = useCallback(async (
+    text: string, 
+    language: string = 'English',
+    options?: { cardId?: string; audioUrl?: string }
+  ) => {
     const currentGender = genderRef.current;
     const cacheKey = getCacheKey(text, language, currentGender);
     
@@ -182,9 +190,32 @@ export function useSpeech(options: UseSpeechOptions = {}) {
         audioRef.current = null;
       }
 
-      // Check client-side cache first (instant playback)
+      // TIER 1: Check if card already has cached audio URL (FREE - no API call)
+      if (options?.audioUrl) {
+        console.log(`[TTS] TIER 1 HIT (Card DB): "${text.substring(0, 20)}..."`);
+        const audio = new Audio(options.audioUrl);
+        audioRef.current = audio;
+
+        audio.onplay = () => setIsSpeaking(true);
+        audio.onended = () => setIsSpeaking(false);
+        audio.onerror = () => {
+          setIsSpeaking(false);
+          // If card URL fails, fall through to other tiers
+          console.warn('[TTS] Card audio URL failed, trying other tiers');
+        };
+
+        try {
+          await audio.play();
+          return;
+        } catch (e) {
+          console.warn('[TTS] Card audio playback failed:', e);
+          // Continue to other tiers
+        }
+      }
+
+      // TIER 2: Check client-side memory cache (FREE - instant playback)
       if (audioCache.has(cacheKey)) {
-        console.log(`[TTS Client Cache] HIT: "${text.substring(0, 20)}..."`);
+        console.log(`[TTS] TIER 2 HIT (Memory): "${text.substring(0, 20)}..."`);
         const cachedUrl = audioCache.get(cacheKey)!;
         const audio = new Audio(cachedUrl);
         audioRef.current = audio;
@@ -197,28 +228,36 @@ export function useSpeech(options: UseSpeechOptions = {}) {
         return;
       }
 
-      // Not in client cache, fetch from server (may hit server cache)
+      // TIER 3 & 4: Server will check Supabase Storage, then ElevenLabs
       setIsLoading(true);
-      console.log(`[TTS Client Cache] MISS: "${text.substring(0, 20)}..." - fetching`);
+      console.log(`[TTS] MISS all client tiers: "${text.substring(0, 20)}..." - calling server`);
 
       const response = await fetch('/api/text-to-speech', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, language, voiceGender: currentGender }),
+        body: JSON.stringify({ 
+          text, 
+          language, 
+          voiceGender: currentGender,
+          cardId: options?.cardId, // Pass cardId so server can update the card's audio_url
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to generate speech');
       }
 
+      // Check if server returned a permanent URL (stored in Supabase)
+      const serverAudioUrl = response.headers.get('X-Audio-Url');
+      
       const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
+      const blobUrl = URL.createObjectURL(audioBlob);
       
-      // Store in client cache (don't revoke URL so it can be reused)
-      audioCache.set(cacheKey, audioUrl);
-      console.log(`[TTS Client Cache] STORED: "${text.substring(0, 20)}..." (${audioCache.size} items cached)`);
+      // Store in client memory cache
+      audioCache.set(cacheKey, blobUrl);
+      console.log(`[TTS] STORED in memory: "${text.substring(0, 20)}..." (${audioCache.size} items)`);
       
-      const audio = new Audio(audioUrl);
+      const audio = new Audio(blobUrl);
       audioRef.current = audio;
 
       audio.onplay = () => setIsSpeaking(true);
@@ -236,11 +275,16 @@ export function useSpeech(options: UseSpeechOptions = {}) {
   }, [speakWithBrowser]);
 
   // Main speak function - uses provider setting (reads from ref for latest value)
-  const speak = useCallback((text: string, language: string = 'English') => {
+  // Pass cardId and audioUrl for efficient caching
+  const speak = useCallback((
+    text: string, 
+    language: string = 'English',
+    options?: { cardId?: string; audioUrl?: string }
+  ) => {
     const currentProvider = providerRef.current;
     
     if (currentProvider === 'elevenlabs') {
-      speakWithElevenLabs(text, language);
+      speakWithElevenLabs(text, language, options);
     } else {
       speakWithBrowser(text, language);
     }

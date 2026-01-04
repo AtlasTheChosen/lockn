@@ -429,7 +429,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           <WordHoverText
                             text={currentCard.target_phrase}
                             translations={wordTranslations[`${currentCard.id}-target`] || []}
-                            onWordSpeak={(word) => speak(word, stack.target_language)}
+                            onWordSpeak={(word) => speak(word, stack.target_language, { cardId: currentCard.id })}
                             language={stack.target_language}
                           />
                         )}
@@ -439,7 +439,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           e.stopPropagation();
                           speak(
                             reverseMode ? currentCard.native_translation : currentCard.target_phrase,
-                            reverseMode ? 'English' : stack.target_language
+                            reverseMode ? 'English' : stack.target_language,
+                            { cardId: currentCard.id, audioUrl: currentCard.audio_url }
                           );
                         }}
                         disabled={isTTSLoading}
@@ -498,7 +499,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           <WordHoverText
                             text={currentCard.target_phrase}
                             translations={wordTranslations[`${currentCard.id}-target`] || []}
-                            onWordSpeak={(word) => speak(word, stack.target_language)}
+                            onWordSpeak={(word) => speak(word, stack.target_language, { cardId: currentCard.id })}
                             language={stack.target_language}
                           />
                         ) : (
@@ -510,7 +511,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           e.stopPropagation();
                           speak(
                             reverseMode ? currentCard.target_phrase : currentCard.native_translation,
-                            reverseMode ? stack.target_language : 'English'
+                            reverseMode ? stack.target_language : 'English',
+                            { cardId: currentCard.id, audioUrl: currentCard.audio_url }
                           );
                         }}
                         disabled={isTTSLoading}
@@ -530,7 +532,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           <WordHoverText
                             text={currentCard.target_phrase}
                             translations={wordTranslations[`${currentCard.id}-target`] || []}
-                            onWordSpeak={(word) => speak(word, stack.target_language)}
+                            onWordSpeak={(word) => speak(word, stack.target_language, { cardId: currentCard.id })}
                             language={stack.target_language}
                           />
                         )}
@@ -540,7 +542,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           e.stopPropagation();
                           speak(
                             reverseMode ? currentCard.native_translation : currentCard.target_phrase,
-                            reverseMode ? 'English' : stack.target_language
+                            reverseMode ? 'English' : stack.target_language,
+                            { cardId: currentCard.id, audioUrl: currentCard.audio_url }
                           );
                         }}
                         disabled={isTTSLoading}
