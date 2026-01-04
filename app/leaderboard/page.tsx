@@ -29,7 +29,7 @@ export default function LeaderboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('weekly_avg');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('today');
 
   const loadLeaderboardData = useCallback(async () => {
     try {
