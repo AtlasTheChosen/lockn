@@ -58,51 +58,26 @@ export default function DashboardTabs({
     last_test_date: stack.last_test_date || undefined,
   }));
 
-  const calculatePassedCards = (testProgress: number, cardCount: number) => {
-    return Math.round((testProgress / 100) * cardCount);
-  };
-
-  const getWeekStart = () => {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - dayOfWeek);
-    weekStart.setHours(0, 0, 0, 0);
-    return weekStart;
-  };
-
-  const totalPassedCards = stacks.reduce((sum, stack) => {
-    return sum + calculatePassedCards(stack.test_progress ?? 0, stack.card_count);
-  }, 0);
-
-  const weekStart = getWeekStart();
-  const passedThisWeek = stacks.reduce((sum, stack) => {
-    if (stack.last_test_date && new Date(stack.last_test_date) >= weekStart) {
-      return sum + calculatePassedCards(stack.test_progress ?? 0, stack.card_count);
-    }
-    return sum;
-  }, 0);
-
+  // Calculate weekly average from history
   const calculateWeeklyAvg = () => {
-    const testedStacks = stacks.filter(s => s.last_test_date);
-    if (testedStacks.length === 0) return 0;
+    const history = stats?.weekly_cards_history ?? [];
+    if (history.length === 0) return 0;
     
-    const firstTestDate = testedStacks.reduce((earliest, stack) => {
-      const testDate = new Date(stack.last_test_date!);
-      return testDate < earliest ? testDate : earliest;
-    }, new Date());
-    
-    const weeksSinceFirst = Math.max(1, Math.ceil((Date.now() - firstTestDate.getTime()) / (7 * 24 * 60 * 60 * 1000)));
-    return Math.round(totalPassedCards / weeksSinceFirst);
+    const totalCards = history.reduce((sum, week) => sum + (week.count || 0), 0);
+    return Math.round(totalCards / history.length);
   };
 
+  // Use database values directly for accurate stats
   const displayStats = stats
     ? {
-        total_cards_reviewed: stats.total_reviews,
-        current_streak: stats.current_streak,
-        longest_streak: stats.longest_streak,
-        total_mastered: totalPassedCards,
-        current_week_cards: passedThisWeek,
+        total_cards_reviewed: stats.total_reviews ?? 0,
+        current_streak: stats.current_streak ?? 0,
+        longest_streak: stats.longest_streak ?? 0,
+        // Use the actual database value for total mastered cards
+        total_mastered: stats.total_cards_mastered ?? 0,
+        // Use the actual database value for this week's cards
+        current_week_cards: stats.current_week_cards ?? 0,
+        // Calculate weekly average from history
         weekly_average: calculateWeeklyAvg(),
         weekly_cards_history: stats.weekly_cards_history ?? [],
         pause_weekly_tracking: stats.pause_weekly_tracking ?? false,
