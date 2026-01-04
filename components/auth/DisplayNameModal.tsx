@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, User } from 'lucide-react';
+import { Loader2, User, Sparkles, BookOpen } from 'lucide-react';
 
 // Banned words list (lowercase) - comprehensive list of slurs and offensive terms
 const BANNED_WORDS = [
@@ -91,13 +91,15 @@ function containsBannedWord(text: string): boolean {
 
 interface DisplayNameModalProps {
   userId: string;
-  onComplete: (displayName: string) => void;
+  onComplete: (displayName: string, showTutorial?: boolean) => void;
 }
 
 export default function DisplayNameModal({ userId, onComplete }: DisplayNameModalProps) {
   const [displayName, setDisplayName] = useState('');
+  const [savedDisplayName, setSavedDisplayName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTutorialPrompt, setShowTutorialPrompt] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +163,9 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
         throw updateError;
       }
 
-      onComplete(trimmedName);
+      // Save name and show tutorial prompt
+      setSavedDisplayName(trimmedName);
+      setShowTutorialPrompt(true);
     } catch (err: any) {
       console.error('Error setting display name:', err);
       setError(err.message || 'Failed to set display name. Please try again.');
@@ -169,6 +173,41 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
       setLoading(false);
     }
   };
+
+  // Show tutorial prompt after display name is saved
+  if (showTutorialPrompt) {
+    return (
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 z-50">
+        <Card className="w-full max-w-md bg-slate-900 border-slate-700">
+          <CardHeader className="text-center">
+            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="h-8 w-8 text-white" />
+            </div>
+            <CardTitle className="text-2xl text-white">Welcome, {savedDisplayName}! 🎉</CardTitle>
+            <CardDescription className="text-slate-400">
+              Would you like a quick tour of how the app works?
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button
+              onClick={() => onComplete(savedDisplayName, true)}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 text-lg"
+            >
+              <Sparkles className="h-5 w-5 mr-2" />
+              Show me around
+            </Button>
+            <Button
+              onClick={() => onComplete(savedDisplayName, false)}
+              variant="ghost"
+              className="w-full text-slate-400 hover:text-white py-6 text-lg"
+            >
+              Skip for now
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 z-50">

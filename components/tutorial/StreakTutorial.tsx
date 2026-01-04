@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Flame, Trophy, Clock, Snowflake, ChevronRight, ChevronLeft, X, Sparkles } from 'lucide-react';
+import { Flame, Trophy, Clock, Snowflake, ChevronRight, ChevronLeft, X, Sparkles, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface StreakTutorialProps {
@@ -13,6 +13,15 @@ interface StreakTutorialProps {
 const STEPS = [
   {
     id: 1,
+    title: "Welcome to LOCKN! ✨",
+    subtitle: "Your language learning journey starts here",
+    description: "Here's what makes LOCKN special:\n\n📚 Create flashcard stacks on any topic you want\n\n🔍 Tap \"Breakdown\" for grammar tips & memory tricks\n\n🔊 Tap any word to hear it and see its definition",
+    icon: BookOpen,
+    color: 'from-purple-400 to-pink-500',
+    bgColor: 'bg-gradient-to-br from-purple-50 to-pink-50',
+  },
+  {
+    id: 2,
     title: "Keep Your Streak Alive! 🔥",
     subtitle: "Learn 10 cards every day",
     description: "Rate 10 cards as \"Kinda Know\" or \"Really Know\" each day to build your streak. Consistency is key!",
@@ -21,7 +30,7 @@ const STEPS = [
     bgColor: 'bg-gradient-to-br from-orange-50 to-red-50',
   },
   {
-    id: 2,
+    id: 3,
     title: "Master Your Stack! 🏆",
     subtitle: "Unlock the final test",
     description: "Once you rate ALL cards in a stack as \"Kinda Know\" or better, a mastery test unlocks. Pass it to complete the stack!",
@@ -30,7 +39,7 @@ const STEPS = [
     bgColor: 'bg-gradient-to-br from-yellow-50 to-amber-50',
   },
   {
-    id: 3,
+    id: 4,
     title: "Beat the Clock! ⏰",
     subtitle: "Complete tests on time",
     description: "You have a grace period to complete each test:\n\n• Small stacks (10 cards): 2 days\n• Medium stacks (25+ cards): 5 days\n• Large stacks (50+ cards): 10 days",
@@ -39,7 +48,7 @@ const STEPS = [
     bgColor: 'bg-gradient-to-br from-blue-50 to-indigo-50',
   },
   {
-    id: 4,
+    id: 5,
     title: "Streak Frozen? ❄️",
     subtitle: "Don't worry, you can recover!",
     description: "If you miss a test deadline, your streak freezes and can't grow. You must still learn 10 cards daily or your streak resets to 0! Pass the test to unfreeze and start growing again.",

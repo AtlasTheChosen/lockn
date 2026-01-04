@@ -337,8 +337,11 @@ export default function DashboardPage() {
     );
   }
 
-  const handleDisplayNameSet = (displayName: string) => {
+  const handleDisplayNameSet = (displayName: string, showTutorial?: boolean) => {
     setNeedsDisplayName(false);
+    if (showTutorial) {
+      setShowStreakTutorial(true);
+    }
     setData(prev => ({
       ...prev,
       profile: { ...prev.profile, display_name: displayName },
