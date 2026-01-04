@@ -31,7 +31,8 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
+    // Use hard navigation to ensure clean logout
+    window.location.href = '/';
   };
 
   return (

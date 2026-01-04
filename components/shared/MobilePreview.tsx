@@ -53,8 +53,8 @@ function MobilePreviewInner({ children }: MobilePreviewProviderProps) {
 
   return (
     <MobilePreviewContext.Provider value={{ isMobilePreview, setMobilePreview }}>
-      {/* Floating Toggle Button - Always visible (except inside iframe) */}
-      <div className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2">
+      {/* Floating Toggle Button - Only visible on desktop (hidden on mobile to avoid blocking logout) */}
+      <div className="hidden md:flex fixed bottom-4 right-4 z-[9999] flex-col gap-2">
         <button
           onClick={() => setMobilePreview(!isMobilePreview)}
           className={`p-3 rounded-full shadow-lg transition-all hover:scale-110 ${

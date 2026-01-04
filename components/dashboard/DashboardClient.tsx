@@ -68,8 +68,8 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    // Use hard navigation to ensure clean logout
+    window.location.href = '/';
   };
 
   const handleGenerate = async () => {

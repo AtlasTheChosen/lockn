@@ -60,8 +60,8 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    // Use hard navigation to ensure clean logout
+    window.location.href = '/';
   };
 
   const handleNewStack = () => {
