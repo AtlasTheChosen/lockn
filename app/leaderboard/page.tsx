@@ -14,12 +14,12 @@ interface LeaderboardUser {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
-  current_week_cards: number;
+  daily_cards_learned: number;
   weekly_average: number;
-  total_stacks_completed: number;
+  total_cards_mastered: number;
 }
 
-type FilterType = 'weekly_avg' | 'this_week' | 'stacks';
+type FilterType = 'today' | 'weekly_avg' | 'total';
 
 export default function LeaderboardPage() {
   const router = useRouter();
@@ -53,9 +53,9 @@ export default function LeaderboardPage() {
           id: profile.id,
           display_name: profile.display_name,
           avatar_url: profile.avatar_url,
-          current_week_cards: userStats?.current_week_cards || 0,
+          daily_cards_learned: userStats?.daily_cards_learned || 0,
           weekly_average: calculateWeeklyAverage(weeklyHistory),
-          total_stacks_completed: userStats?.total_stacks_completed || 0,
+          total_cards_mastered: userStats?.total_cards_mastered || 0,
         };
       });
 
@@ -83,12 +83,12 @@ export default function LeaderboardPage() {
   const getSortedUsers = (metric: FilterType) => {
     return [...users].sort((a, b) => {
       switch (metric) {
+        case 'today':
+          return b.daily_cards_learned - a.daily_cards_learned;
         case 'weekly_avg':
           return b.weekly_average - a.weekly_average;
-        case 'this_week':
-          return b.current_week_cards - a.current_week_cards;
-        case 'stacks':
-          return b.total_stacks_completed - a.total_stacks_completed;
+        case 'total':
+          return b.total_cards_mastered - a.total_cards_mastered;
         default:
           return 0;
       }
@@ -104,23 +104,23 @@ export default function LeaderboardPage() {
 
   const getValue = (user: LeaderboardUser, metric: FilterType) => {
     switch (metric) {
+      case 'today':
+        return user.daily_cards_learned;
       case 'weekly_avg':
         return user.weekly_average;
-      case 'this_week':
-        return user.current_week_cards;
-      case 'stacks':
-        return user.total_stacks_completed;
+      case 'total':
+        return user.total_cards_mastered;
     }
   };
 
   const getLabel = (metric: FilterType) => {
     switch (metric) {
+      case 'today':
+        return 'mastered today';
       case 'weekly_avg':
-        return 'cards/week';
-      case 'this_week':
-        return 'cards this week';
-      case 'stacks':
-        return 'stacks completed';
+        return 'cards/week avg';
+      case 'total':
+        return 'total mastered';
     }
   };
 
@@ -200,6 +200,17 @@ export default function LeaderboardPage() {
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-8 animate-fade-in stagger-1">
           <button
+            onClick={() => setActiveFilter('today')}
+            className={`px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
+              activeFilter === 'today'
+                ? 'bg-slate-800 text-white'
+                : 'bg-white border-2 border-slate-200 text-slate-500 hover:border-talka-purple hover:-translate-y-0.5'
+            }`}
+          >
+            <Calendar className="h-4 w-4" />
+            🔥 Today
+          </button>
+          <button
             onClick={() => setActiveFilter('weekly_avg')}
             className={`px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
               activeFilter === 'weekly_avg'
@@ -208,29 +219,18 @@ export default function LeaderboardPage() {
             }`}
           >
             <TrendingUp className="h-4 w-4" />
-            📈 Avg Passed
+            📈 Avg/Week
           </button>
           <button
-            onClick={() => setActiveFilter('this_week')}
+            onClick={() => setActiveFilter('total')}
             className={`px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
-              activeFilter === 'this_week'
-                ? 'bg-slate-800 text-white'
-                : 'bg-white border-2 border-slate-200 text-slate-500 hover:border-talka-purple hover:-translate-y-0.5'
-            }`}
-          >
-            <Calendar className="h-4 w-4" />
-            📅 Passed/Week
-          </button>
-          <button
-            onClick={() => setActiveFilter('stacks')}
-            className={`px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
-              activeFilter === 'stacks'
+              activeFilter === 'total'
                 ? 'bg-slate-800 text-white'
                 : 'bg-white border-2 border-slate-200 text-slate-500 hover:border-talka-purple hover:-translate-y-0.5'
             }`}
           >
             <Target className="h-4 w-4" />
-            📚 Stacks
+            🏆 Total
           </button>
         </div>
 

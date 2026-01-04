@@ -24,7 +24,7 @@ export async function GET() {
     // Fetch all user stats
     const { data: stats, error: statsError } = await supabase
       .from('user_stats')
-      .select('user_id, current_week_cards, weekly_cards_history, total_stacks_completed');
+      .select('user_id, current_week_cards, weekly_cards_history, total_cards_mastered, daily_cards_learned');
 
     if (statsError) {
       console.error('[Leaderboard API] Stats error:', statsError);

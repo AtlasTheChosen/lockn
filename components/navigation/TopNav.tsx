@@ -28,6 +28,7 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
   const router = useRouter();
   const supabase = createClient();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
 
   const getInitials = (name: string) => {
     return name.substring(0, 2).toUpperCase();
@@ -72,7 +73,10 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
             return (
               <button
                 key={link.href}
-                onClick={() => setShowAuthModal(true)}
+                onClick={() => {
+                  setAuthModalMode('signup');
+                  setShowAuthModal(true);
+                }}
                 className={cn(
                   'px-6 py-3 rounded-[20px] font-semibold text-base transition-all duration-300',
                   'text-slate-500 hover:text-slate-800 hover:bg-talka-purple/10 hover:-translate-y-0.5'
@@ -154,18 +158,33 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
           </button>
         </div>
       ) : (
-        <button
-          onClick={() => setShowAuthModal(true)}
-          className="px-6 py-3 rounded-[20px] font-semibold text-base bg-gradient-purple-pink text-white shadow-purple hover:-translate-y-0.5 transition-all duration-300"
-        >
-          Sign In
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              setAuthModalMode('login');
+              setShowAuthModal(true);
+            }}
+            className="px-6 py-3 rounded-[20px] font-semibold text-base text-slate-600 hover:text-talka-purple hover:bg-talka-purple/10 transition-all duration-300"
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => {
+              setAuthModalMode('signup');
+              setShowAuthModal(true);
+            }}
+            className="px-6 py-3 rounded-[20px] font-semibold text-base bg-gradient-purple-pink text-white shadow-purple hover:-translate-y-0.5 transition-all duration-300"
+          >
+            Get Started ✨
+          </button>
+        </div>
       )}
 
       {/* Auth Modal for guests */}
       <AuthModal 
         isOpen={showAuthModal} 
         onClose={() => setShowAuthModal(false)}
+        initialMode={authModalMode}
       />
     </nav>
   );
