@@ -22,31 +22,33 @@ export async function POST(request: Request) {
     if (!openai) {
       return NextResponse.json({ 
         wordBreakdown: [],
-        grammarNotes: 'API key not configured',
-        mnemonic: '',
-        culturalContext: '',
-        usageTips: ''
+        grammarPattern: 'API key not configured',
+        patternExamples: [],
+        cognateHint: '',
+        commonMistake: '',
+        memoryTrick: ''
       });
     }
 
-    const systemPrompt = `You are a language learning expert helping users deeply understand ${targetLanguage} phrases. Given a phrase and its ${nativeLanguage} translation, provide a comprehensive breakdown to help memorization and understanding.
+    const systemPrompt = `You are a language learning expert. Break down this ${targetLanguage} phrase to help a ${nativeLanguage} speaker truly understand and remember it.
 
-Return ONLY valid JSON in this exact format:
+Return ONLY valid JSON:
 {
   "wordBreakdown": [
     {
-      "word": "original word in ${targetLanguage}",
+      "word": "word in ${targetLanguage}",
       "meaning": "${nativeLanguage} meaning",
-      "grammar": "grammatical role (e.g., 'verb - present tense', 'noun - feminine', 'preposition')"
+      "grammar": "grammatical role (verb-present, noun-fem, etc.)"
     }
   ],
-  "grammarNotes": "Brief explanation of any important grammar structures used in this phrase",
-  "mnemonic": "A creative, memorable trick to remember this phrase (use wordplay, visual associations, stories, or sound-alikes)",
-  "culturalContext": "When and where native speakers would typically use this phrase, any cultural nuances",
-  "usageTips": "Practical tips on when to use this phrase, formality level, common situations"
+  "grammarPattern": "The reusable grammar rule this phrase demonstrates. Explain WHY it works this way.",
+  "patternExamples": ["2-3 other common phrases using this same pattern"],
+  "cognateHint": "Any ${targetLanguage} words here that share roots with ${nativeLanguage} words (or empty string if none)",
+  "commonMistake": "What learners typically get wrong with this grammar/vocab and why",
+  "memoryTrick": "ONLY include if genuinely clever - a memorable way to remember the grammar pattern or a tricky word. Leave empty string if nothing clever comes to mind."
 }
 
-Make the mnemonic creative, memorable, and even funny if appropriate. It should help the learner remember both the phrase AND its meaning.`;
+Focus on teaching PATTERNS that unlock many sentences, not just this one phrase. Connect to ${nativeLanguage} cognates when possible. Be concise.`;
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
@@ -57,12 +59,8 @@ Make the mnemonic creative, memorable, and even funny if appropriate. It should 
         },
         {
           role: 'user',
-          content: `Break down this ${targetLanguage} phrase for a ${nativeLanguage} speaker:
-
-Phrase: "${phrase}"
-Translation: "${translation}"
-
-Provide word-by-word breakdown, grammar notes, a memorable mnemonic, cultural context, and usage tips.`,
+          content: `Phrase: "${phrase}"
+Translation: "${translation}"`,
         },
       ],
       temperature: 0.7,
@@ -73,10 +71,11 @@ Provide word-by-word breakdown, grammar notes, a memorable mnemonic, cultural co
     if (!content) {
       return NextResponse.json({ 
         wordBreakdown: [],
-        grammarNotes: '',
-        mnemonic: '',
-        culturalContext: '',
-        usageTips: ''
+        grammarPattern: '',
+        patternExamples: [],
+        cognateHint: '',
+        commonMistake: '',
+        memoryTrick: ''
       });
     }
 
@@ -90,10 +89,11 @@ Provide word-by-word breakdown, grammar notes, a memorable mnemonic, cultural co
       } else {
         return NextResponse.json({ 
           wordBreakdown: [],
-          grammarNotes: '',
-          mnemonic: '',
-          culturalContext: '',
-          usageTips: ''
+          grammarPattern: '',
+          patternExamples: [],
+          cognateHint: '',
+          commonMistake: '',
+          memoryTrick: ''
         });
       }
     }
@@ -103,10 +103,11 @@ Provide word-by-word breakdown, grammar notes, a memorable mnemonic, cultural co
     console.error('Breakdown error:', error);
     return NextResponse.json({ 
       wordBreakdown: [],
-      grammarNotes: '',
-      mnemonic: '',
-      culturalContext: '',
-      usageTips: ''
+      grammarPattern: '',
+      patternExamples: [],
+      cognateHint: '',
+      commonMistake: '',
+      memoryTrick: ''
     });
   }
 }

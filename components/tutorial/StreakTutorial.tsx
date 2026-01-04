@@ -42,7 +42,7 @@ const STEPS = [
     id: 4,
     title: "Streak Frozen? ❄️",
     subtitle: "Don't worry, you can recover!",
-    description: "If you miss a test deadline, your streak freezes. But keep learning 10 cards daily to protect it! Pass the test to unfreeze and start growing again.",
+    description: "If you miss a test deadline, your streak freezes and can't grow. You must still learn 10 cards daily or your streak resets to 0! Pass the test to unfreeze and start growing again.",
     icon: Snowflake,
     color: 'from-cyan-400 to-blue-500',
     bgColor: 'bg-gradient-to-br from-cyan-50 to-blue-50',

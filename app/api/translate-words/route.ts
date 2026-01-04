@@ -116,6 +116,10 @@ Include ALL words - do not skip any.`;
       }
     }
 
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'translate-words/route.ts:response',message:'API returning translations',data:{inputText:text,wordCount:text.split(/\s+/).filter((w:string)=>w.length>0).length,translationsReturned:parsed.translations?.length||0,translationWords:(parsed.translations||[]).map((t:any)=>t.word)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
+
     return NextResponse.json({ translations: parsed.translations || [] });
   } catch (error: any) {
     console.error('Translation error:', error);

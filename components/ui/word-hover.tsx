@@ -105,7 +105,11 @@ export function WordHoverText({ text, translations = [], className = '', onWordS
   } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   
-  const words = text.split(/(\s+|[.,!?;:])/g).filter(w => w.trim().length > 0 || /\s/.test(w));
+  const words = text.split(/(\s+|[.,!?;:¿¡"'«»—-])/g).filter(w => w.trim().length > 0 || /\s/.test(w));
+  
+  // #region agent log
+  fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'word-hover.tsx:WordHoverText',message:'Component render',data:{text,wordsExtracted:words,translationsCount:translations.length,translationWords:translations.map(t=>t.word)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A-C'})}).catch(()=>{});
+  // #endregion
 
   // Detect mobile device
   useEffect(() => {
@@ -118,8 +122,14 @@ export function WordHoverText({ text, translations = [], className = '', onWordS
   }, []);
 
   const getTranslation = (word: string): WordTranslation | null => {
-    const cleanWord = word.toLowerCase().replace(/[.,!?;:]/g, '');
-    return translations.find(t => t.word.toLowerCase() === cleanWord) || null;
+    const cleanWord = word.toLowerCase().replace(/[.,!?;:¿¡"'«»—-]/g, '');
+    const found = translations.find(t => t.word.toLowerCase().replace(/[.,!?;:¿¡"'«»—-]/g, '') === cleanWord);
+    // #region agent log
+    if (!found && cleanWord.length > 0) {
+      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'word-hover.tsx:getTranslation',message:'No translation found for word',data:{originalWord:word,cleanWord,availableTranslations:translations.map(t=>({word:t.word,clean:t.word.toLowerCase().replace(/[.,!?;:¿¡"'«»—-]/g,'')}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B-D'})}).catch(()=>{});
+    }
+    // #endregion
+    return found || null;
   };
 
   const handleSpeak = (word: string) => {

@@ -144,7 +144,13 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       // Fetch translations for target phrase
       const targetKey = `${currentCard.id}-target`;
       if (!wordTranslations[targetKey]) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StackLearningClient.tsx:useEffect',message:'Fetching translations for card',data:{cardId:currentCard.id,targetPhrase:currentCard.target_phrase,targetLang},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+        // #endregion
         getWordTranslations(currentCard.target_phrase, targetLang, 'English').then(translations => {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StackLearningClient.tsx:useEffect:callback',message:'Translations received and stored',data:{cardId:currentCard.id,translationsCount:translations.length,words:translations.map((t:any)=>t.word)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
           setWordTranslations((prev: Record<string, any>) => ({
             ...prev,
             [targetKey]: translations
@@ -625,50 +631,66 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           </div>
                         </div>
 
-                        {/* Grammar Notes */}
-                        {breakdownData[currentCard.id].grammarNotes && (
+                        {/* Grammar Pattern */}
+                        {(breakdownData[currentCard.id].grammarPattern || breakdownData[currentCard.id].grammarNotes) && (
                           <div>
                             <h4 className="text-amber-700 font-bold text-sm mb-2 flex items-center gap-2">
-                              📝 Grammar Notes
+                              📝 Grammar Pattern
                             </h4>
                             <p className="text-slate-700 text-sm leading-relaxed">
-                              {breakdownData[currentCard.id].grammarNotes}
+                              {breakdownData[currentCard.id].grammarPattern || breakdownData[currentCard.id].grammarNotes}
                             </p>
                           </div>
                         )}
 
-                        {/* Mnemonic */}
-                        {breakdownData[currentCard.id].mnemonic && (
-                          <div className="bg-white/60 rounded-xl p-3">
+                        {/* Pattern Examples */}
+                        {breakdownData[currentCard.id].patternExamples?.length > 0 && (
+                          <div>
+                            <h4 className="text-blue-700 font-bold text-sm mb-2 flex items-center gap-2">
+                              🔄 Same Pattern
+                            </h4>
+                            <ul className="text-slate-700 text-sm space-y-1">
+                              {breakdownData[currentCard.id].patternExamples.map((ex: string, i: number) => (
+                                <li key={i} className="flex items-center gap-2">
+                                  <span className="text-blue-500">•</span> {ex}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Cognate Hint */}
+                        {breakdownData[currentCard.id].cognateHint && (
+                          <div className="bg-green-50 rounded-xl p-3">
+                            <h4 className="text-green-700 font-bold text-sm mb-2 flex items-center gap-2">
+                              🔗 English Connection
+                            </h4>
+                            <p className="text-slate-700 text-sm">
+                              {breakdownData[currentCard.id].cognateHint}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Common Mistake */}
+                        {breakdownData[currentCard.id].commonMistake && (
+                          <div className="bg-red-50 rounded-xl p-3">
+                            <h4 className="text-red-700 font-bold text-sm mb-2 flex items-center gap-2">
+                              ⚠️ Watch Out
+                            </h4>
+                            <p className="text-slate-700 text-sm">
+                              {breakdownData[currentCard.id].commonMistake}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Memory Trick */}
+                        {(breakdownData[currentCard.id].memoryTrick || breakdownData[currentCard.id].mnemonic) && (
+                          <div className="bg-purple-50 rounded-xl p-3">
                             <h4 className="text-purple-700 font-bold text-sm mb-2 flex items-center gap-2">
                               🧠 Memory Trick
                             </h4>
                             <p className="text-slate-700 text-sm italic">
-                              "{breakdownData[currentCard.id].mnemonic}"
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Cultural Context */}
-                        {breakdownData[currentCard.id].culturalContext && (
-                          <div>
-                            <h4 className="text-amber-700 font-bold text-sm mb-2 flex items-center gap-2">
-                              🌍 Cultural Context
-                            </h4>
-                            <p className="text-slate-700 text-sm leading-relaxed">
-                              {breakdownData[currentCard.id].culturalContext}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Usage Tips */}
-                        {breakdownData[currentCard.id].usageTips && (
-                          <div>
-                            <h4 className="text-amber-700 font-bold text-sm mb-2 flex items-center gap-2">
-                              💡 When to Use
-                            </h4>
-                            <p className="text-slate-700 text-sm leading-relaxed">
-                              {breakdownData[currentCard.id].usageTips}
+                              "{breakdownData[currentCard.id].memoryTrick || breakdownData[currentCard.id].mnemonic}"
                             </p>
                           </div>
                         )}

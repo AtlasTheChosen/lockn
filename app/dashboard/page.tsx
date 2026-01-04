@@ -209,7 +209,8 @@ export default function DashboardPage() {
       }
 
       // Check if streak should be reset (new day and didn't meet yesterday's requirement)
-      if (stats && !stats.streak_frozen && accessToken) {
+      // Note: This applies even when frozen - missing daily cards resets streak to 0
+      if (stats && accessToken) {
         const today = getTodayDate();
         const lastActiveDate = stats.daily_cards_date;
         
