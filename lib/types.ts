@@ -2,6 +2,7 @@ export interface UserProfile {
   id: string;
   email: string;
   display_name?: string;
+  display_name_changed_at?: string;
   avatar_url?: string;
   bio?: string;
   badges?: Badge[];

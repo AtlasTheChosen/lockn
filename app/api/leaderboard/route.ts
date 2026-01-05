@@ -10,11 +10,12 @@ export async function GET() {
     // Create admin client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch all user profiles (public leaderboard data)
+    // Fetch all user profiles with display names (public leaderboard data)
     const { data: profiles, error: profilesError } = await supabase
       .from('user_profiles')
       .select('id, display_name, avatar_url')
-      .limit(50);
+      .not('display_name', 'is', null)
+      .limit(100);
 
     if (profilesError) {
       console.error('[Leaderboard API] Profiles error:', profilesError);

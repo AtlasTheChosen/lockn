@@ -177,21 +177,21 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
   // Show tutorial prompt after display name is saved
   if (showTutorialPrompt) {
     return (
-      <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 z-50">
-        <Card className="w-full max-w-md bg-slate-900 border-slate-700">
-          <CardHeader className="text-center">
-            <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center mx-auto mb-4">
-              <BookOpen className="h-8 w-8 text-white" />
+      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+        <Card className="w-full max-w-md bg-white border-0 shadow-talka-lg rounded-3xl overflow-hidden">
+          <CardHeader className="text-center pt-8">
+            <div className="h-20 w-20 rounded-full bg-gradient-purple-pink flex items-center justify-center mx-auto mb-4 shadow-purple">
+              <BookOpen className="h-10 w-10 text-white" />
             </div>
-            <CardTitle className="text-2xl text-white">Welcome, {savedDisplayName}! 🎉</CardTitle>
-            <CardDescription className="text-slate-400">
+            <CardTitle className="font-display text-2xl text-slate-800">Welcome, {savedDisplayName}! 🎉</CardTitle>
+            <CardDescription className="text-slate-500 font-medium">
               Would you like a quick tour of how the app works?
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 pb-8">
             <Button
               onClick={() => onComplete(savedDisplayName, true)}
-              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-6 text-lg"
+              className="w-full bg-gradient-purple-pink hover:opacity-90 text-white font-bold py-6 text-lg rounded-2xl shadow-purple transition-all hover:-translate-y-0.5"
             >
               <Sparkles className="h-5 w-5 mr-2" />
               Show me around
@@ -199,7 +199,7 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
             <Button
               onClick={() => onComplete(savedDisplayName, false)}
               variant="ghost"
-              className="w-full text-slate-400 hover:text-white py-6 text-lg"
+              className="w-full text-slate-500 hover:text-slate-700 hover:bg-slate-100 py-6 text-lg rounded-2xl font-semibold"
             >
               Skip for now
             </Button>
@@ -210,41 +210,41 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
   }
 
   return (
-    <div className="fixed inset-0 bg-black/90 backdrop-blur-xl flex items-center justify-center p-6 z-50">
-      <Card className="w-full max-w-md bg-slate-900 border-slate-700">
-        <CardHeader className="text-center">
-          <div className="h-16 w-16 rounded-full bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-            <User className="h-8 w-8 text-blue-400" />
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+      <Card className="w-full max-w-md bg-white border-0 shadow-talka-lg rounded-3xl overflow-hidden">
+        <CardHeader className="text-center pt-8">
+          <div className="h-20 w-20 rounded-full bg-gradient-cyan-blue flex items-center justify-center mx-auto mb-4 shadow-blue">
+            <User className="h-10 w-10 text-white" />
           </div>
-          <CardTitle className="text-2xl text-white">Choose Your Display Name</CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardTitle className="font-display text-2xl text-slate-800">Choose Your Display Name</CardTitle>
+          <CardDescription className="text-slate-500 font-medium">
             This is how other users will see you. You can change it later in settings.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-8">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Enter display name..."
-                className="bg-slate-800 border-slate-700 text-white text-lg py-6"
+                className="bg-slate-50 border-2 border-slate-200 text-slate-800 text-lg py-6 rounded-2xl focus:border-talka-purple focus:ring-talka-purple placeholder:text-slate-400"
                 maxLength={30}
                 autoFocus
               />
-              <p className="text-slate-500 text-xs mt-2">
+              <p className="text-slate-400 text-xs mt-2 text-right">
                 {displayName.length}/30 characters
               </p>
             </div>
 
             {error && (
-              <p className="text-red-400 text-sm text-center">{error}</p>
+              <p className="text-red-500 text-sm text-center font-medium">{error}</p>
             )}
 
             <Button
               type="submit"
               disabled={loading || !displayName.trim()}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
+              className="w-full bg-gradient-purple-pink hover:opacity-90 text-white font-bold py-6 text-lg rounded-2xl shadow-purple transition-all hover:-translate-y-0.5 disabled:opacity-50"
             >
               {loading ? (
                 <>

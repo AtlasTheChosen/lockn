@@ -259,6 +259,9 @@ export default function DashboardPage() {
 
       if (!profile?.display_name) {
         setNeedsDisplayName(true);
+      } else if (profile && !profile.has_seen_streak_tutorial) {
+        // Show tutorial prompt for users with display name who haven't seen it
+        setShowStreakTutorial(true);
       }
       
     } catch (err: any) {
@@ -349,13 +352,25 @@ export default function DashboardPage() {
     }));
   };
 
+  const handleTutorialComplete = async () => {
+    setShowStreakTutorial(false);
+    // Mark tutorial as seen in database
+    if (data.user?.id) {
+      const supabase = createClient();
+      await supabase
+        .from('user_profiles')
+        .update({ has_seen_streak_tutorial: true })
+        .eq('id', data.user.id);
+    }
+  };
+
   return (
     <AppLayout>
       {/* Streak Tutorial */}
       {showStreakTutorial && (
         <StreakTutorial 
-          onComplete={() => setShowStreakTutorial(false)}
-          onSkip={() => setShowStreakTutorial(false)}
+          onComplete={handleTutorialComplete}
+          onSkip={handleTutorialComplete}
         />
       )}
 

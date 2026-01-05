@@ -60,6 +60,7 @@ interface Props {
 
 export default function ProfileSettings({ profile, accessToken, onUpdate }: Props) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
+  const [originalDisplayName] = useState(profile.display_name || '');
   const [bio, setBio] = useState(profile.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(1));
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
@@ -78,6 +79,25 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
+
+  // Check if display name can be changed (once per month)
+  const canChangeDisplayName = () => {
+    if (!profile.display_name_changed_at) return true;
+    const lastChanged = new Date(profile.display_name_changed_at);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - lastChanged.getTime()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 30;
+  };
+
+  const getDaysUntilCanChange = () => {
+    if (!profile.display_name_changed_at) return 0;
+    const lastChanged = new Date(profile.display_name_changed_at);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - lastChanged.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0, 30 - diffDays);
+  };
+
+  const isDisplayNameChanged = displayName !== originalDisplayName;
 
   useEffect(() => {
     if (profile.badges) {
@@ -101,6 +121,32 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
       setSaving(true);
       setMessage(null);
 
+      // Check if display name is being changed and if it's allowed
+      if (isDisplayNameChanged && !canChangeDisplayName()) {
+        setMessage({ 
+          type: 'error', 
+          text: `You can only change your display name once per month. ${getDaysUntilCanChange()} days remaining.` 
+        });
+        setSaving(false);
+        return;
+      }
+
+      // Build update object
+      const updateData: any = {
+        bio: bio || null,
+        avatar_url: avatarUrl,
+        profile_public: profilePublic,
+        languages_learning: languagesLearning,
+        theme_preference: theme,
+        notification_prefs: notificationPrefs,
+      };
+
+      // Only update display name fields if name is actually changing
+      if (isDisplayNameChanged) {
+        updateData.display_name = displayName || null;
+        updateData.display_name_changed_at = new Date().toISOString();
+      }
+
       const response = await fetch(
         `${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`,
         {
@@ -110,15 +156,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            display_name: displayName || null,
-            bio: bio || null,
-            avatar_url: avatarUrl,
-            profile_public: profilePublic,
-            languages_learning: languagesLearning,
-            theme_preference: theme,
-            notification_prefs: notificationPrefs,
-          }),
+          body: JSON.stringify(updateData),
         }
       );
 
@@ -272,6 +310,16 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
               className="bg-slate-50 border-2 border-slate-200 rounded-2xl mt-2 font-medium focus:border-talka-purple focus:ring-0"
               maxLength={50}
             />
+            {/* Display name change warning */}
+            {isDisplayNameChanged && (
+              <div className={`mt-2 p-3 rounded-xl text-sm ${canChangeDisplayName() ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600'}`}>
+                {canChangeDisplayName() ? (
+                  <p className="font-medium">⚠️ You can only change your display name once per month.</p>
+                ) : (
+                  <p className="font-medium">🚫 You can change your display name again in {getDaysUntilCanChange()} days.</p>
+                )}
+              </div>
+            )}
           </div>
 
           <div>
