@@ -188,6 +188,10 @@ export default function DashboardPage() {
               
               if (updatedProfile) {
                 profile = updatedProfile;
+                // Notify toolbar to refresh with new avatar
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('profile-updated'));
+                }
               }
             } catch (e) {
               console.warn('[Dashboard] Could not assign avatar:', e);
