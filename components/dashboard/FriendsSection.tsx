@@ -525,27 +525,30 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                   </div>
                 </div>
                 {/* Friend Stats */}
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t-2 border-slate-100">
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 text-orange-500 mb-1">
-                      <Calendar className="h-4 w-4" />
-                      <span className="text-xs font-semibold">Today</span>
+                <div className="pt-4 border-t-2 border-slate-100">
+                  <p className="text-xs font-semibold text-slate-400 text-center mb-2 uppercase tracking-wide">Cards Mastered</p>
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 text-orange-500 mb-1">
+                        <Calendar className="h-4 w-4" />
+                        <span className="text-xs font-semibold">Today</span>
+                      </div>
+                      <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.daily_cards_learned || 0}</p>
                     </div>
-                    <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.daily_cards_learned || 0}</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 text-indigo-500 mb-1">
-                      <TrendingUp className="h-4 w-4" />
-                      <span className="text-xs font-semibold">Avg/Week</span>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 text-indigo-500 mb-1">
+                        <TrendingUp className="h-4 w-4" />
+                        <span className="text-xs font-semibold">Avg/Week</span>
+                      </div>
+                      <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.weekly_average || 0}</p>
                     </div>
-                    <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.weekly_average || 0}</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center gap-1 text-green-500 mb-1">
-                      <Target className="h-4 w-4" />
-                      <span className="text-xs font-semibold">Total</span>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 text-green-500 mb-1">
+                        <Target className="h-4 w-4" />
+                        <span className="text-xs font-semibold">Total</span>
+                      </div>
+                      <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.total_cards_mastered || 0}</p>
                     </div>
-                    <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.total_cards_mastered || 0}</p>
                   </div>
                 </div>
               </div>

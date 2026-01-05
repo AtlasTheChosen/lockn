@@ -259,7 +259,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       try {
         const { data: dailyStats } = await supabase
           .from('user_stats')
-          .select('daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen, total_cards_mastered')
+          .select('daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen, total_cards_mastered, streak_awarded_today')
           .eq('user_id', stack.user_id)
           .single();
 
@@ -271,10 +271,14 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           let newTotalMastered = (dailyStats.total_cards_mastered || 0) + 1;
           let newStreak = dailyStats.current_streak || 0;
           let newLongestStreak = dailyStats.longest_streak || 0;
+          // Track if streak was already awarded today (reset on new day)
+          let streakAwardedToday = needsReset ? false : (dailyStats.streak_awarded_today || false);
 
-          if (!dailyStats.streak_frozen) {
-            if (newDailyCards === STREAK_DAILY_REQUIREMENT) {
+          // Award streak when reaching 10+ cards (only once per day)
+          if (!dailyStats.streak_frozen && !streakAwardedToday) {
+            if (newDailyCards >= STREAK_DAILY_REQUIREMENT) {
               newStreak += 1;
+              streakAwardedToday = true;
               if (newStreak > newLongestStreak) {
                 newLongestStreak = newStreak;
               }
@@ -290,6 +294,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
               longest_streak: newLongestStreak,
               last_activity_date: today,
               total_cards_mastered: newTotalMastered,
+              streak_awarded_today: streakAwardedToday,
             })
             .eq('user_id', stack.user_id);
           

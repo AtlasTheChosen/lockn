@@ -95,6 +95,18 @@ export default function LeaderboardPage() {
     loadLeaderboardData();
   }, [sessionUser, sessionLoading, router, loadLeaderboardData]);
 
+  // Refresh leaderboard when user returns to tab (catches updates after mastering cards)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (sessionUser && !loading) {
+        loadLeaderboardData();
+      }
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [sessionUser, loading, loadLeaderboardData]);
+
   const getSortedUsers = (metric: FilterType) => {
     return [...users].sort((a, b) => {
       switch (metric) {
