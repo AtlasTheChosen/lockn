@@ -11,8 +11,6 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2, Sparkles } from 'lucide-react';
-import OAuthButtons from '@/components/auth/OAuthButtons';
-
 export const dynamic = 'force-dynamic';
 
 export default function LoginPage() {
@@ -341,19 +339,6 @@ export default function LoginPage() {
             </form>
           ) : (
             <div className="space-y-6">
-              {/* OAuth Buttons */}
-              <OAuthButtons onError={setError} />
-
-              {/* Divider */}
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-white/10"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 bg-black text-white/40 font-light">or continue with email</span>
-                </div>
-              </div>
-
               {/* Email/Password Form */}
               <form onSubmit={handleLogin} className="space-y-6">
                 <div>

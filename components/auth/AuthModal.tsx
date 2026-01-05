@@ -77,32 +77,75 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
           const avatarId = getRandomAvatarId();
           const avatarUrl = getAvatarUrl(avatarId);
           
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthModal.tsx:signup',message:'Creating profile and stats for new user',data:{userId:data.user.id?.substring(0,8),email:data.user.email},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-          // #endregion
-          
           const { error: profileError } = await supabase.from('user_profiles').insert({
             id: data.user.id,
             email: data.user.email,
             avatar_url: avatarUrl,
           });
           
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthModal.tsx:profileInsert',message:'Profile insert result',data:{success:!profileError,error:profileError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-          // #endregion
-          
           const { error: statsError } = await supabase.from('user_stats').insert({
             user_id: data.user.id,
           });
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthModal.tsx:statsInsert',message:'Stats insert result',data:{success:!statsError,error:statsError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-          // #endregion
+
+          // Migrate trial cards to user's account
+          const trialCardsStr = localStorage.getItem('lockn-trial-cards');
+          const trialScenario = localStorage.getItem('lockn-trial-scenario');
+          const trialLanguage = localStorage.getItem('lockn-trial-language') || 'Spanish';
+          const trialLevel = localStorage.getItem('lockn-trial-level') || 'B1';
+          const trialRatingsStr = localStorage.getItem('lockn-trial-ratings');
+
+          if (trialCardsStr && trialScenario) {
+            const trialCards = JSON.parse(trialCardsStr);
+            const trialRatings = trialRatingsStr ? JSON.parse(trialRatingsStr) : {};
+
+            // Capitalize the first letter of each word in the title
+            const capitalizedTitle = trialScenario
+              .split(' ')
+              .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+              .join(' ');
+
+            // Create the card stack
+            const { data: stack, error: stackError } = await supabase
+              .from('card_stacks')
+              .insert({
+                user_id: data.user.id,
+                title: capitalizedTitle,
+                target_language: trialLanguage,
+                native_language: 'English',
+                card_count: trialCards.length,
+                cefr_level: trialLevel,
+              })
+              .select()
+              .single();
+
+            if (!stackError && stack) {
+              // Create flashcards with ratings
+              const flashcards = trialCards.map((card: any, index: number) => ({
+                stack_id: stack.id,
+                user_id: data.user.id,
+                card_order: index,
+                target_phrase: card.targetPhrase,
+                native_translation: card.nativeTranslation,
+                example_sentence: card.exampleSentence,
+                tone_advice: card.toneAdvice,
+                user_rating: trialRatings[index] || 0,
+                mastery_level: trialRatings[index] >= 4 ? trialRatings[index] - 3 : 0,
+              }));
+
+              await supabase.from('flashcards').insert(flashcards);
+              
+              // Clear trial data from localStorage
+              localStorage.removeItem('lockn-trial-cards');
+              localStorage.removeItem('lockn-trial-scenario');
+              localStorage.removeItem('lockn-trial-language');
+              localStorage.removeItem('lockn-trial-level');
+              localStorage.removeItem('lockn-trial-ratings');
+              
+              console.log('[AuthModal] Trial data migrated successfully:', stack.id);
+            }
+          }
         } catch (profileError: any) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthModal.tsx:error',message:'Error creating profile/stats',data:{error:profileError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-          // #endregion
-          console.warn('Profile creation error:', profileError);
+          console.warn('Profile/trial migration error:', profileError);
         }
         
         setLoading(false);

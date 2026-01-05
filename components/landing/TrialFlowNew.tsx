@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, Check, X, Loader2, ArrowLeft, ArrowLeftRight } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronUp, Check, X, Loader2, ArrowLeft, ArrowLeftRight, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { distance } from 'fastest-levenshtein';
@@ -11,11 +11,11 @@ import { CARD_RATINGS } from '@/lib/constants';
 import { createClient } from '@/lib/supabase/client';
 
 const RATING_OPTIONS = [
-  { value: CARD_RATINGS.REALLY_DONT_KNOW, label: "Really Don't Know", emoji: '😵', gradient: 'bg-gradient-to-r from-red-500 to-red-600' },
-  { value: CARD_RATINGS.DONT_KNOW, label: "Don't Know", emoji: '😕', gradient: 'bg-gradient-to-r from-orange-500 to-orange-600' },
-  { value: CARD_RATINGS.NEUTRAL, label: 'Neutral', emoji: '😐', gradient: 'bg-gradient-to-r from-yellow-500 to-yellow-600' },
-  { value: CARD_RATINGS.KINDA_KNOW, label: 'Kinda Know', emoji: '🙂', gradient: 'bg-gradient-to-r from-green-500 to-green-600' },
-  { value: CARD_RATINGS.REALLY_KNOW, label: 'Really Know', emoji: '🤩', gradient: 'bg-gradient-to-r from-blue-500 to-blue-600' },
+  { value: CARD_RATINGS.REALLY_DONT_KNOW, label: "Really Don't Know", gradient: 'bg-gradient-to-r from-red-500 to-red-600' },
+  { value: CARD_RATINGS.DONT_KNOW, label: "Don't Know", gradient: 'bg-gradient-to-r from-orange-500 to-orange-600' },
+  { value: CARD_RATINGS.NEUTRAL, label: 'Neutral', gradient: 'bg-gradient-to-r from-yellow-500 to-yellow-600' },
+  { value: CARD_RATINGS.KINDA_KNOW, label: 'Kinda Know', gradient: 'bg-gradient-to-r from-green-500 to-green-600' },
+  { value: CARD_RATINGS.REALLY_KNOW, label: 'Really Know', gradient: 'bg-gradient-to-r from-blue-500 to-blue-600' },
 ];
 
 interface Card {
@@ -45,6 +45,9 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [reverseMode, setReverseMode] = useState(false);
   const [cefrLevel, setCefrLevel] = useState('B1');
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [breakdownData, setBreakdownData] = useState<Record<number, any>>({});
+  const [isLoadingBreakdown, setIsLoadingBreakdown] = useState(false);
 
   // Check if user is logged in and load CEFR level
   useEffect(() => {
@@ -86,6 +89,40 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
       }
     }
   }, [isFlipped, currentIndex, phase, currentCard]);
+
+  // Reset breakdown when card changes
+  useEffect(() => {
+    setShowBreakdown(false);
+  }, [currentIndex]);
+
+  // Fetch breakdown data for a card
+  const fetchBreakdown = async () => {
+    if (breakdownData[currentIndex]) {
+      setShowBreakdown(true);
+      return;
+    }
+    setIsLoadingBreakdown(true);
+    try {
+      const targetLang = localStorage.getItem('lockn-trial-language') || 'Spanish';
+      const response = await fetch('/api/phrase-breakdown', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phrase: currentCard.targetPhrase,
+          translation: currentCard.nativeTranslation,
+          language: targetLang,
+        }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setBreakdownData(prev => ({ ...prev, [currentIndex]: data }));
+        setShowBreakdown(true);
+      }
+    } catch (error) {
+      console.error('Error fetching breakdown:', error);
+    }
+    setIsLoadingBreakdown(false);
+  };
 
   const normalizeString = (str: string): string => {
     return str
@@ -358,7 +395,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                         )}
                       </div>
                       <p className="text-center text-slate-400 text-xs sm:text-sm font-medium mt-8">
-                        Tap anywhere to flip ✨
+                        Tap anywhere to flip
                       </p>
                     </div>
                   ) : (
@@ -387,19 +424,69 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                         </p>
                       </div>
 
-                      {/* Full Breakdown Section */}
-                      <div className="bg-slate-50 rounded-xl sm:rounded-2xl p-4 sm:p-5 space-y-3">
-                        <div>
-                          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-1">Example</p>
-                          <p className="text-slate-700 text-sm sm:text-base font-medium">{currentCard.exampleSentence}</p>
-                        </div>
-                        <div className="pt-2 border-t border-slate-200">
-                          <p className="text-slate-400 text-xs font-semibold uppercase tracking-wide mb-1">Tone</p>
-                          <span className="inline-block px-3 py-1 bg-talka-purple/10 text-talka-purple font-semibold rounded-lg text-sm">
-                            {currentCard.toneAdvice}
-                          </span>
-                        </div>
+                      {/* Tone Badge */}
+                      <div className="flex items-center justify-center">
+                        <span className="px-4 py-2 bg-talka-purple/10 text-talka-purple font-semibold rounded-xl">
+                          {currentCard.toneAdvice}
+                        </span>
                       </div>
+
+                      {/* Breakdown Button */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); showBreakdown ? setShowBreakdown(false) : fetchBreakdown(); }}
+                        disabled={isLoadingBreakdown}
+                        className="mx-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-amber-600 hover:text-amber-700 font-medium rounded-lg hover:bg-amber-50 transition-all disabled:opacity-50"
+                      >
+                        {isLoadingBreakdown ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Lightbulb className="w-3.5 h-3.5" />
+                        )}
+                        {showBreakdown ? 'Hide' : 'Breakdown'}
+                        {showBreakdown ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                      </button>
+
+                      {/* Breakdown Content */}
+                      <AnimatePresence>
+                        {showBreakdown && breakdownData[currentIndex] && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 sm:p-5 border-2 border-amber-200 space-y-3 overflow-hidden"
+                          >
+                            {/* Word-by-Word Breakdown */}
+                            {breakdownData[currentIndex].wordBreakdown?.length > 0 && (
+                              <div>
+                                <h4 className="text-amber-700 font-bold text-sm mb-2 flex items-center gap-2">
+                                  Word-by-Word
+                                </h4>
+                                <div className="space-y-1.5">
+                                  {breakdownData[currentIndex].wordBreakdown?.map((item: any, i: number) => (
+                                    <div key={i} className="flex items-start gap-2 text-sm">
+                                      <span className="font-bold text-slate-800 min-w-[60px]">{item.word}</span>
+                                      <span className="text-slate-600">→ {item.meaning}</span>
+                                      {item.grammar && (
+                                        <span className="text-amber-600 text-xs bg-amber-100 px-1.5 py-0.5 rounded-full">{item.grammar}</span>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Grammar Pattern */}
+                            {(breakdownData[currentIndex].grammarPattern || breakdownData[currentIndex].grammarNotes) && (
+                              <div className="pt-2 border-t border-amber-200">
+                                <h4 className="text-amber-700 font-bold text-sm mb-1">Grammar</h4>
+                                <p className="text-slate-700 text-sm leading-relaxed">
+                                  {breakdownData[currentIndex].grammarPattern || breakdownData[currentIndex].grammarNotes}
+                                </p>
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
 
                       <p className="text-center text-slate-400 text-[10px] sm:text-xs font-medium">
                         Hover over words to see definitions
@@ -434,7 +521,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                           disabled={!userAnswer.trim()}
                           className="w-full bg-gradient-purple-pink text-white font-bold rounded-xl sm:rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-4 text-base shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]"
                         >
-                          Submit Answer ✨
+                          Submit Answer
                         </Button>
                       </div>
                     ) : (
@@ -472,7 +559,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                           onClick={handleNextTestCard}
                           className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-6 text-base shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all"
                         >
-                          {currentIndex < cards.length - 1 ? 'Next Card →' : 'Complete Trial 🎊'}
+                          {currentIndex < cards.length - 1 ? 'Next Card' : 'Complete Trial'}
                         </Button>
                       </div>
                     )}
@@ -492,17 +579,20 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
               <p className="text-center text-slate-500 text-xs sm:text-sm font-semibold mb-2 sm:mb-3">
                 Rate your knowledge:
               </p>
-              <div className="grid grid-cols-2 sm:grid-cols-1 gap-2">
-                {RATING_OPTIONS.map((option) => (
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {RATING_OPTIONS.map((option, index) => (
                   <Button
                     key={option.value}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleRating(option.value);
                     }}
-                    className={`w-full ${option.gradient} hover:opacity-90 text-white rounded-xl sm:rounded-2xl py-3 sm:py-4 text-sm sm:text-base font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all min-h-[48px] active:scale-[0.98]`}
+                    className={`${option.gradient} hover:opacity-90 text-white rounded-xl sm:rounded-2xl py-3 sm:py-4 text-sm sm:text-base font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all min-h-[48px] active:scale-[0.98] ${
+                      index === RATING_OPTIONS.length - 1 ? 'col-span-2 sm:col-span-1 max-w-[200px] mx-auto sm:max-w-none' : ''
+                    }`}
                   >
-                    {option.emoji} <span className="hidden sm:inline">{option.label}</span><span className="sm:hidden">{option.label.split(' ').slice(-1)}</span>
+                    <span className="hidden sm:inline">{option.label}</span>
+                    <span className="sm:hidden">{option.label.split(' ').slice(-1)}</span>
                     {cardRatings[currentIndex] === option.value && <Check className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />}
                   </Button>
                 ))}

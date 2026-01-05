@@ -10,8 +10,6 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Loader2, Sparkles } from 'lucide-react';
-import OAuthButtons from '@/components/auth/OAuthButtons';
-
 export const dynamic = 'force-dynamic';
 
 export default function SignupPage() {
@@ -234,19 +232,6 @@ export default function SignupPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
         >
-          {/* OAuth Buttons */}
-          <OAuthButtons onError={setError} />
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-black text-white/40 font-light">or sign up with email</span>
-            </div>
-          </div>
-
           {/* Email/Password Form */}
           <form onSubmit={handleSignup} className="space-y-6">
             <div>
