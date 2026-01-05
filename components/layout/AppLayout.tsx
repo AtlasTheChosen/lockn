@@ -110,7 +110,7 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
         avatarUrl={avatarUrl}
         isLoggedIn={isLoggedIn}
       />
-      <main className="pb-24 md:pb-0 safe-area-bottom relative z-0">
+      <main className="pb-32 md:pb-0 safe-area-bottom relative z-0">
         {children}
       </main>
       <BottomNav streak={streak} streakFrozen={streakFrozen} isLoggedIn={isLoggedIn} />

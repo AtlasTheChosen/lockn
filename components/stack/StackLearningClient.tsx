@@ -879,7 +879,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   value={testAnswer}
                   onChange={(e) => setTestAnswer(e.target.value)}
                   placeholder={`Type your answer in ${stack.target_language}...`}
-                  className="bg-slate-50 border-2 border-slate-200 rounded-2xl text-base sm:text-lg py-4 sm:py-6 h-14 sm:h-16 font-medium focus:border-talka-purple focus:ring-0"
+                  className="bg-slate-50 border-2 border-slate-200 rounded-2xl text-base sm:text-lg py-4 sm:py-6 h-14 sm:h-16 font-medium focus:border-talka-purple focus:ring-0 placeholder:text-slate-400"
                   disabled={isGrading}
                   autoComplete="off"
                   autoCapitalize="off"
