@@ -143,6 +143,12 @@ export default function LandingPage() {
         toneAdvice: card.tone_advice,
       }));
       
+      // Save trial data to localStorage for migration to Supabase on signup
+      localStorage.setItem('lockn-trial-cards', JSON.stringify(formattedCards));
+      localStorage.setItem('lockn-trial-scenario', scenario);
+      // Clear any previous ratings when starting fresh
+      localStorage.removeItem('lockn-trial-ratings');
+      
       setGeneratedCards(formattedCards);
       setAppState('trial');
     } catch (error: any) {

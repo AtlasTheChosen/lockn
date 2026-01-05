@@ -77,15 +77,31 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
           const avatarId = getRandomAvatarId();
           const avatarUrl = getAvatarUrl(avatarId);
           
-          await supabase.from('user_profiles').insert({
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthModal.tsx:signup',message:'Creating profile and stats for new user',data:{userId:data.user.id?.substring(0,8),email:data.user.email},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
+          
+          const { error: profileError } = await supabase.from('user_profiles').insert({
             id: data.user.id,
             email: data.user.email,
             avatar_url: avatarUrl,
           });
-          await supabase.from('user_stats').insert({
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthModal.tsx:profileInsert',message:'Profile insert result',data:{success:!profileError,error:profileError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
+          
+          const { error: statsError } = await supabase.from('user_stats').insert({
             user_id: data.user.id,
           });
-        } catch (profileError) {
+          
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthModal.tsx:statsInsert',message:'Stats insert result',data:{success:!statsError,error:statsError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
+        } catch (profileError: any) {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AuthModal.tsx:error',message:'Error creating profile/stats',data:{error:profileError?.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
+          // #endregion
           console.warn('Profile creation error:', profileError);
         }
         

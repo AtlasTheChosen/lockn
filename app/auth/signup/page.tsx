@@ -30,6 +30,85 @@ export default function SignupPage() {
     }
   }, []);
 
+  // Migrate trial data from localStorage to Supabase
+  const migrateTrialData = async (userId: string) => {
+    try {
+      const trialCardsStr = localStorage.getItem('lockn-trial-cards');
+      const trialScenario = localStorage.getItem('lockn-trial-scenario');
+      const trialLanguage = localStorage.getItem('lockn-trial-language') || 'Spanish';
+      const trialLevel = localStorage.getItem('lockn-trial-level') || 'B1';
+      const trialRatingsStr = localStorage.getItem('lockn-trial-ratings');
+
+      if (!trialCardsStr || !trialScenario) {
+        console.log('[Signup] No trial data to migrate');
+        return null;
+      }
+
+      const trialCards = JSON.parse(trialCardsStr);
+      const trialRatings = trialRatingsStr ? JSON.parse(trialRatingsStr) : {};
+
+      // Capitalize the first letter of each word in the title
+      const capitalizedTitle = trialScenario
+        .split(' ')
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+      // Create the card stack
+      const { data: stack, error: stackError } = await supabase
+        .from('card_stacks')
+        .insert({
+          user_id: userId,
+          title: capitalizedTitle,
+          target_language: trialLanguage,
+          native_language: 'English',
+          card_count: trialCards.length,
+          cefr_level: trialLevel,
+        })
+        .select()
+        .single();
+
+      if (stackError || !stack) {
+        console.error('[Signup] Failed to create stack:', stackError);
+        return null;
+      }
+
+      // Create flashcards with ratings
+      const flashcards = trialCards.map((card: any, index: number) => ({
+        stack_id: stack.id,
+        user_id: userId,
+        card_order: index,
+        target_phrase: card.targetPhrase,
+        native_translation: card.nativeTranslation,
+        example_sentence: card.exampleSentence,
+        tone_advice: card.toneAdvice,
+        user_rating: trialRatings[index] || 0,
+        mastery_level: trialRatings[index] >= 4 ? trialRatings[index] - 3 : 0, // Convert rating to mastery
+      }));
+
+      const { error: cardsError } = await supabase.from('flashcards').insert(flashcards);
+
+      if (cardsError) {
+        console.error('[Signup] Failed to create flashcards:', cardsError);
+        // Clean up the stack if cards failed
+        await supabase.from('card_stacks').delete().eq('id', stack.id);
+        return null;
+      }
+
+      // Clear trial data from localStorage
+      localStorage.removeItem('lockn-trial-cards');
+      localStorage.removeItem('lockn-trial-scenario');
+      localStorage.removeItem('lockn-trial-language');
+      localStorage.removeItem('lockn-trial-level');
+      localStorage.removeItem('lockn-trial-ratings');
+
+      console.log('[Signup] Trial data migrated successfully:', stack.id);
+      return stack.id;
+    } catch (error) {
+      console.error('[Signup] Error migrating trial data:', error);
+      return null;
+    }
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabase) return;
@@ -87,10 +166,19 @@ export default function SignupPage() {
           }
         }
 
+        // Migrate trial data to user's first stack
+        const stackId = await migrateTrialData(data.user.id);
+
         // Session persists automatically via Supabase cookies
         // The stayLoggedIn checkbox is for user preference display
         setLoading(false);
-        router.push('/dashboard');
+        
+        // Redirect to the new stack if created, otherwise dashboard
+        if (stackId) {
+          router.push(`/stack/${stackId}`);
+        } else {
+          router.push('/dashboard');
+        }
         router.refresh();
       } catch (profileError) {
         console.error('Error setting up profile:', profileError);

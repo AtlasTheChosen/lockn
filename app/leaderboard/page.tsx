@@ -35,6 +35,10 @@ export default function LeaderboardPage() {
     try {
       setError(null);
       
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'leaderboard/page.tsx:loadData',message:'Loading leaderboard data',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
+      // #endregion
+      
       // Use server-side API route that bypasses RLS
       const response = await fetch('/api/leaderboard');
       
@@ -43,6 +47,10 @@ export default function LeaderboardPage() {
       }
       
       const { profiles: profilesData, stats: statsData } = await response.json();
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'leaderboard/page.tsx:dataReceived',message:'Leaderboard data received',data:{profileCount:profilesData?.length,statsCount:statsData?.length,sampleProfiles:profilesData?.slice(0,5)?.map((p:any)=>({id:p.id?.substring(0,8),name:p.display_name}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2-H5'})}).catch(()=>{});
+      // #endregion
       
       const statsMap = new Map(statsData?.map((s: any) => [s.user_id, s]) || []);
       
@@ -59,9 +67,16 @@ export default function LeaderboardPage() {
         };
       });
 
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'leaderboard/page.tsx:combined',message:'Combined users ready',data:{userCount:combinedUsers.length,usersWithStats:combinedUsers.filter(u=>u.total_cards_mastered>0).length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H5'})}).catch(()=>{});
+      // #endregion
+
       setUsers(combinedUsers);
       
     } catch (err: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'leaderboard/page.tsx:error',message:'Error loading leaderboard',data:{error:err.message},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H4'})}).catch(()=>{});
+      // #endregion
       setError(err.message || 'Failed to load leaderboard');
     } finally {
       setLoading(false);

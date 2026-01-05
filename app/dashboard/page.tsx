@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const { checkAndAwardBadges } = useBadgeChecker();
   
   const loadingRef = useRef(false);
+  const trialMigrationRef = useRef(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsDisplayName, setNeedsDisplayName] = useState(false);
@@ -38,6 +39,99 @@ export default function DashboardPage() {
     stats: null,
     userName: 'Guest',
   });
+
+  // Migrate trial data from localStorage to Supabase (for OAuth users)
+  const migrateTrialData = useCallback(async (userId: string) => {
+    if (trialMigrationRef.current) return null;
+    trialMigrationRef.current = true;
+
+    try {
+      const trialCardsStr = localStorage.getItem('lockn-trial-cards');
+      const trialScenario = localStorage.getItem('lockn-trial-scenario');
+      const trialLanguage = localStorage.getItem('lockn-trial-language') || 'Spanish';
+      const trialLevel = localStorage.getItem('lockn-trial-level') || 'B1';
+      const trialRatingsStr = localStorage.getItem('lockn-trial-ratings');
+
+      if (!trialCardsStr || !trialScenario) {
+        return null;
+      }
+
+      const supabase = createClient();
+      const trialCards = JSON.parse(trialCardsStr);
+      const trialRatings = trialRatingsStr ? JSON.parse(trialRatingsStr) : {};
+
+      // Capitalize the first letter of each word in the title
+      const capitalizedTitle = trialScenario
+        .split(' ')
+        .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
+
+      // Create the card stack
+      const { data: stack, error: stackError } = await supabase
+        .from('card_stacks')
+        .insert({
+          user_id: userId,
+          title: capitalizedTitle,
+          target_language: trialLanguage,
+          native_language: 'English',
+          card_count: trialCards.length,
+          cefr_level: trialLevel,
+        })
+        .select()
+        .single();
+
+      if (stackError || !stack) {
+        console.error('[Dashboard] Failed to create trial stack:', stackError);
+        return null;
+      }
+
+      // Create flashcards with ratings
+      const flashcards = trialCards.map((card: any, index: number) => ({
+        stack_id: stack.id,
+        user_id: userId,
+        card_order: index,
+        target_phrase: card.targetPhrase,
+        native_translation: card.nativeTranslation,
+        example_sentence: card.exampleSentence,
+        tone_advice: card.toneAdvice,
+        user_rating: trialRatings[index] || 0,
+        mastery_level: trialRatings[index] >= 4 ? trialRatings[index] - 3 : 0,
+      }));
+
+      const { error: cardsError } = await supabase.from('flashcards').insert(flashcards);
+
+      if (cardsError) {
+        console.error('[Dashboard] Failed to create trial flashcards:', cardsError);
+        await supabase.from('card_stacks').delete().eq('id', stack.id);
+        return null;
+      }
+
+      // Clear trial data from localStorage
+      localStorage.removeItem('lockn-trial-cards');
+      localStorage.removeItem('lockn-trial-scenario');
+      localStorage.removeItem('lockn-trial-language');
+      localStorage.removeItem('lockn-trial-level');
+      localStorage.removeItem('lockn-trial-ratings');
+
+      console.log('[Dashboard] Trial data migrated successfully:', stack.id);
+      return stack.id;
+    } catch (error) {
+      console.error('[Dashboard] Error migrating trial data:', error);
+      return null;
+    }
+  }, []);
+
+  // Check for trial data to migrate on mount (for OAuth users)
+  useEffect(() => {
+    if (sessionUser && !sessionLoading) {
+      migrateTrialData(sessionUser.id).then((stackId) => {
+        if (stackId) {
+          // Redirect to the newly created stack
+          router.push(`/stack/${stackId}`);
+        }
+      });
+    }
+  }, [sessionUser, sessionLoading, migrateTrialData, router]);
 
   const loadDashboardData = useCallback(async (userId: string, userEmail?: string) => {
     // Prevent double invocation

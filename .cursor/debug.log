@@ -1,0 +1,2 @@
+{"location":"api/leaderboard/route.ts:GET","message":"Leaderboard API called","data":{"hasServiceKey":false,"supabaseUrl":"https://rqzutylpsgwyhhviqhhg.supabase.co"},"timestamp":1767572397446,"sessionId":"debug-session","hypothesisId":"H1-H4"}
+{"location":"api/leaderboard/route.ts:error","message":"API error","data":{"error":"supabaseKey is required."},"timestamp":1767572397451,"sessionId":"debug-session","hypothesisId":"H4"}
