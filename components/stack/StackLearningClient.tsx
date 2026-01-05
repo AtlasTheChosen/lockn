@@ -168,13 +168,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       // Fetch translations for target phrase
       const targetKey = `${currentCard.id}-target`;
       if (!wordTranslations[targetKey]) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StackLearningClient.tsx:useEffect',message:'Fetching translations for card',data:{cardId:currentCard.id,targetPhrase:currentCard.target_phrase,targetLang},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-        // #endregion
         getWordTranslations(currentCard.target_phrase, targetLang, 'English').then(translations => {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'StackLearningClient.tsx:useEffect:callback',message:'Translations received and stored',data:{cardId:currentCard.id,translationsCount:translations.length,words:translations.map((t:any)=>t.word)},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-          // #endregion
           setWordTranslations((prev: Record<string, any>) => ({
             ...prev,
             [targetKey]: translations
@@ -255,37 +249,41 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     const wasNotMasteredBefore = (currentCard.user_rating || 1) < CARD_RATINGS.KINDA_KNOW;
     const isNowMastered = rating >= CARD_RATINGS.KINDA_KNOW;
     
+    
     if (wasNotMasteredBefore && isNowMastered) {
       try {
-        const { data: dailyStats } = await supabase
+        // Note: Don't select streak_awarded_today - column may not exist in older DBs
+        const { data: dailyStats, error: statsError } = await supabase
           .from('user_stats')
-          .select('daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen, total_cards_mastered, streak_awarded_today')
+          .select('daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen, total_cards_mastered')
           .eq('user_id', stack.user_id)
           .single();
+
 
         if (dailyStats) {
           const today = getTodayDate();
           const needsReset = isNewDay(dailyStats.daily_cards_date);
           
-          let newDailyCards = needsReset ? 1 : (dailyStats.daily_cards_learned || 0) + 1;
+          // Previous count BEFORE this card
+          const prevDailyCards = needsReset ? 0 : (dailyStats.daily_cards_learned || 0);
+          let newDailyCards = prevDailyCards + 1;
           let newTotalMastered = (dailyStats.total_cards_mastered || 0) + 1;
           let newStreak = dailyStats.current_streak || 0;
           let newLongestStreak = dailyStats.longest_streak || 0;
-          // Track if streak was already awarded today (reset on new day)
-          let streakAwardedToday = needsReset ? false : (dailyStats.streak_awarded_today || false);
 
-          // Award streak when reaching 10+ cards (only once per day)
-          if (!dailyStats.streak_frozen && !streakAwardedToday) {
-            if (newDailyCards >= STREAK_DAILY_REQUIREMENT) {
-              newStreak += 1;
-              streakAwardedToday = true;
-              if (newStreak > newLongestStreak) {
-                newLongestStreak = newStreak;
-              }
+
+          // Award streak ONLY when crossing the 10-card threshold (not already at/above 10)
+          // This ensures streak is awarded exactly once per day
+          const crossingThreshold = prevDailyCards < STREAK_DAILY_REQUIREMENT && newDailyCards >= STREAK_DAILY_REQUIREMENT;
+          
+          if (!dailyStats.streak_frozen && crossingThreshold) {
+            newStreak += 1;
+            if (newStreak > newLongestStreak) {
+              newLongestStreak = newStreak;
             }
           }
 
-          await supabase
+          const { error: updateError } = await supabase
             .from('user_stats')
             .update({
               daily_cards_learned: newDailyCards,
@@ -294,9 +292,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
               longest_streak: newLongestStreak,
               last_activity_date: today,
               total_cards_mastered: newTotalMastered,
-              streak_awarded_today: streakAwardedToday,
             })
             .eq('user_id', stack.user_id);
+          
           
           // Notify nav to update streak display
           window.dispatchEvent(new Event(STATS_UPDATED_EVENT));

@@ -50,7 +50,8 @@ export function useSession() {
         }
         
         const data = await response.json();
-        return data?.[0] || null;
+        const profile = data?.[0] || null;
+        return profile;
       } catch (e: any) {
         if (e.name === 'AbortError') {
           console.warn('[useSession] Profile fetch timed out');

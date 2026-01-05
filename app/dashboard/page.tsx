@@ -155,26 +155,64 @@ export default function DashboardPage() {
           .maybeSingle();
 
         if (profileError && (profileError.code === 'PGRST116' || !profileData)) {
-          const { data: newProfile } = await supabase
-            .from('user_profiles')
-            .insert({ id: userId, email: userEmail })
-            .select()
-            .single();
-          profile = newProfile;
+          // Use create-profile API which assigns random avatar
+          const createRes = await fetch('/api/create-profile', { method: 'POST' });
+          if (createRes.ok) {
+            const { profile: newProfile } = await createRes.json();
+            profile = newProfile;
+          } else {
+            const { data: newProfile } = await supabase
+              .from('user_profiles')
+              .insert({ id: userId, email: userEmail })
+              .select()
+              .single();
+            profile = newProfile;
+          }
         } else {
           profile = profileData;
+          
+          // Assign avatar to existing profiles without one
+          if (profile && !profile.avatar_url) {
+            try {
+              // Import dynamically to avoid circular dependencies
+              const { getRandomAvatarId, getAvatarUrl } = await import('@/lib/avatars');
+              const avatarId = getRandomAvatarId();
+              const avatarUrl = getAvatarUrl(avatarId);
+              
+              const { data: updatedProfile } = await supabase
+                .from('user_profiles')
+                .update({ avatar_url: avatarUrl })
+                .eq('id', userId)
+                .select()
+                .single();
+              
+              if (updatedProfile) {
+                profile = updatedProfile;
+              }
+            } catch (e) {
+              console.warn('[Dashboard] Could not assign avatar:', e);
+            }
+          }
         }
       }
 
       // Create profile if still missing
       if (!profile) {
         try {
-          const { data: newProfile } = await supabase
-            .from('user_profiles')
-            .insert({ id: userId, email: userEmail })
-            .select()
-            .single();
-          profile = newProfile;
+          // Use create-profile API which assigns random avatar
+          const createRes = await fetch('/api/create-profile', { method: 'POST' });
+          if (createRes.ok) {
+            const { profile: newProfile } = await createRes.json();
+            profile = newProfile;
+          } else {
+            // Fallback to direct insert if API fails
+            const { data: newProfile } = await supabase
+              .from('user_profiles')
+              .insert({ id: userId, email: userEmail })
+              .select()
+              .single();
+            profile = newProfile;
+          }
         } catch (e) {
           console.warn('[Dashboard] Could not create profile:', e);
         }
@@ -192,7 +230,7 @@ export default function DashboardPage() {
           method: 'GET',
           headers: {
             'apikey': supabaseKey!,
-            'Authorization': `Bearer ${supabaseKey}`,
+            'Authorization': `Bearer ${accessToken}`,  // Use user's token for RLS
             'Content-Type': 'application/json',
           },
           signal: abortController.signal,
@@ -219,7 +257,7 @@ export default function DashboardPage() {
           method: 'GET',
           headers: {
             'apikey': supabaseKey!,
-            'Authorization': `Bearer ${supabaseKey}`,
+            'Authorization': `Bearer ${accessToken}`,  // Use user's token for RLS
             'Content-Type': 'application/json',
           },
         });
@@ -234,7 +272,7 @@ export default function DashboardPage() {
               method: 'POST',
               headers: {
                 'apikey': supabaseKey!,
-                'Authorization': `Bearer ${supabaseKey}`,
+                'Authorization': `Bearer ${accessToken}`,  // Use user's token for RLS
                 'Content-Type': 'application/json',
                 'Prefer': 'return=representation',
               },
@@ -270,18 +308,10 @@ export default function DashboardPage() {
         const newOverdueStacks = overdueStackIds.filter(
           (id: string) => !currentFrozenStacks.includes(id)
         );
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:overdue-check',message:'Checking for overdue stacks',data:{totalStacks:stacksData.length,overdueCount:overdueStacks.length,newOverdueCount:newOverdueStacks.length,currentFrozen:stats.streak_frozen,currentFrozenStacks},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
 
         // Only update if there are genuinely new overdue stacks
         if (newOverdueStacks.length > 0) {
           const updatedFrozenStacks = Array.from(new Set([...currentFrozenStacks, ...overdueStackIds]));
-          
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'dashboard/page.tsx:freeze-streak',message:'Freezing streak due to new overdue stacks',data:{newOverdueStacks,overdueStackIds,currentFrozenStacks,willSetFrozen:true},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-          // #endregion
           
           // Use native fetch for update with proper accessToken
           await fetch(`${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}`, {

@@ -66,10 +66,6 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
         if (statsRes.ok) {
           const statsArr = await statsRes.json();
           const stats = statsArr?.[0];
-          console.log('[AppLayout] Stats loaded:', stats);
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AppLayout.tsx:stats-loaded',message:'Stats from DB',data:{current_streak:stats?.current_streak,streak_frozen:stats?.streak_frozen,streak_frozen_stacks:stats?.streak_frozen_stacks},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-          // #endregion
           if (stats) {
             setStreak(stats.current_streak || 0);
             setStreakFrozen(stats.streak_frozen || false);
@@ -117,8 +113,3 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
     </div>
   );
 }
-
-
-
-
-
