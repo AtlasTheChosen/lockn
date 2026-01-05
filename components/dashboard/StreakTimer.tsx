@@ -14,22 +14,24 @@ export default function StreakTimer({ dailyCardsLearned, className = '' }: Strea
   const hasMetGoal = dailyCardsLearned >= STREAK_DAILY_REQUIREMENT;
   const progress = Math.min(100, (dailyCardsLearned / STREAK_DAILY_REQUIREMENT) * 100);
 
-  // Update countdown every minute
+  // Update countdown every second for real-time display
   useEffect(() => {
     const interval = setInterval(() => {
       setTimeRemaining(getStreakTimeRemaining());
-    }, 60000); // Update every minute
+    }, 1000); // Update every second
 
     return () => clearInterval(interval);
   }, []);
 
-  // Format time display
+  // Format time display with hours:minutes:seconds
   const formatTime = () => {
-    const { hours, minutes } = timeRemaining;
+    const { hours, minutes, seconds } = timeRemaining;
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    
     if (hours > 0) {
-      return `${hours}h ${minutes}m`;
+      return `${hours}:${pad(minutes)}:${pad(seconds)}`;
     }
-    return `${minutes}m`;
+    return `${minutes}:${pad(seconds)}`;
   };
 
   // Get urgency color based on time remaining and progress

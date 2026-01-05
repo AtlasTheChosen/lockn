@@ -10,6 +10,7 @@ import {
   awardEventBadge 
 } from '@/components/social/AchievementBadges';
 import { createClient } from '@/lib/supabase/client';
+import { notifyAwardEarned } from '@/lib/notifications';
 
 export interface BadgeStats {
   current_streak: number;
@@ -84,8 +85,11 @@ export function useBadgeChecker() {
         return [];
       }
 
-      // Show toast notifications for each new badge
-      newBadges.forEach((badge) => {
+      // Show toast notifications and create notifications for each new badge
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
+      newBadges.forEach(async (badge) => {
         const emoji = categoryEmoji[badge.category];
         toast.success(
           `${emoji} Badge Earned: ${badge.name}`,
@@ -94,6 +98,11 @@ export function useBadgeChecker() {
             duration: 5000,
           }
         );
+
+        // Create notification for award earned
+        if (accessToken) {
+          await notifyAwardEarned(userId, badge.name, badge.description, badge.id, accessToken);
+        }
       });
 
       return newBadges;
@@ -146,6 +155,13 @@ export function useBadgeChecker() {
           duration: 5000,
         }
       );
+
+      // Create notification for award earned
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (accessToken) {
+        await notifyAwardEarned(userId, newBadge.name, newBadge.description, newBadge.id, accessToken);
+      }
 
       return newBadge;
     } finally {

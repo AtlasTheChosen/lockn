@@ -20,6 +20,7 @@ import {
 import { toast } from 'sonner';
 import type { Friendship, FriendProfile } from '@/lib/types';
 import { calculateWeeklyAverage } from '@/lib/weekly-stats';
+import { notifyFriendRequest, notifyFriendAccepted } from '@/lib/notifications';
 
 interface Props {
   userId: string;
@@ -265,6 +266,16 @@ export default function FriendsSection({ userId, accessToken }: Props) {
         status: 'pending',
       }, accessToken);
 
+      // Get sender's display name for the notification
+      const senderProfiles = await supaFetch<any[]>(
+        `user_profiles?id=eq.${userId}&select=display_name`,
+        accessToken
+      );
+      const senderDisplayName = senderProfiles?.[0]?.display_name || 'Someone';
+
+      // Notify the recipient about the friend request
+      await notifyFriendRequest(targetProfile.id, senderDisplayName, userId, accessToken);
+
       setMessage({ type: 'success', text: `Friend request sent to ${targetProfile.display_name}!` });
       toast.success(`Friend request sent to ${targetProfile.display_name}!`);
       setSearchDisplayName('');
@@ -298,6 +309,16 @@ export default function FriendsSection({ userId, accessToken }: Props) {
           accessToken
         );
       } catch {}
+
+      // Get accepter's display name for the notification
+      const accepterProfiles = await supaFetch<any[]>(
+        `user_profiles?id=eq.${userId}&select=display_name`,
+        accessToken
+      );
+      const accepterDisplayName = accepterProfiles?.[0]?.display_name || 'Someone';
+
+      // Notify the original requester that their request was accepted
+      await notifyFriendAccepted(friendship.user_id, accepterDisplayName, userId, accessToken);
 
       setMessage({ type: 'success', text: 'Friend request accepted!' });
       loadFriends();
