@@ -397,7 +397,7 @@ export default function DashboardPage() {
       loadingRef.current = false;
       setDataLoading(false);
     }
-  }, [checkAndAwardBadges]);
+  }, [checkAndAwardBadges, accessToken]);
 
   useEffect(() => {
     if (sessionLoading) return;
