@@ -474,7 +474,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             <AnimatePresence mode="wait">
               {!isFlipped ? (
                 <motion.div
-                  key="front"
+                  key={`front-${currentIndex}`}
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.96 }}
@@ -546,7 +546,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                 </motion.div>
               ) : (
                 <motion.div
-                  key="back"
+                  key={`back-${currentIndex}`}
                   initial={{ opacity: 0, scale: 0.96 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.96 }}
@@ -755,26 +755,30 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           </motion.div>
 
           {/* Rating Buttons */}
-          {isFlipped && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3"
-            >
-              {RATING_OPTIONS.map((option, index) => (
-                <Button
-                  key={option.value}
-                  onClick={() => handleRating(option.value)}
-                  className={`bg-gradient-to-r ${option.gradient} text-white font-semibold rounded-xl px-3 sm:px-4 py-4 sm:py-3 text-sm min-h-[56px] sm:min-h-0 hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-md active:scale-95 ${
-                    index === RATING_OPTIONS.length - 1 ? 'col-span-2 sm:col-span-1 max-w-[200px] mx-auto sm:max-w-none' : ''
-                  }`}
-                >
-                  {option.label}
-                  {currentCard.user_rating === option.value && <Check className="ml-1 h-4 w-4" />}
-                </Button>
-              ))}
-            </motion.div>
-          )}
+          <AnimatePresence mode="wait">
+            {isFlipped && (
+              <motion.div
+                key={`buttons-${currentIndex}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10, transition: { duration: 0.15 } }}
+                className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3"
+              >
+                {RATING_OPTIONS.map((option, index) => (
+                  <Button
+                    key={option.value}
+                    onClick={() => handleRating(option.value)}
+                    className={`bg-gradient-to-r ${option.gradient} text-white font-semibold rounded-xl px-3 sm:px-4 py-4 sm:py-3 text-sm min-h-[56px] sm:min-h-0 hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-md active:scale-95 ${
+                      index === RATING_OPTIONS.length - 1 ? 'col-span-2 sm:col-span-1 max-w-[200px] mx-auto sm:max-w-none' : ''
+                    }`}
+                  >
+                    {option.label}
+                    {currentCard.user_rating === option.value && <Check className="ml-1 h-4 w-4" />}
+                  </Button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Return Button */}
           <div className="mt-6 flex justify-center">

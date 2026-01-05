@@ -105,6 +105,13 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
     }
   }, [profile.badges]);
 
+  // Sync avatar when profile prop changes (e.g., after auto-assignment)
+  useEffect(() => {
+    if (profile.avatar_url) {
+      setAvatarUrl(profile.avatar_url);
+    }
+  }, [profile.avatar_url]);
+
   const handleAddLanguage = () => {
     if (selectedLanguage && !languagesLearning.includes(selectedLanguage)) {
       setLanguagesLearning([...languagesLearning, selectedLanguage]);

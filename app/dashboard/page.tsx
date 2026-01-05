@@ -133,7 +133,7 @@ export default function DashboardPage() {
     }
   }, [sessionUser, sessionLoading, migrateTrialData, router]);
 
-  const loadDashboardData = useCallback(async (userId: string, userEmail?: string) => {
+  const loadDashboardData = useCallback(async (userId: string, userEmail?: string, forceRefresh = false) => {
     // Prevent double invocation
     if (loadingRef.current) return;
     loadingRef.current = true;
@@ -145,58 +145,56 @@ export default function DashboardPage() {
     try {
       setError(null);
       
-      // Use profile from session if available
-      let profile = sessionProfile;
-      if (!profile) {
-        const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
+      // Always fetch fresh profile from DB (don't use stale session cache on refresh)
+      let profile = null;
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('id', userId)
+        .maybeSingle();
 
-        if (profileError && (profileError.code === 'PGRST116' || !profileData)) {
-          // Use create-profile API which assigns random avatar
-          const createRes = await fetch('/api/create-profile', { method: 'POST' });
-          if (createRes.ok) {
-            const { profile: newProfile } = await createRes.json();
-            profile = newProfile;
-          } else {
-            const { data: newProfile } = await supabase
-              .from('user_profiles')
-              .insert({ id: userId, email: userEmail })
-              .select()
-              .single();
-            profile = newProfile;
-          }
+      if (profileError && (profileError.code === 'PGRST116' || !profileData)) {
+        // Use create-profile API which assigns random avatar
+        const createRes = await fetch('/api/create-profile', { method: 'POST' });
+        if (createRes.ok) {
+          const { profile: newProfile } = await createRes.json();
+          profile = newProfile;
         } else {
-          profile = profileData;
+          const { data: newProfile } = await supabase
+            .from('user_profiles')
+            .insert({ id: userId, email: userEmail })
+            .select()
+            .single();
+          profile = newProfile;
+        }
+      } else {
+        profile = profileData;
+      }
+      
+      // Assign avatar to ANY profile without one (from session OR database)
+      if (profile && !profile.avatar_url) {
+        try {
+          // Import dynamically to avoid circular dependencies
+          const { getRandomAvatarId, getAvatarUrl } = await import('@/lib/avatars');
+          const avatarId = getRandomAvatarId();
+          const avatarUrl = getAvatarUrl(avatarId);
           
-          // Assign avatar to existing profiles without one
-          if (profile && !profile.avatar_url) {
-            try {
-              // Import dynamically to avoid circular dependencies
-              const { getRandomAvatarId, getAvatarUrl } = await import('@/lib/avatars');
-              const avatarId = getRandomAvatarId();
-              const avatarUrl = getAvatarUrl(avatarId);
-              
-              const { data: updatedProfile } = await supabase
-                .from('user_profiles')
-                .update({ avatar_url: avatarUrl })
-                .eq('id', userId)
-                .select()
-                .single();
-              
-              if (updatedProfile) {
-                profile = updatedProfile;
-                // Notify toolbar to refresh with new avatar
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('profile-updated'));
-                }
-              }
-            } catch (e) {
-              console.warn('[Dashboard] Could not assign avatar:', e);
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('user_profiles')
+            .update({ avatar_url: avatarUrl })
+            .eq('id', userId)
+            .select()
+            .single();
+          
+          if (updatedProfile) {
+            profile = updatedProfile;
+            // Notify toolbar to refresh with new avatar
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('profile-updated'));
             }
           }
+        } catch (e) {
+          console.warn('[Dashboard] Could not assign avatar:', e);
         }
       }
 
@@ -399,7 +397,7 @@ export default function DashboardPage() {
       loadingRef.current = false;
       setDataLoading(false);
     }
-  }, [sessionProfile, checkAndAwardBadges]);
+  }, [checkAndAwardBadges]);
 
   useEffect(() => {
     if (sessionLoading) return;

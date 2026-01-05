@@ -148,7 +148,11 @@ export default function DashboardTabs({
             ⚙️ Profile Settings
           </h1>
           {profile ? (
-            <ProfileSettings profile={profile} accessToken={accessToken} onUpdate={onUpdate} />
+            <ProfileSettings 
+              profile={profile} 
+              accessToken={accessToken} 
+              onUpdate={onUpdate} 
+            />
           ) : (
             <div className="text-center text-slate-400 py-12">Loading profile...</div>
           )}
