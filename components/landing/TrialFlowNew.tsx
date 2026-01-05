@@ -11,11 +11,11 @@ import { CARD_RATINGS } from '@/lib/constants';
 import { createClient } from '@/lib/supabase/client';
 
 const RATING_OPTIONS = [
-  { value: CARD_RATINGS.REALLY_DONT_KNOW, label: "Really Don't Know", gradient: 'bg-gradient-to-r from-red-500 to-red-600' },
-  { value: CARD_RATINGS.DONT_KNOW, label: "Don't Know", gradient: 'bg-gradient-to-r from-orange-500 to-orange-600' },
-  { value: CARD_RATINGS.NEUTRAL, label: 'Neutral', gradient: 'bg-gradient-to-r from-yellow-500 to-yellow-600' },
-  { value: CARD_RATINGS.KINDA_KNOW, label: 'Kinda Know', gradient: 'bg-gradient-to-r from-green-500 to-green-600' },
-  { value: CARD_RATINGS.REALLY_KNOW, label: 'Really Know', gradient: 'bg-gradient-to-r from-blue-500 to-blue-600' },
+  { value: CARD_RATINGS.REALLY_DONT_KNOW, label: "Really Don't Know", gradient: 'from-red-400 to-red-500' },
+  { value: CARD_RATINGS.DONT_KNOW, label: "Don't Know", gradient: 'from-orange-400 to-orange-500' },
+  { value: CARD_RATINGS.NEUTRAL, label: 'Neutral', gradient: 'from-yellow-400 to-amber-500' },
+  { value: CARD_RATINGS.KINDA_KNOW, label: 'Kinda Know', gradient: 'from-green-400 to-emerald-500' },
+  { value: CARD_RATINGS.REALLY_KNOW, label: 'Really Know', gradient: 'from-blue-400 to-indigo-500' },
 ];
 
 interface Card {
@@ -574,29 +574,23 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-4 sm:mt-6 space-y-2 sm:space-y-3"
+              className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3"
             >
-              <p className="text-center text-slate-500 text-xs sm:text-sm font-semibold mb-2 sm:mb-3">
-                Rate your knowledge:
-              </p>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {RATING_OPTIONS.map((option, index) => (
-                  <Button
-                    key={option.value}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRating(option.value);
-                    }}
-                    className={`${option.gradient} hover:opacity-90 text-white rounded-xl sm:rounded-2xl py-3 sm:py-4 text-sm sm:text-base font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all min-h-[48px] active:scale-[0.98] ${
-                      index === RATING_OPTIONS.length - 1 ? 'col-span-2 sm:col-span-1 max-w-[200px] mx-auto sm:max-w-none' : ''
-                    }`}
-                  >
-                    <span className="hidden sm:inline">{option.label}</span>
-                    <span className="sm:hidden">{option.label.split(' ').slice(-1)}</span>
-                    {cardRatings[currentIndex] === option.value && <Check className="ml-1 sm:ml-2 h-4 w-4 sm:h-5 sm:w-5" />}
-                  </Button>
-                ))}
-              </div>
+              {RATING_OPTIONS.map((option, index) => (
+                <Button
+                  key={option.value}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRating(option.value);
+                  }}
+                  className={`bg-gradient-to-r ${option.gradient} text-white font-semibold rounded-xl px-3 sm:px-4 py-4 sm:py-3 text-sm min-h-[56px] sm:min-h-0 hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-md active:scale-95 ${
+                    index === RATING_OPTIONS.length - 1 ? 'col-span-2 sm:col-span-1 max-w-[200px] mx-auto sm:max-w-none' : ''
+                  }`}
+                >
+                  {option.label}
+                  {cardRatings[currentIndex] === option.value && <Check className="ml-1 h-4 w-4" />}
+                </Button>
+              ))}
             </motion.div>
           )}
 

@@ -167,8 +167,12 @@ export default function LandingPage() {
     setAppState('conversion');
   };
 
+  const handleCloseConversion = () => {
+    setAppState('trial');
+  };
+
   return (
-    <AppLayout>
+    <AppLayout hideNav={appState === 'conversion'}>
       {/* Streak Tutorial */}
       {showStreakTutorial && (
         <StreakTutorial 
@@ -305,7 +309,7 @@ export default function LandingPage() {
 
       <AnimatePresence>
         {appState === 'conversion' && (
-          <ConversionOverlay scenario={selectedScenario} />
+          <ConversionOverlay scenario={selectedScenario} onClose={handleCloseConversion} />
         )}
       </AnimatePresence>
     </AppLayout>
