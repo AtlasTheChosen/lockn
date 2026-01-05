@@ -72,19 +72,23 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
         setError(signUpError.message);
         setLoading(false);
       } else if (data.user) {
+        // Store user info for use in closures
+        const userId = data.user.id;
+        const userEmail = data.user.email;
+        
         // Create profile with random avatar
         try {
           const avatarId = getRandomAvatarId();
           const avatarUrl = getAvatarUrl(avatarId);
           
           const { error: profileError } = await supabase.from('user_profiles').insert({
-            id: data.user.id,
-            email: data.user.email,
+            id: userId,
+            email: userEmail,
             avatar_url: avatarUrl,
           });
           
           const { error: statsError } = await supabase.from('user_stats').insert({
-            user_id: data.user.id,
+            user_id: userId,
           });
 
           // Migrate trial cards to user's account
@@ -108,7 +112,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
             const { data: stack, error: stackError } = await supabase
               .from('card_stacks')
               .insert({
-                user_id: data.user.id,
+                user_id: userId,
                 title: capitalizedTitle,
                 target_language: trialLanguage,
                 native_language: 'English',
@@ -122,7 +126,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
               // Create flashcards with ratings
               const flashcards = trialCards.map((card: any, index: number) => ({
                 stack_id: stack.id,
-                user_id: data.user.id,
+                user_id: userId,
                 card_order: index,
                 target_phrase: card.targetPhrase,
                 native_translation: card.nativeTranslation,
