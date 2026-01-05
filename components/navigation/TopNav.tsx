@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client';
 import { LogOut } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import AuthModal from '@/components/auth/AuthModal';
+import { NotificationBell } from '@/components/notifications';
 
 interface TopNavProps {
   streak?: number;
@@ -15,6 +16,7 @@ interface TopNavProps {
   displayName?: string;
   avatarUrl?: string;
   isLoggedIn?: boolean;
+  userId?: string;
 }
 
 const navLinks = [
@@ -23,7 +25,7 @@ const navLinks = [
   { href: '/leaderboard', label: 'Leaderboards', requiresAuth: true },
 ];
 
-export default function TopNav({ streak = 0, streakFrozen = false, displayName = 'U', avatarUrl, isLoggedIn = false }: TopNavProps) {
+export default function TopNav({ streak = 0, streakFrozen = false, displayName = 'U', avatarUrl, isLoggedIn = false, userId }: TopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -126,6 +128,9 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
               </div>
             )}
           </div>
+
+          {/* Notifications Bell */}
+          {userId && <NotificationBell userId={userId} />}
           
           {/* Avatar + Username */}
           <Link 

@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/client';
 import { getCEFRBadgeColor } from '@/lib/cefr-ranking';
 import { formatWeekRange, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
 import { formatDeadlineDisplay, isDeadlinePassed, STREAK_DAILY_REQUIREMENT, formatCountdown, getDeadlineUrgency, getTimeRemaining } from '@/lib/streak';
+import StreakTimer from './StreakTimer';
 
 type SortOption = 'newest' | 'oldest' | 'alpha-asc' | 'alpha-desc' | 'uncompleted' | 'completed' | 'progress-asc' | 'progress-desc';
 
@@ -252,6 +253,12 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
           </div>
         </div>
       </div>
+
+      {/* Daily Streak Timer */}
+      <StreakTimer 
+        dailyCardsLearned={stats?.daily_cards_learned || 0} 
+        className="mb-6 sm:mb-8 animate-fade-in stagger-2"
+      />
 
       {/* Streak Frozen / Pending Tests Alert */}
       {pendingTests.length > 0 && (

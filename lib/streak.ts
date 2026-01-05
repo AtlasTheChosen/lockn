@@ -124,3 +124,35 @@ export function getDeadlineUrgency(deadline: string | Date | null): 0 | 1 | 2 | 
   return 3; // More than 2 days - normal
 }
 
+// Get streak deadline: End of following day at 11:59:59 PM local time
+export function getStreakDeadline(): Date {
+  const now = new Date();
+  const deadline = new Date(now);
+  deadline.setDate(deadline.getDate() + 1); // Tomorrow
+  deadline.setHours(23, 59, 59, 999); // End of day 11:59:59 PM
+  return deadline;
+}
+
+// Get time remaining until streak resets
+export function getStreakTimeRemaining(): {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  totalMs: number;
+} {
+  const deadline = getStreakDeadline();
+  const now = new Date();
+  const diffMs = deadline.getTime() - now.getTime();
+  
+  if (diffMs <= 0) {
+    return { hours: 0, minutes: 0, seconds: 0, totalMs: 0 };
+  }
+  
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  
+  return { hours, minutes, seconds, totalMs: diffMs };
+}
+

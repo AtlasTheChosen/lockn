@@ -247,6 +247,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
 
     // Track daily MASTERED cards for streak
     const wasNotMasteredBefore = (currentCard.user_rating || 1) < CARD_RATINGS.KINDA_KNOW;
+    const wasMasteredBefore = (currentCard.user_rating || 1) >= CARD_RATINGS.KINDA_KNOW;
     const isNowMastered = rating >= CARD_RATINGS.KINDA_KNOW;
     
     
@@ -301,6 +302,51 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         }
       } catch (e) {
         console.error('Daily streak tracking error:', e);
+      }
+    }
+
+    // Handle card downgrade from mastered to not mastered
+    if (wasMasteredBefore && !isNowMastered) {
+      try {
+        const { data: userStats } = await supabase
+          .from('user_stats')
+          .select('total_cards_mastered')
+          .eq('user_id', stack.user_id)
+          .single();
+
+        if (userStats) {
+          const newTotalMastered = Math.max(0, (userStats.total_cards_mastered || 0) - 1);
+          
+          await supabase
+            .from('user_stats')
+            .update({
+              total_cards_mastered: newTotalMastered,
+            })
+            .eq('user_id', stack.user_id);
+        }
+
+        // Reset test deadline if stack had one (mastery dropped)
+        if (stack.test_deadline || stack.mastery_reached_at) {
+          await supabase
+            .from('card_stacks')
+            .update({
+              test_deadline: null,
+              mastery_reached_at: null,
+            })
+            .eq('id', stack.id);
+          
+          // Update local stack state
+          setStack(prev => ({
+            ...prev,
+            test_deadline: null,
+            mastery_reached_at: null,
+          }));
+        }
+
+        // Notify nav to update display
+        window.dispatchEvent(new Event(STATS_UPDATED_EVENT));
+      } catch (e) {
+        console.error('Card downgrade tracking error:', e);
       }
     }
 
@@ -754,9 +800,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             </AnimatePresence>
           </motion.div>
 
-          {/* Rating Buttons */}
+          {/* Rating Buttons - hidden when stack is 100% complete (locked mastery) */}
           <AnimatePresence mode="wait">
-            {isFlipped && (
+            {isFlipped && stack.test_progress !== 100 && (
               <motion.div
                 key={`buttons-${currentIndex}`}
                 initial={{ opacity: 0, y: 20 }}
