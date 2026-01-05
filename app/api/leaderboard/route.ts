@@ -6,12 +6,23 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+// Disable Next.js route caching to ensure fresh data
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
   try {
-    // Use service role key if available, otherwise use anon key (RLS should allow public reads)
-    const supabase = supabaseServiceKey 
-      ? createClient(supabaseUrl, supabaseServiceKey)
-      : createClient(supabaseUrl, supabaseAnonKey);
+    // Create a fresh client on each request with no caching
+    const supabase = createClient(
+      supabaseUrl, 
+      supabaseServiceKey || supabaseAnonKey,
+      {
+        auth: { persistSession: false },
+        global: { 
+          headers: { 'Cache-Control': 'no-cache' }
+        }
+      }
+    );
 
     // Fetch ALL user profiles first (to check what's being filtered)
     const { data: allProfiles, error: allProfilesError } = await supabase
@@ -38,10 +49,10 @@ export async function GET() {
       return NextResponse.json({ error: statsError.message }, { status: 500 });
     }
 
-    return NextResponse.json({
-      profiles: profiles || [],
-      stats: stats || [],
-    });
+    return NextResponse.json(
+      { profiles: profiles || [], stats: stats || [] },
+      { headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } }
+    );
   } catch (error: any) {
     console.error('[Leaderboard API] Error:', error);
     return NextResponse.json({ error: error.message }, { status: 500 });

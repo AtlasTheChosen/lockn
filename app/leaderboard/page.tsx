@@ -35,8 +35,11 @@ export default function LeaderboardPage() {
     try {
       setError(null);
       
-      // Use server-side API route that bypasses RLS
-      const response = await fetch('/api/leaderboard');
+      // Use server-side API route that bypasses RLS (with cache-busting)
+      const response = await fetch(`/api/leaderboard?t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache' }
+      });
       
       if (!response.ok) {
         throw new Error(`Failed to fetch leaderboard: ${response.status}`);
@@ -281,7 +284,7 @@ export default function LeaderboardPage() {
                   <div className="w-14 h-14 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-xl text-white shadow-blue flex-shrink-0 overflow-hidden">
                     {user.avatar_url ? (
                       <img 
-                        src={user.avatar_url} 
+                        src={user.avatar_url}
                         alt={user.display_name || 'User'} 
                         className="w-full h-full object-cover scale-110"
                       />

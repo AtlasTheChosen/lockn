@@ -45,6 +45,9 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
         if (profileRes.ok) {
           const profiles = await profileRes.json();
           const profile = profiles?.[0];
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/05b1efa4-c9cf-49d6-99df-c5f8f76c5ba9',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'AppLayout.tsx:toolbar',message:'Toolbar avatar from DB',data:{avatar:profile?.avatar_url,displayName:profile?.display_name},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'TOOLBAR'})}).catch(()=>{});
+          // #endregion
           if (profile?.display_name) setDisplayName(profile.display_name);
           if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
         }
