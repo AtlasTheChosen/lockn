@@ -10,9 +10,9 @@ interface LogoProps {
 const sizes = {
   xs: 24,
   sm: 32,
-  md: 40,
-  lg: 52,
-  xl: 72,
+  md: 48,
+  lg: 64,
+  xl: 96,
   '2xl': 125,
 };
 
@@ -21,8 +21,8 @@ export default function Logo({ size = '2xl', className = '' }: LogoProps) {
   
   return (
     <Image
-      src="/images/logo.png"
-      alt="LOCKN Logo"
+      src="/images/bird logo.png"
+      alt="FlashDash Bird Logo"
       width={pixelSize}
       height={pixelSize}
       className={`object-contain ${className}`}

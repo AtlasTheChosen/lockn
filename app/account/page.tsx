@@ -19,12 +19,8 @@ import {
   AlertCircle,
   RefreshCw,
   LogOut,
-  Trash2,
-  Pause,
-  Play,
-  TrendingUp
+  Trash2
 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,8 +43,6 @@ export default function AccountSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [pauseTracking, setPauseTracking] = useState(false);
-  const [savingPause, setSavingPause] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!sessionUser) return;
@@ -73,53 +67,12 @@ export default function AccountSettingsPage() {
         const profileData = profileResponse.ok ? await profileResponse.json() : [];
         setProfile(profileData?.[0] || null);
       }
-
-      // Load pause tracking state from user_stats
-      const statsResponse = await fetch(
-        `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${sessionUser.id}&select=pause_weekly_tracking`,
-        {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      const statsData = statsResponse.ok ? await statsResponse.json() : [];
-      if (statsData?.[0]) {
-        setPauseTracking(statsData[0].pause_weekly_tracking || false);
-      }
     } catch (err: any) {
       setError(err.message || 'Failed to load account data');
     } finally {
       setLoading(false);
     }
   }, [sessionUser, sessionProfile]);
-
-  const handleTogglePause = async (paused: boolean) => {
-    if (!sessionUser) return;
-    
-    setSavingPause(true);
-    try {
-      await fetch(
-        `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${sessionUser.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ pause_weekly_tracking: paused }),
-        }
-      );
-      setPauseTracking(paused);
-    } catch (err) {
-      console.error('Failed to update pause setting:', err);
-    } finally {
-      setSavingPause(false);
-    }
-  };
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -284,44 +237,6 @@ export default function AccountSettingsPage() {
                   </Button>
                 </Link>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Weekly Tracking Preferences */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
-                Weekly Tracking
-              </CardTitle>
-              <CardDescription className="text-slate-400">
-                Manage your weekly learning statistics
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between py-2">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    {pauseTracking ? (
-                      <Pause className="h-4 w-4 text-yellow-400" />
-                    ) : (
-                      <Play className="h-4 w-4 text-green-400" />
-                    )}
-                    <span className="text-white font-medium">Pause Weekly Tracking</span>
-                  </div>
-                  <p className="text-slate-400 text-sm mt-1">
-                    {pauseTracking 
-                      ? "Weekly stats are paused. Your progress won't reset on Sunday."
-                      : "Weekly stats reset every Sunday at midnight (your local time)."}
-                  </p>
-                </div>
-                <Switch
-                  checked={pauseTracking}
-                  onCheckedChange={handleTogglePause}
-                  disabled={savingPause}
-                  className="data-[state=checked]:bg-yellow-500"
-                />
-              </div>
             </CardContent>
           </Card>
 

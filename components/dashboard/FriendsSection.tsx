@@ -13,13 +13,13 @@ import {
   Ban,
   Users,
   AlertCircle,
-  TrendingUp,
+  Flame,
   Calendar,
   Target,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Friendship, FriendProfile } from '@/lib/types';
-import { calculateWeeklyAverage } from '@/lib/weekly-stats';
+// Weekly stats import removed - showing longest_streak, this_week, total now
 import { notifyFriendRequest, notifyFriendAccepted } from '@/lib/notifications';
 
 interface Props {
@@ -28,8 +28,8 @@ interface Props {
 }
 
 interface FriendStats {
-  daily_cards_learned: number;
-  weekly_average: number;
+  longest_streak: number;
+  current_week_cards: number;
   total_cards_mastered: number;
 }
 
@@ -144,7 +144,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       );
 
       const statsData = await supaFetch<any[]>(
-        `user_stats?user_id=in.(${Array.from(userIds).join(',')})&select=user_id,daily_cards_learned,weekly_cards_history,total_cards_mastered`,
+        `user_stats?user_id=in.(${Array.from(userIds).join(',')})&select=user_id,longest_streak,current_week_cards,total_cards_mastered`,
         accessToken
       );
 
@@ -167,14 +167,13 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       friendshipsData.forEach((friendship) => {
         const friendId = friendship.user_id === userId ? friendship.friend_id : friendship.user_id;
         const friendStats = statsMap.get(friendId);
-        const weeklyHistory = friendStats?.weekly_cards_history || [];
         
         const withProfile: FriendWithProfile = {
           ...friendship,
           profile: profileMap.get(friendId),
           stats: {
-            daily_cards_learned: friendStats?.daily_cards_learned || 0,
-            weekly_average: calculateWeeklyAverage(weeklyHistory),
+            longest_streak: friendStats?.longest_streak || 0,
+            current_week_cards: friendStats?.current_week_cards || 0,
             total_cards_mastered: friendStats?.total_cards_mastered || 0,
           },
         };
@@ -400,28 +399,30 @@ export default function FriendsSection({ userId, accessToken }: Props) {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Add Friend Card */}
-      <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-talka-md animate-fade-in">
-        <h3 className="font-display text-lg sm:text-xl font-semibold mb-1 sm:mb-2 flex items-center gap-2">
+      <div className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 animate-fade-in" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-md)', border: '1px solid var(--border-color)' }}>
+        <h3 className="font-display text-lg sm:text-xl font-semibold mb-1 sm:mb-2 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
           ✨ Add Friend
         </h3>
-        <p className="text-slate-500 text-sm font-medium mb-4 sm:mb-6">
+        <p className="text-sm font-medium mb-4 sm:mb-6" style={{ color: 'var(--text-secondary)' }}>
           Search for users by display name
         </p>
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             <Input
               value={searchDisplayName}
               onChange={(e) => setSearchDisplayName(e.target.value)}
               placeholder="Enter display name..."
-              className="bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 h-14 font-medium focus:border-talka-purple focus:ring-0 text-slate-800 placeholder:text-slate-500"
+              className="rounded-2xl pl-12 h-14 font-medium focus:ring-0"
+              style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
               onKeyDown={(e) => e.key === 'Enter' && handleSendRequest()}
             />
           </div>
           <Button
             onClick={handleSendRequest}
             disabled={actionLoading === 'send'}
-            className="w-full sm:w-auto bg-gradient-purple-pink text-white font-bold rounded-2xl px-6 min-h-[52px] sm:min-h-0 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all active:scale-[0.98]"
+            className="w-full sm:w-auto text-white font-bold rounded-2xl px-6 min-h-[52px] sm:min-h-0 hover:-translate-y-0.5 transition-all active:scale-[0.98] active:translate-y-1"
+            style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
           >
             {actionLoading === 'send' ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -435,51 +436,51 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       {/* Message */}
       {message && (
         <div
-          className={`flex items-center gap-3 p-4 rounded-2xl animate-fade-in ${
-            message.type === 'success'
-              ? 'bg-green-50 text-green-700 border-2 border-green-200'
-              : 'bg-red-50 text-red-700 border-2 border-red-200'
-          }`}
+          className="flex items-center gap-3 p-4 rounded-2xl animate-fade-in"
+          style={message.type === 'success' 
+            ? { backgroundColor: 'rgba(88, 204, 2, 0.15)', color: 'var(--accent-green)', border: '2px solid rgba(88, 204, 2, 0.3)' }
+            : { backgroundColor: 'rgba(255, 75, 75, 0.15)', color: 'var(--accent-red)', border: '2px solid rgba(255, 75, 75, 0.3)' }
+          }
         >
           {message.type === 'success' ? (
-            <Check className="h-5 w-5 text-green-500" />
+            <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
           ) : (
-            <AlertCircle className="h-5 w-5 text-red-500" />
+            <AlertCircle className="h-5 w-5" style={{ color: 'var(--accent-red)' }} />
           )}
           <span className="font-medium">{message.text}</span>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="flex gap-1 sm:gap-2 bg-white p-1.5 sm:p-2 rounded-2xl sm:rounded-[20px] shadow-talka-sm overflow-x-auto no-scrollbar">
+      <div className="flex gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-2xl sm:rounded-[20px] overflow-x-auto no-scrollbar" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
         <button
           onClick={() => setActiveTab('friends')}
-          className={`flex-1 min-w-[80px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base active:scale-95 ${
-            activeTab === 'friends'
-              ? 'bg-gradient-purple-pink text-white shadow-purple'
-              : 'text-slate-500 hover:bg-slate-50'
-          }`}
+          className="flex-1 min-w-[80px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base active:scale-95"
+          style={activeTab === 'friends'
+            ? { backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }
+            : { color: 'var(--text-secondary)' }
+          }
         >
           <Users className="h-4 w-4" />
           <span className="hidden sm:inline">Friends</span> ({friends.length})
         </button>
         <button
           onClick={() => setActiveTab('requests')}
-          className={`flex-1 min-w-[80px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base active:scale-95 ${
-            activeTab === 'requests'
-              ? 'bg-gradient-purple-pink text-white shadow-purple'
-              : 'text-slate-500 hover:bg-slate-50'
-          }`}
+          className="flex-1 min-w-[80px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base active:scale-95"
+          style={activeTab === 'requests'
+            ? { backgroundColor: 'var(--accent-blue)', color: 'white', boxShadow: '0 3px 0 #0369a1' }
+            : { color: 'var(--text-secondary)' }
+          }
         >
           📬 <span className="hidden sm:inline">Requests</span> ({pendingRequests.length + sentRequests.length})
         </button>
         <button
           onClick={() => setActiveTab('blocked')}
-          className={`flex-1 min-w-[80px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base active:scale-95 ${
-            activeTab === 'blocked'
-              ? 'bg-gradient-purple-pink text-white shadow-purple'
-              : 'text-slate-500 hover:bg-slate-50'
-          }`}
+          className="flex-1 min-w-[80px] px-3 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex items-center justify-center gap-1 sm:gap-2 text-sm sm:text-base active:scale-95"
+          style={activeTab === 'blocked'
+            ? { backgroundColor: 'var(--accent-red)', color: 'white', boxShadow: '0 3px 0 #b91c1c' }
+            : { color: 'var(--text-secondary)' }
+          }
         >
           🚫 <span className="hidden sm:inline">Blocked</span> ({blockedUsers.length})
         </button>
@@ -489,29 +490,30 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       {activeTab === 'friends' && (
         <div className="space-y-4 animate-fade-in">
           {friends.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center shadow-talka-sm">
+            <div className="rounded-3xl p-12 text-center" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
               <div className="text-6xl mb-4 opacity-50">👥</div>
-              <h3 className="font-display text-xl font-semibold text-slate-700 mb-2">No friends yet. Start by adding some!</h3>
-              <p className="text-slate-500">Search for users above to send friend requests</p>
+              <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No friends yet. Start by adding some!</h3>
+              <p style={{ color: 'var(--text-secondary)' }}>Search for users above to send friend requests</p>
             </div>
           ) : (
             friends.map((friendship) => (
-              <div key={friendship.id} className="bg-white rounded-3xl p-6 shadow-talka-sm hover:shadow-talka-md transition-all">
+              <div key={friendship.id} className="rounded-3xl p-6 transition-all" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
                     {friendship.profile?.avatar_url ? (
                       <img 
                         src={friendship.profile.avatar_url} 
                         alt={friendship.profile?.display_name || 'User'} 
-                        className="w-14 h-14 rounded-full object-cover shadow-blue"
+                        className="w-14 h-14 rounded-full object-cover"
+                        style={{ boxShadow: '0 4px 12px rgba(28, 176, 246, 0.3)' }}
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-lg text-white shadow-blue">
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg text-white" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))' }}>
                         {getInitials(friendship.profile)}
                       </div>
                     )}
                     <div>
-                      <p className="font-display text-lg font-semibold text-slate-800">
+                      <p className="font-display text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {friendship.profile?.display_name || 'User'}
                       </p>
                     </div>
@@ -522,7 +524,8 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                       size="sm"
                       onClick={() => handleBlockUser(friendship.id)}
                       disabled={actionLoading === friendship.id}
-                      className="rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                      className="rounded-xl"
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       {actionLoading === friendship.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -535,7 +538,8 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                       size="sm"
                       onClick={() => handleRemoveFriend(friendship.id)}
                       disabled={actionLoading === friendship.id}
-                      className="rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50"
+                      className="rounded-xl hover:bg-red-500/10"
+                      style={{ color: 'var(--text-muted)' }}
                     >
                       {actionLoading === friendship.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -546,29 +550,29 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                   </div>
                 </div>
                 {/* Friend Stats */}
-                <div className="pt-4 border-t-2 border-slate-100">
-                  <p className="text-xs font-semibold text-slate-400 text-center mb-2 uppercase tracking-wide">Cards Mastered</p>
+                <div className="pt-4" style={{ borderTop: '2px solid var(--border-color)' }}>
+                  <p className="text-xs font-semibold text-center mb-2 uppercase tracking-wide" style={{ color: 'var(--text-muted)' }}>Stats</p>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-orange-500 mb-1">
+                      <div className="flex items-center justify-center gap-1 mb-1" style={{ color: 'var(--accent-orange)' }}>
+                        <Flame className="h-4 w-4" />
+                        <span className="text-xs font-semibold">Best</span>
+                      </div>
+                      <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{friendship.stats?.longest_streak || 0}</p>
+                    </div>
+                    <div className="text-center">
+                      <div className="flex items-center justify-center gap-1 mb-1" style={{ color: 'var(--accent-blue)' }}>
                         <Calendar className="h-4 w-4" />
-                        <span className="text-xs font-semibold">Today</span>
+                        <span className="text-xs font-semibold">Week</span>
                       </div>
-                      <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.daily_cards_learned || 0}</p>
+                      <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{friendship.stats?.current_week_cards || 0}</p>
                     </div>
                     <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-indigo-500 mb-1">
-                        <TrendingUp className="h-4 w-4" />
-                        <span className="text-xs font-semibold">Avg/Week</span>
-                      </div>
-                      <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.weekly_average || 0}</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1 text-green-500 mb-1">
+                      <div className="flex items-center justify-center gap-1 mb-1" style={{ color: 'var(--accent-green)' }}>
                         <Target className="h-4 w-4" />
                         <span className="text-xs font-semibold">Total</span>
                       </div>
-                      <p className="font-display text-xl font-semibold text-slate-800">{friendship.stats?.total_cards_mastered || 0}</p>
+                      <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{friendship.stats?.total_cards_mastered || 0}</p>
                     </div>
                   </div>
                 </div>
@@ -583,31 +587,31 @@ export default function FriendsSection({ userId, accessToken }: Props) {
         <div className="space-y-6 animate-fade-in">
           {/* Incoming Requests */}
           <div>
-            <h3 className="font-display text-lg font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="font-display text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               📥 Incoming Requests ({pendingRequests.length})
             </h3>
             {pendingRequests.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center shadow-talka-sm border-2 border-slate-100">
-                <p className="text-slate-500 text-sm">No incoming friend requests</p>
+              <div className="rounded-2xl p-6 text-center" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '2px solid var(--border-color)' }}>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No incoming friend requests</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {pendingRequests.map((friendship) => (
-                  <div key={friendship.id} className="bg-white rounded-2xl p-5 shadow-talka-sm flex items-center justify-between border-2 border-green-100">
+                  <div key={friendship.id} className="rounded-2xl p-5 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '2px solid rgba(88, 204, 2, 0.3)' }}>
                     <div className="flex items-center gap-4">
                       {friendship.profile?.avatar_url ? (
                         <img 
                           src={friendship.profile.avatar_url} 
                           alt={friendship.profile?.display_name || 'User'} 
-                          className="w-12 h-12 rounded-full object-cover shadow-blue"
+                          className="w-12 h-12 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-white shadow-blue">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))' }}>
                           {getInitials(friendship.profile)}
                         </div>
                       )}
                       <div>
-                        <p className="font-display font-semibold text-slate-800">
+                        <p className="font-display font-semibold" style={{ color: 'var(--text-primary)' }}>
                           {friendship.profile?.display_name || 'User'}
                         </p>
                       </div>
@@ -617,7 +621,8 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                         size="sm"
                         onClick={() => handleAcceptRequest(friendship.id)}
                         disabled={actionLoading === friendship.id}
-                        className="bg-gradient-green-cyan text-white font-bold rounded-xl shadow-green"
+                        className="text-white font-bold rounded-xl"
+                        style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
                       >
                         {actionLoading === friendship.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -630,7 +635,8 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                         size="sm"
                         onClick={() => handleDeclineRequest(friendship.id)}
                         disabled={actionLoading === friendship.id}
-                        className="rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50"
+                        className="rounded-xl hover:bg-red-500/10"
+                        style={{ color: 'var(--text-muted)' }}
                       >
                         {actionLoading === friendship.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -647,34 +653,34 @@ export default function FriendsSection({ userId, accessToken }: Props) {
 
           {/* Sent Requests */}
           <div>
-            <h3 className="font-display text-lg font-semibold text-slate-700 mb-3 flex items-center gap-2">
+            <h3 className="font-display text-lg font-semibold mb-3 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               📤 Sent Requests ({sentRequests.length})
             </h3>
             {sentRequests.length === 0 ? (
-              <div className="bg-white rounded-2xl p-6 text-center shadow-talka-sm border-2 border-slate-100">
-                <p className="text-slate-500 text-sm">No pending sent requests</p>
+              <div className="rounded-2xl p-6 text-center" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '2px solid var(--border-color)' }}>
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No pending sent requests</p>
               </div>
             ) : (
               <div className="space-y-3">
                 {sentRequests.map((friendship) => (
-                  <div key={friendship.id} className="bg-white rounded-2xl p-5 shadow-talka-sm flex items-center justify-between border-2 border-amber-100">
+                  <div key={friendship.id} className="rounded-2xl p-5 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '2px solid rgba(251, 146, 60, 0.3)' }}>
                     <div className="flex items-center gap-4">
                       {friendship.profile?.avatar_url ? (
                         <img 
                           src={friendship.profile.avatar_url} 
                           alt={friendship.profile?.display_name || 'User'} 
-                          className="w-12 h-12 rounded-full object-cover shadow-purple"
+                          className="w-12 h-12 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-purple-pink flex items-center justify-center font-bold text-white shadow-purple">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: 'linear-gradient(to bottom right, var(--accent-orange), var(--accent-yellow))' }}>
                           {getInitials(friendship.profile)}
                         </div>
                       )}
                       <div>
-                        <p className="font-display font-semibold text-slate-800">
+                        <p className="font-display font-semibold" style={{ color: 'var(--text-primary)' }}>
                           {friendship.profile?.display_name || 'User'}
                         </p>
-                        <p className="text-xs text-amber-600 font-medium">Awaiting response...</p>
+                        <p className="text-xs font-medium" style={{ color: 'var(--accent-orange)' }}>Awaiting response...</p>
                       </div>
                     </div>
                     <Button
@@ -682,7 +688,8 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                       size="sm"
                       onClick={() => handleDeclineRequest(friendship.id)}
                       disabled={actionLoading === friendship.id}
-                      className="rounded-xl text-slate-500 hover:text-red-500 hover:bg-red-50 font-semibold"
+                      className="rounded-xl font-semibold hover:bg-red-500/10"
+                      style={{ color: 'var(--text-secondary)' }}
                     >
                       {actionLoading === friendship.id ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -702,14 +709,14 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       {activeTab === 'blocked' && (
         <div className="space-y-4 animate-fade-in">
           {blockedUsers.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center shadow-talka-sm">
+            <div className="rounded-3xl p-12 text-center" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
               <div className="text-6xl mb-4 opacity-50">🚫</div>
-              <h3 className="font-display text-xl font-semibold text-slate-700 mb-2">No blocked users</h3>
-              <p className="text-slate-500">Users you block will appear here</p>
+              <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No blocked users</h3>
+              <p style={{ color: 'var(--text-secondary)' }}>Users you block will appear here</p>
             </div>
           ) : (
             blockedUsers.map((friendship) => (
-              <div key={friendship.id} className="bg-white rounded-3xl p-6 shadow-talka-sm flex items-center justify-between">
+              <div key={friendship.id} className="rounded-3xl p-6 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
                 <div className="flex items-center gap-4">
                   {friendship.profile?.avatar_url ? (
                     <img 
@@ -718,15 +725,15 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                       className="w-14 h-14 rounded-full object-cover grayscale opacity-60"
                     />
                   ) : (
-                    <div className="w-14 h-14 rounded-full bg-slate-300 flex items-center justify-center font-bold text-lg text-white">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg text-white" style={{ backgroundColor: 'var(--text-muted)' }}>
                       {getInitials(friendship.profile)}
                     </div>
                   )}
                   <div>
-                    <p className="font-display text-lg font-semibold text-slate-800">
+                    <p className="font-display text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                       {friendship.profile?.display_name || 'User'}
                     </p>
-                    <span className="inline-block px-3 py-1 bg-red-100 text-red-600 rounded-lg text-xs font-bold mt-1">
+                    <span className="inline-block px-3 py-1 rounded-lg text-xs font-bold mt-1" style={{ backgroundColor: 'rgba(255, 75, 75, 0.2)', color: 'var(--accent-red)' }}>
                       Blocked
                     </span>
                   </div>
@@ -735,7 +742,8 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                   size="sm"
                   onClick={() => handleUnblockUser(friendship.id)}
                   disabled={actionLoading === friendship.id}
-                  className="bg-gradient-purple-pink text-white rounded-xl font-semibold shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                  className="text-white rounded-xl font-semibold hover:-translate-y-0.5 transition-all"
+                  style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
                 >
                   {actionLoading === friendship.id ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

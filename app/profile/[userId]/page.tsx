@@ -11,7 +11,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import AchievementBadges from '@/components/social/AchievementBadges';
-import { calculateWeeklyAverage } from '@/lib/weekly-stats';
 import {
   ArrowLeft,
   UserPlus,
@@ -104,7 +103,7 @@ export default function PublicProfilePage() {
       // Fetch user stats
       const { data: statsData, error: statsError } = await supabase
         .from('user_stats')
-        .select('current_streak, total_cards_mastered, total_stacks_completed, weekly_cards_history')
+        .select('current_streak, total_cards_mastered, total_stacks_completed, current_week_cards')
         .eq('user_id', userId)
         .maybeSingle();
 
@@ -125,7 +124,7 @@ export default function PublicProfilePage() {
         current_streak: statsData?.current_streak || 0,
         total_cards_mastered: statsData?.total_cards_mastered || 0,
         total_stacks_completed: statsData?.total_stacks_completed || 0,
-        weekly_average: calculateWeeklyAverage(statsData?.weekly_cards_history || []),
+        current_week_cards: statsData?.current_week_cards || 0,
       };
 
       setProfile(fullProfile);
@@ -487,8 +486,8 @@ export default function PublicProfilePage() {
           <Card className="bg-slate-800/50 border-slate-700">
             <CardContent className="p-4 text-center">
               <Calendar className="h-6 w-6 text-green-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">{profile.weekly_average}</p>
-              <p className="text-xs text-slate-400">Avg/Week</p>
+              <p className="text-2xl font-bold text-white">{profile.current_week_cards}</p>
+              <p className="text-xs text-slate-400">This Week</p>
             </CardContent>
           </Card>
         </div>

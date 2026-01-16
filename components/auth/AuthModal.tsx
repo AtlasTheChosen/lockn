@@ -235,12 +235,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 100 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-talka-lg overflow-hidden max-h-[90vh] overflow-y-auto"
+          className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-talka-lg overflow-hidden max-h-[90vh] overflow-y-auto"
+          style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}
         >
           {/* Close Button */}
           <button
             onClick={onClose}
-            className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 rounded-xl transition-all"
+            style={{ color: 'var(--text-secondary)' }}
           >
             <X className="h-5 w-5" />
           </button>
@@ -248,32 +250,32 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
           {/* Header */}
           <div className="text-center mb-6 sm:mb-8 pt-4 sm:pt-0">
             <div className="flex justify-center mb-3 sm:mb-4">
-              <Logo size="md" className="sm:w-16 sm:h-16" />
+              <Logo size="lg" />
             </div>
             {showResetForm ? (
               <>
-                <h2 className="font-display text-2xl font-semibold text-slate-800 mb-2">
+                <h2 className="font-display text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
                   Reset Password
                 </h2>
-                <p className="text-slate-500 text-sm font-medium">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                   Enter your email to receive a reset link
                 </p>
               </>
             ) : resetSent ? (
               <>
-                <h2 className="font-display text-2xl font-semibold text-slate-800 mb-2">
+                <h2 className="font-display text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
                   Check Your Email 📧
                 </h2>
-                <p className="text-slate-500 text-sm font-medium">
-                  We sent a reset link to <span className="text-talka-purple font-semibold">{email}</span>
+                <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
+                  We sent a reset link to <span className="font-semibold" style={{ color: 'var(--accent-green)' }}>{email}</span>
                 </p>
               </>
             ) : (
               <>
-                <h2 className="font-display text-2xl font-semibold text-slate-800 mb-2">
+                <h2 className="font-display text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
                   {mode === 'signup' ? 'Join LOCKN! ✨' : 'Welcome Back! 👋'}
                 </h2>
-                <p className="text-slate-500 text-sm font-medium">
+                <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                   {mode === 'signup' ? 'Create your free account to start learning' : 'Sign in to continue your journey'}
                 </p>
               </>
@@ -286,37 +288,41 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                 setResetSent(false);
                 setShowResetForm(false);
               }}
-              className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 shadow-purple"
+              className="w-full text-white font-bold rounded-2xl py-4"
+              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
             >
               Back to Sign In
             </Button>
           ) : showResetForm ? (
             <form onSubmit={handlePasswordReset} className="space-y-4">
               <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                 <Input
                   type="email"
                   placeholder="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 py-6 font-medium focus:border-talka-purple focus:ring-0"
+                  className="rounded-2xl pl-12 py-6 font-medium focus:ring-0"
+                  style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
                 />
               </div>
               {error && (
-                <p className="text-red-500 text-sm font-medium text-center">{error}</p>
+                <p className="text-sm font-medium text-center" style={{ color: 'var(--accent-red)' }}>{error}</p>
               )}
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50"
+                className="w-full text-white font-bold rounded-2xl py-4 hover:-translate-y-0.5 transition-all disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
               >
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send Reset Link'}
               </Button>
               <button
                 type="button"
                 onClick={() => setShowResetForm(false)}
-                className="w-full text-slate-500 text-sm font-medium hover:text-talka-purple transition-colors"
+                className="w-full text-sm font-medium transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
               >
                 ← Back to sign in
               </button>
@@ -326,7 +332,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
               {/* Email Form */}
               <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-4">
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                   <Input
                     type="email"
                     placeholder="Email address"
@@ -334,12 +340,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="email"
-                    className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 h-14 sm:h-16 text-base font-medium focus:border-talka-purple focus:ring-0"
+                    className="rounded-2xl pl-12 h-14 sm:h-16 text-base font-medium focus:ring-0"
+                    style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
                   />
                 </div>
 
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                   <Input
                     type={showPassword ? 'text' : 'password'}
                     placeholder={mode === 'signup' ? 'Password (6+ characters)' : 'Password'}
@@ -347,12 +354,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-                    className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 pr-12 h-14 sm:h-16 text-base font-medium focus:border-talka-purple focus:ring-0"
+                    className="rounded-2xl pl-12 pr-12 h-14 sm:h-16 text-base font-medium focus:ring-0"
+                    style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-1"
+                    style={{ color: 'var(--text-muted)' }}
                   >
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
@@ -360,7 +369,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
 
                 {mode === 'signup' && (
                   <div className="relative">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                     <Input
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Confirm password"
@@ -368,7 +377,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
                       autoComplete="new-password"
-                      className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 h-14 sm:h-16 text-base font-medium focus:border-talka-purple focus:ring-0"
+                      className="rounded-2xl pl-12 h-14 sm:h-16 text-base font-medium focus:ring-0"
+                      style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
                     />
                   </div>
                 )}
@@ -377,7 +387,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-red-500 text-sm font-medium text-center"
+                    className="text-sm font-medium text-center"
+                    style={{ color: 'var(--accent-red)' }}
                   >
                     {error}
                   </motion.p>
@@ -386,7 +397,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-4 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]"
+                  className="w-full text-white font-bold rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-4 hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98] active:translate-y-1"
+                  style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
                 >
                   {loading ? (
                     <>
@@ -402,7 +414,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                   <button
                     type="button"
                     onClick={() => setShowResetForm(true)}
-                    className="w-full text-slate-500 text-sm font-medium hover:text-talka-purple transition-colors py-2"
+                    className="w-full text-sm font-medium transition-colors py-2"
+                    style={{ color: 'var(--text-secondary)' }}
                   >
                     Forgot password?
                   </button>
@@ -410,13 +423,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
               </form>
 
               {/* Switch Mode */}
-              <p className="text-center text-slate-500 text-sm font-medium mt-6">
+              <p className="text-center text-sm font-medium mt-6" style={{ color: 'var(--text-secondary)' }}>
                 {mode === 'signup' ? (
                   <>
                     Already have an account?{' '}
                     <button
                       onClick={() => switchMode('login')}
-                      className="text-talka-purple font-semibold hover:underline"
+                      className="font-semibold hover:underline"
+                      style={{ color: 'var(--accent-green)' }}
                     >
                       Sign in
                     </button>
@@ -426,7 +440,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                     Don't have an account?{' '}
                     <button
                       onClick={() => switchMode('signup')}
-                      className="text-talka-purple font-semibold hover:underline"
+                      className="font-semibold hover:underline"
+                      style={{ color: 'var(--accent-green)' }}
                     >
                       Sign up
                     </button>

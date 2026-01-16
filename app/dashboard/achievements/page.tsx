@@ -25,7 +25,7 @@ interface BadgeStats {
   ice_breaker_count?: number;
   tests_completed?: number;
   perfect_test_streak?: number;
-  daily_cards_learned?: number;
+  cards_mastered_today?: number; // Replaces daily_cards_learned
   daily_goal_streak?: number;
   languages_count?: number;
   is_premium?: boolean;
@@ -60,10 +60,10 @@ const BADGE_THRESHOLDS: Record<string, { current: (stats: BadgeStats) => number;
   'stack_perfect': { current: (s) => s.best_test_score ?? 0, target: 100 },
   'perfect_streak_3': { current: (s) => s.perfect_test_streak ?? 0, target: 3 },
   'first_test': { current: (s) => s.tests_completed ?? 0, target: 1 },
-  'daily_goal': { current: (s) => s.daily_cards_learned ?? 0, target: 10 },
+  'daily_goal': { current: (s) => s.cards_mastered_today ?? 0, target: 10 },
   'daily_goal_streak_7': { current: (s) => s.daily_goal_streak ?? 0, target: 7 },
   'daily_goal_streak_30': { current: (s) => s.daily_goal_streak ?? 0, target: 30 },
-  'overachiever': { current: (s) => s.daily_cards_learned ?? 0, target: 50 },
+  'overachiever': { current: (s) => s.cards_mastered_today ?? 0, target: 50 },
   'speed_learner': { current: () => 0, target: 1 },
   'night_owl': { current: () => 0, target: 1 },
   'early_bird': { current: () => 0, target: 1 },
@@ -227,7 +227,7 @@ export default function AchievementsPage() {
 
         // Fetch user stats
         const statsResponse = await fetch(
-          `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}&select=current_streak,longest_streak,total_cards_mastered,total_stacks_completed,daily_cards_learned,tests_completed,perfect_test_streak,daily_goal_streak,ice_breaker_count`,
+          `${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}&select=current_streak,longest_streak,total_cards_mastered,total_stacks_completed,cards_mastered_today,tests_completed,perfect_test_streak,daily_goal_streak,ice_breaker_count`,
           {
             headers: {
               'apikey': supabaseKey!,
@@ -344,21 +344,21 @@ export default function AchievementsPage() {
 
   if (sessionLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
         <div className="text-center">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-violet-500 to-purple-600 animate-pulse mx-auto mb-4 flex items-center justify-center">
+            <div className="w-20 h-20 rounded-full animate-pulse mx-auto mb-4 flex items-center justify-center" style={{ background: 'linear-gradient(to bottom right, var(--accent-green), var(--accent-blue))' }}>
               <Trophy className="h-10 w-10 text-white" />
             </div>
           </div>
-          <p className="text-slate-600 font-medium">Loading your achievements...</p>
+          <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>Loading your achievements...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -366,13 +366,14 @@ export default function AchievementsPage() {
             variant="ghost"
             size="icon"
             onClick={() => router.push('/dashboard')}
-            className="rounded-full bg-white shadow-sm border border-slate-200 hover:bg-slate-50"
+            className="rounded-full"
+            style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}
           >
-            <ArrowLeft className="h-5 w-5 text-slate-600" />
+            <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Achievements</h1>
-            <p className="text-slate-500">Track your progress and unlock badges</p>
+            <h1 className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>Achievements</h1>
+            <p style={{ color: 'var(--text-secondary)' }}>Track your progress and unlock badges</p>
           </div>
         </div>
 
@@ -446,12 +447,11 @@ export default function AchievementsPage() {
         <div className="flex flex-wrap gap-2 mb-6">
           <button
             onClick={() => setSelectedCategory('all')}
-            className={cn(
-              'px-4 py-2 rounded-full font-semibold text-sm transition-all',
-              selectedCategory === 'all'
-                ? 'bg-slate-900 text-white shadow-lg'
-                : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:bg-slate-50'
-            )}
+            className="px-4 py-2 rounded-full font-semibold text-sm transition-all"
+            style={selectedCategory === 'all'
+              ? { backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: 'var(--shadow-md)' }
+              : { backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }
+            }
           >
             All Badges
           </button>
@@ -463,8 +463,12 @@ export default function AchievementsPage() {
                 'px-4 py-2 rounded-full font-semibold text-sm transition-all flex items-center gap-2',
                 selectedCategory === cat
                   ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
-                  : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                  : ''
               )}
+              style={selectedCategory !== cat
+                ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }
+                : undefined
+              }
             >
               <span>{config.emoji}</span>
               <span>{config.label}</span>
@@ -485,8 +489,9 @@ export default function AchievementsPage() {
                   'rounded-2xl p-5 transition-all border-2',
                   badge.isEarned
                     ? `${config.bgLight} ${config.borderColor} shadow-sm`
-                    : 'bg-white border-slate-100 hover:border-slate-200'
+                    : ''
                 )}
+                style={!badge.isEarned ? { backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' } : undefined}
               >
                 <div className="flex items-start gap-4">
                   {/* Badge Icon */}
@@ -495,16 +500,17 @@ export default function AchievementsPage() {
                       'w-14 h-14 rounded-xl flex items-center justify-center shrink-0 relative',
                       badge.isEarned
                         ? `${config.iconBg} shadow-lg`
-                        : 'bg-slate-100'
+                        : ''
                     )}
+                    style={!badge.isEarned ? { backgroundColor: 'var(--bg-secondary)' } : undefined}
                   >
                     {badge.isEarned ? (
                       <IconComponent className="h-7 w-7 text-white" />
                     ) : (
-                      <Lock className="h-6 w-6 text-slate-400" />
+                      <Lock className="h-6 w-6" style={{ color: 'var(--text-muted)' }} />
                     )}
                     {badge.isEarned && (
-                      <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm">
+                      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: 'var(--accent-green)' }}>
                         <Check className="h-3 w-3 text-white" strokeWidth={3} />
                       </div>
                     )}
@@ -514,11 +520,11 @@ export default function AchievementsPage() {
                   <div className="flex-1 min-w-0">
                     <h3 className={cn(
                       'font-bold text-base mb-0.5',
-                      badge.isEarned ? config.textColor : 'text-slate-700'
-                    )}>
+                      badge.isEarned ? config.textColor : ''
+                    )} style={!badge.isEarned ? { color: 'var(--text-primary)' } : undefined}>
                       {badge.name}
                     </h3>
-                    <p className="text-slate-500 text-sm line-clamp-2">
+                    <p className="text-sm line-clamp-2" style={{ color: 'var(--text-secondary)' }}>
                       {badge.description}
                     </p>
                   </div>
@@ -526,9 +532,9 @@ export default function AchievementsPage() {
                 
                 {/* Progress or Earned Date */}
                 {badge.isEarned ? (
-                  <div className="mt-4 pt-3 border-t border-slate-200/50">
-                    <p className="text-sm text-slate-500 flex items-center gap-2">
-                      <Check className="h-4 w-4 text-emerald-500" />
+                  <div className="mt-4 pt-3" style={{ borderTop: '1px solid var(--border-color)' }}>
+                    <p className="text-sm flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                      <Check className="h-4 w-4" style={{ color: 'var(--accent-green)' }} />
                       Earned {new Date(badge.earnedAt!).toLocaleDateString('en-US', { 
                         month: 'short', 
                         day: 'numeric', 
@@ -539,12 +545,12 @@ export default function AchievementsPage() {
                 ) : (
                   <div className="mt-4">
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="text-slate-500">{badge.requirement}</span>
-                      <span className="font-semibold text-slate-700">
+                      <span style={{ color: 'var(--text-secondary)' }}>{badge.requirement}</span>
+                      <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {badge.currentValue}/{badge.targetValue}
                       </span>
                     </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                       <div 
                         className={cn('h-full rounded-full transition-all duration-500', `bg-gradient-to-r ${config.gradient}`)}
                         style={{ width: `${badge.progress}%` }}
@@ -559,23 +565,23 @@ export default function AchievementsPage() {
 
         {/* Empty state when no badges match filter */}
         {filteredBadges.length === 0 && (
-          <div className="text-center py-16 bg-white rounded-2xl border border-slate-100">
+          <div className="text-center py-16 rounded-2xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
             <div className="text-5xl mb-4">🔍</div>
-            <h3 className="text-xl font-semibold text-slate-700 mb-2">No badges found</h3>
-            <p className="text-slate-500">Try selecting a different category</p>
+            <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No badges found</h3>
+            <p style={{ color: 'var(--text-secondary)' }}>Try selecting a different category</p>
           </div>
         )}
 
         {/* Call to action for empty badges */}
         {badges.length === 0 && selectedCategory === 'all' && (
-          <div className="mt-8 text-center bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-8 border border-violet-100">
+          <div className="mt-8 text-center rounded-2xl p-8" style={{ background: 'linear-gradient(to bottom right, rgba(88, 204, 2, 0.1), rgba(28, 176, 246, 0.1))', border: '1px solid var(--border-color)' }}>
             <div className="text-6xl mb-4">🎯</div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">Start Your Badge Journey!</h3>
-            <p className="text-slate-600 mb-6 max-w-md mx-auto">
+            <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Start Your Badge Journey!</h3>
+            <p className="mb-6 max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
               Complete learning activities to earn badges and show off your achievements.
             </p>
             <Link href="/dashboard">
-              <Button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold rounded-xl px-6 py-3 shadow-lg hover:shadow-xl transition-all">
+              <Button className="text-white font-bold rounded-xl px-6 py-3 transition-all" style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}>
                 Start Learning →
               </Button>
             </Link>

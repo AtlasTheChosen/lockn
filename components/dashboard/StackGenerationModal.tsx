@@ -157,66 +157,70 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-2xl bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl"
+          className="relative w-full max-w-2xl backdrop-blur-xl rounded-3xl p-8 shadow-2xl"
+          style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}
         >
           <Button
             onClick={onClose}
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 text-white/60 hover:text-white"
+            className="absolute top-4 right-4"
+            style={{ color: 'var(--text-muted)' }}
           >
             <X className="h-5 w-5" />
           </Button>
 
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center gap-3 mb-4">
-              <Sparkles className="h-8 w-8 text-blue-500" />
-              <h2 className="text-3xl font-light">Generate New Stack</h2>
+              <Sparkles className="h-8 w-8" style={{ color: 'var(--accent-green)' }} />
+              <h2 className="text-3xl font-semibold" style={{ color: 'var(--text-primary)' }}>Generate New Stack</h2>
             </div>
-            <p className="text-white/60 font-light">
+            <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>
               Create a custom flashcard stack for any scenario
             </p>
           </div>
 
           <div className="space-y-6">
             <div>
-              <label className="text-white/80 text-sm font-light mb-2 block">
+              <label className="text-sm font-semibold mb-2 block" style={{ color: 'var(--text-primary)' }}>
                 What real-world topic or scenario do you want to master?
               </label>
                   <Input
                     value={scenario}
                     onChange={(e) => handleScenarioChange(e.target.value)}
                     placeholder="e.g., Ordering coffee in Paris, Negotiating a salary, Handling small talk at a party, Travel emergencies"
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40 rounded-xl py-6 font-light focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className="rounded-xl py-6 font-medium focus:ring-1"
+                    style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
                   />
                   {contentWarning && (
                     <motion.div
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="flex items-start gap-2 p-4 bg-yellow-500/20 border border-yellow-500/30 rounded-xl mt-3"
+                      className="flex items-start gap-2 p-4 rounded-xl mt-3"
+                      style={{ backgroundColor: 'rgba(251, 191, 36, 0.2)', border: '1px solid rgba(251, 191, 36, 0.3)' }}
                     >
-                      <AlertTriangle className="h-5 w-5 text-yellow-400 flex-shrink-0 mt-0.5" />
-                      <p className="text-yellow-300 text-sm font-light">{contentWarning}</p>
+                      <AlertTriangle className="h-5 w-5 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-yellow)' }} />
+                      <p className="text-sm font-medium" style={{ color: 'var(--accent-yellow)' }}>{contentWarning}</p>
                     </motion.div>
                   )}
-              <p className="text-white/50 text-xs font-light mt-2">
+              <p className="text-xs font-medium mt-2" style={{ color: 'var(--text-muted)' }}>
                 We'll generate a story-based flashcard stack tailored to your topic with authentic phrases and context.
               </p>
             </div>
 
             <div>
-              <label className="text-white/80 text-sm font-light mb-3 block">Target Language</label>
+              <label className="text-sm font-semibold mb-3 block" style={{ color: 'var(--text-primary)' }}>Target Language</label>
               <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2">
                 {SUPPORTED_LANGUAGES.map((lang) => (
                   <Button
                     key={lang.code}
                     onClick={() => setSelectedLanguage(lang.code)}
                     variant="outline"
-                    className={`rounded-xl font-light ${
-                      selectedLanguage === lang.code
-                        ? 'bg-blue-500 border-blue-500 text-white'
-                        : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
-                    }`}
+                    className="rounded-xl font-medium"
+                    style={selectedLanguage === lang.code
+                      ? { backgroundColor: 'var(--accent-green)', borderColor: 'var(--accent-green)', color: 'white' }
+                      : { backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }
+                    }
                   >
                     {lang.name}
                   </Button>
@@ -225,32 +229,32 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
             </div>
 
             <div>
-              <label className="text-white/80 text-sm font-light mb-3 block">Difficulty Level (CEFR)</label>
+              <label className="text-sm font-semibold mb-3 block" style={{ color: 'var(--text-primary)' }}>Difficulty Level (CEFR)</label>
               <div className="grid grid-cols-3 gap-2">
                 {CEFR_LEVELS.map((level) => (
                   <Button
                     key={level.code}
                     onClick={() => setSelectedDifficulty(level.code)}
                     variant="outline"
-                    className={`rounded-xl font-light ${
-                      selectedDifficulty === level.code
-                        ? 'bg-blue-500 border-blue-500 text-white'
-                        : 'bg-white/5 border-white/10 text-white/80 hover:bg-white/10'
-                    }`}
+                    className="rounded-xl font-medium"
+                    style={selectedDifficulty === level.code
+                      ? { backgroundColor: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: 'white' }
+                      : { backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }
+                    }
                   >
                     <div className="flex flex-col items-center">
-                      <span className="font-semibold">{level.code}</span>
+                      <span className="font-bold">{level.code}</span>
                     </div>
                   </Button>
                 ))}
               </div>
-              <p className="text-white/50 text-xs mt-2 font-light">
+              <p className="text-xs mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
                 {CEFR_LEVELS.find((l) => l.code === selectedDifficulty)?.description}
               </p>
             </div>
 
             <div>
-              <label className="text-white/80 text-sm font-light mb-3 block flex items-center gap-2">
+              <label className="text-sm font-semibold mb-3 block flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <CreditCard className="h-4 w-4" />
                 Number of Cards
               </label>
@@ -263,15 +267,15 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
                       localStorage.setItem('talka-card-count', count.toString());
                       DEBUG.storage('Card count changed in modal', count);
                     }}
-                    className={`cursor-pointer transition-all ${
-                      selectedSize === count
-                        ? 'bg-blue-500/20 border-blue-500'
-                        : 'bg-white/5 border-white/10 hover:bg-white/8'
-                    }`}
+                    className="cursor-pointer transition-all"
+                    style={selectedSize === count
+                      ? { backgroundColor: 'rgba(88, 204, 2, 0.2)', borderColor: 'var(--accent-green)' }
+                      : { backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }
+                    }
                   >
                     <CardContent className="p-4 text-center">
-                      <p className="text-2xl font-light mb-1">{count}</p>
-                      <p className="text-xs text-white/60 font-light">
+                      <p className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>{count}</p>
+                      <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                         {count === 10 ? 'Quick' : count === 25 ? 'Standard' : 'Deep dive'}
                       </p>
                     </CardContent>
@@ -280,12 +284,12 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
               </div>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
+            <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
               <div className="flex items-start gap-3">
-                <MessageSquare className="h-5 w-5 text-blue-500 mt-0.5" />
+                <MessageSquare className="h-5 w-5 mt-0.5" style={{ color: 'var(--accent-blue)' }} />
                 <div>
-                  <label className="text-white/80 text-sm font-light block">Conversational Mode</label>
-                  <p className="text-white/50 text-xs font-light mt-1">
+                  <label className="text-sm font-semibold block" style={{ color: 'var(--text-primary)' }}>Conversational Mode</label>
+                  <p className="text-xs font-medium mt-1" style={{ color: 'var(--text-muted)' }}>
                     Present cards in sequential order, like a back-and-forth dialogue
                   </p>
                 </div>
@@ -300,16 +304,18 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
               <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-red-500/20 border border-red-500/30 rounded-xl"
+                className="p-4 rounded-xl"
+                style={{ backgroundColor: 'rgba(255, 75, 75, 0.2)', border: '1px solid rgba(255, 75, 75, 0.3)' }}
               >
-                <p className="text-red-400 text-sm font-light">{error}</p>
+                <p className="text-sm font-medium" style={{ color: 'var(--accent-red)' }}>{error}</p>
               </motion.div>
             )}
 
             <Button
               onClick={handleGenerate}
               disabled={generating || !scenario.trim() || !!contentWarning}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-6 text-base font-light disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full text-white rounded-xl py-6 text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed active:translate-y-1"
+              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
             >
               {generating ? (
                 <>

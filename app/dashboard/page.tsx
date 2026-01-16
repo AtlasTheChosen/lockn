@@ -338,14 +338,14 @@ export default function DashboardPage() {
       // Note: This applies even when frozen - missing daily cards resets streak to 0
       if (stats && accessToken) {
         const today = getTodayDate();
-        const lastActiveDate = stats.daily_cards_date;
+        const lastActiveDate = stats.last_mastery_date || stats.daily_cards_date;
         
         if (lastActiveDate && lastActiveDate !== today) {
-          const yesterdayCards = stats.daily_cards_learned || 0;
+          const yesterdayCards = stats.cards_mastered_today || 0;
           
           const updates = yesterdayCards < STREAK_DAILY_REQUIREMENT
-            ? { current_streak: 0, daily_cards_learned: 0, daily_cards_date: today }
-            : { daily_cards_learned: 0, daily_cards_date: today };
+            ? { current_streak: 0, cards_mastered_today: 0, last_mastery_date: today, streak_awarded_today: false }
+            : { cards_mastered_today: 0, last_mastery_date: today, streak_awarded_today: false };
           
           await fetch(`${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}`, {
             method: 'PATCH',

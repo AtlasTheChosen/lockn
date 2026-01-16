@@ -177,21 +177,22 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
   // Show tutorial prompt after display name is saved
   if (showTutorialPrompt) {
     return (
-      <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-        <Card className="w-full max-w-md bg-white border-0 shadow-talka-lg rounded-3xl overflow-hidden">
+      <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-6 z-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <Card className="w-full max-w-md border-0 rounded-3xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}>
           <CardHeader className="text-center pt-8">
-            <div className="h-20 w-20 rounded-full bg-gradient-purple-pink flex items-center justify-center mx-auto mb-4 shadow-purple">
+            <div className="h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'linear-gradient(to bottom right, var(--accent-green), var(--accent-blue))', boxShadow: '0 8px 20px rgba(88, 204, 2, 0.3)' }}>
               <BookOpen className="h-10 w-10 text-white" />
             </div>
-            <CardTitle className="font-display text-2xl text-slate-800">Welcome, {savedDisplayName}! 🎉</CardTitle>
-            <CardDescription className="text-slate-500 font-medium">
+            <CardTitle className="font-display text-2xl" style={{ color: 'var(--text-primary)' }}>Welcome, {savedDisplayName}! 🎉</CardTitle>
+            <CardDescription className="font-medium" style={{ color: 'var(--text-secondary)' }}>
               Would you like a quick tour of how the app works?
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 pb-8">
             <Button
               onClick={() => onComplete(savedDisplayName, true)}
-              className="w-full bg-gradient-purple-pink hover:opacity-90 text-white font-bold py-6 text-lg rounded-2xl shadow-purple transition-all hover:-translate-y-0.5"
+              className="w-full hover:opacity-90 text-white font-bold py-6 text-lg rounded-2xl transition-all hover:-translate-y-0.5 active:translate-y-1"
+              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
             >
               <Sparkles className="h-5 w-5 mr-2" />
               Show me around
@@ -199,7 +200,8 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
             <Button
               onClick={() => onComplete(savedDisplayName, false)}
               variant="ghost"
-              className="w-full text-slate-500 hover:text-slate-700 hover:bg-slate-100 py-6 text-lg rounded-2xl font-semibold"
+              className="w-full py-6 text-lg rounded-2xl font-semibold"
+              style={{ color: 'var(--text-secondary)' }}
             >
               Skip for now
             </Button>
@@ -210,14 +212,14 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
   }
 
   return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-      <Card className="w-full max-w-md bg-white border-0 shadow-talka-lg rounded-3xl overflow-hidden">
+    <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-6 z-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+      <Card className="w-full max-w-md border-0 rounded-3xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}>
         <CardHeader className="text-center pt-8">
-          <div className="h-20 w-20 rounded-full bg-gradient-cyan-blue flex items-center justify-center mx-auto mb-4 shadow-blue">
+          <div className="h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))', boxShadow: '0 8px 20px rgba(28, 176, 246, 0.3)' }}>
             <User className="h-10 w-10 text-white" />
           </div>
-          <CardTitle className="font-display text-2xl text-slate-800">Choose Your Display Name</CardTitle>
-          <CardDescription className="text-slate-500 font-medium">
+          <CardTitle className="font-display text-2xl" style={{ color: 'var(--text-primary)' }}>Choose Your Display Name</CardTitle>
+          <CardDescription className="font-medium" style={{ color: 'var(--text-secondary)' }}>
             This is how other users will see you. You can change it later in settings.
           </CardDescription>
         </CardHeader>
@@ -228,23 +230,25 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Enter display name..."
-                className="bg-slate-50 border-2 border-slate-200 text-slate-800 text-lg py-6 rounded-2xl focus:border-talka-purple focus:ring-talka-purple placeholder:text-slate-400"
+                className="text-lg py-6 rounded-2xl focus:ring-0"
+                style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
                 maxLength={30}
                 autoFocus
               />
-              <p className="text-slate-400 text-xs mt-2 text-right">
+              <p className="text-xs mt-2 text-right" style={{ color: 'var(--text-muted)' }}>
                 {displayName.length}/30 characters
               </p>
             </div>
 
             {error && (
-              <p className="text-red-500 text-sm text-center font-medium">{error}</p>
+              <p className="text-sm text-center font-medium" style={{ color: 'var(--accent-red)' }}>{error}</p>
             )}
 
             <Button
               type="submit"
               disabled={loading || !displayName.trim()}
-              className="w-full bg-gradient-purple-pink hover:opacity-90 text-white font-bold py-6 text-lg rounded-2xl shadow-purple transition-all hover:-translate-y-0.5 disabled:opacity-50"
+              className="w-full hover:opacity-90 text-white font-bold py-6 text-lg rounded-2xl transition-all hover:-translate-y-0.5 disabled:opacity-50 active:translate-y-1"
+              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
             >
               {loading ? (
                 <>

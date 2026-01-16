@@ -24,7 +24,7 @@ export interface BadgeStats {
   ice_breaker_count?: number;
   tests_completed?: number;
   perfect_test_streak?: number;
-  daily_cards_learned?: number;
+  cards_mastered_today?: number; // Replaces daily_cards_learned
   daily_goal_streak?: number;
   languages_count?: number;
   is_premium?: boolean;
@@ -214,7 +214,7 @@ export function buildBadgeStats(
     longest_streak?: number;
     total_cards_mastered?: number;
     total_stacks_completed?: number;
-    daily_cards_learned?: number;
+    cards_mastered_today?: number; // Replaces daily_cards_learned
     // New achievement tracking fields from user_stats table
     tests_completed?: number;
     perfect_test_streak?: number;
@@ -240,7 +240,7 @@ export function buildBadgeStats(
     longest_streak: userStats?.longest_streak ?? 0,
     total_cards_mastered: userStats?.total_cards_mastered ?? 0,
     total_stacks_completed: userStats?.total_stacks_completed ?? 0,
-    daily_cards_learned: userStats?.daily_cards_learned ?? 0,
+    cards_mastered_today: userStats?.cards_mastered_today ?? 0,
     // Pull achievement stats from userStats first, then allow additionalStats to override
     tests_completed: userStats?.tests_completed ?? 0,
     perfect_test_streak: userStats?.perfect_test_streak ?? 0,

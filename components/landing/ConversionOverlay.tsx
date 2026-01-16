@@ -168,7 +168,7 @@ export default function ConversionOverlay({ scenario, onClose }: ConversionOverl
             transition={{ delay: 0.2, type: 'spring' }}
             className="flex justify-center mb-4"
           >
-            <Logo size="lg" />
+            <Logo size="xl" />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 10 }}

@@ -1,4 +1,4 @@
-import type { WeeklyCardEntry, UserStats } from './types';
+import type { UserStats } from './types';
 
 // Weekly card cap to prevent spam
 export const WEEKLY_CARD_CAP = 500;
@@ -40,37 +40,6 @@ export function shouldResetWeek(currentWeekStart: string | null): boolean {
   return storedWeekStart < currentWeekStartDate;
 }
 
-// Calculate weekly average from history (last 4 weeks)
-export function calculateWeeklyAverage(history: WeeklyCardEntry[]): number {
-  if (!history || history.length === 0) return 0;
-  
-  // Get last 4 weeks
-  const recentWeeks = history.slice(-4);
-  const total = recentWeeks.reduce((sum, entry) => sum + entry.count, 0);
-  return Math.round(total / recentWeeks.length);
-}
-
-// Archive current week and reset
-export function archiveWeek(
-  currentWeekCards: number,
-  weeklyHistory: WeeklyCardEntry[],
-  weekStart: string
-): WeeklyCardEntry[] {
-  const weekId = getISOWeek(new Date(weekStart));
-  
-  // Create archive entry
-  const newEntry: WeeklyCardEntry = {
-    week: weekId,
-    count: currentWeekCards,
-    reset_at: new Date().toISOString(),
-  };
-  
-  // Keep only last 12 weeks of history
-  const updatedHistory = [...weeklyHistory, newEntry].slice(-12);
-  
-  return updatedHistory;
-}
-
 // Check if a card can be counted (anti-cheat: cap at 500)
 export function canCountCard(currentWeekCards: number): boolean {
   return currentWeekCards < WEEKLY_CARD_CAP;
@@ -79,23 +48,17 @@ export function canCountCard(currentWeekCards: number): boolean {
 // Get display stats for the dashboard
 export function getWeeklyDisplayStats(stats: UserStats | null): {
   currentWeekCards: number;
-  weeklyAverage: number;
-  isPaused: boolean;
   isAtCap: boolean;
 } {
   if (!stats) {
     return {
       currentWeekCards: 0,
-      weeklyAverage: 0,
-      isPaused: false,
       isAtCap: false,
     };
   }
   
   return {
     currentWeekCards: stats.current_week_cards || 0,
-    weeklyAverage: calculateWeeklyAverage(stats.weekly_cards_history || []),
-    isPaused: stats.pause_weekly_tracking || false,
     isAtCap: (stats.current_week_cards || 0) >= WEEKLY_CARD_CAP,
   };
 }
@@ -109,11 +72,3 @@ export function formatWeekRange(): string {
   const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
   return `${formatter.format(weekStart)} - ${formatter.format(weekEnd)}`;
 }
-
-
-
-
-
-
-
-

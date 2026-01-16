@@ -23,8 +23,12 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   const [avatarUrl, setAvatarUrl] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
+  const [navDataLoaded, setNavDataLoaded] = useState(false);
 
   const loadUserData = useCallback(async () => {
+    // Reset loading state at start of each fetch to prevent flash during navigation
+    setNavDataLoaded(false);
+    
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
     
@@ -76,6 +80,11 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
       } catch (e) {
         console.warn('[AppLayout] Stats fetch error:', e);
       }
+      // Mark nav data as loaded after stats fetch completes
+      setNavDataLoaded(true);
+    } else {
+      // No session - still mark as loaded (guest mode)
+      setNavDataLoaded(true);
     }
   }, []);
 
@@ -108,11 +117,12 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
         avatarUrl={avatarUrl}
         isLoggedIn={isLoggedIn}
         userId={userId}
+        dataLoaded={navDataLoaded}
       />
       <main className="pb-40 md:pb-0 safe-area-bottom relative z-0">
         {children}
       </main>
-      <BottomNav streak={streak} streakFrozen={streakFrozen} isLoggedIn={isLoggedIn} />
+      <BottomNav streak={streak} streakFrozen={streakFrozen} isLoggedIn={isLoggedIn} dataLoaded={navDataLoaded} />
     </div>
   );
 }

@@ -450,7 +450,7 @@ export default function AchievementBadges({ badges, showAll = false, size = 'md'
 
   if (badges.length === 0) {
     return (
-      <div className="text-sm text-slate-500 italic">
+      <div className="text-sm italic" style={{ color: 'var(--text-muted)' }}>
         No badges earned yet
       </div>
     );
@@ -473,11 +473,11 @@ export default function AchievementBadges({ badges, showAll = false, size = 'md'
                   <IconComponent className={iconSizes[size]} />
                 </div>
               </TooltipTrigger>
-              <TooltipContent side="top" className="bg-slate-800 border-slate-700">
+              <TooltipContent side="top" className="rounded-xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                 <div className="text-center">
-                  <p className="font-semibold text-white">{badge.name}</p>
-                  <p className="text-xs text-slate-400">{badge.description}</p>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{badge.name}</p>
+                  <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{badge.description}</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                     Earned {new Date(badge.earned_at).toLocaleDateString()}
                   </p>
                 </div>
@@ -487,7 +487,8 @@ export default function AchievementBadges({ badges, showAll = false, size = 'md'
         })}
         {!showAll && remainingCount > 0 && (
           <div
-            className={`${sizeClasses[size]} bg-slate-700/50 text-slate-400 rounded-full flex items-center justify-center border border-slate-600 text-xs font-medium`}
+            className={`${sizeClasses[size]} rounded-full flex items-center justify-center text-xs font-medium`}
+            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)', border: '1px solid var(--border-color)' }}
           >
             +{remainingCount}
           </div>
@@ -512,7 +513,7 @@ export function checkBadgeEligibility(
     ice_breaker_count?: number;
     tests_completed?: number;
     perfect_test_streak?: number;
-    daily_cards_learned?: number;
+    cards_mastered_today?: number; // Replaces daily_cards_learned
     daily_goal_streak?: number;
     languages_count?: number;
     is_premium?: boolean;
@@ -615,7 +616,7 @@ export function checkBadgeEligibility(
   // ============================================================
   // PERFORMANCE BADGES
   // ============================================================
-  if ((stats.daily_cards_learned ?? 0) >= 10 && !earnedBadgeIds.includes('daily_goal')) {
+  if ((stats.cards_mastered_today ?? 0) >= 10 && !earnedBadgeIds.includes('daily_goal')) {
     newBadges.push('daily_goal');
   }
   if ((stats.daily_goal_streak ?? 0) >= 7 && !earnedBadgeIds.includes('daily_goal_streak_7')) {
@@ -624,7 +625,7 @@ export function checkBadgeEligibility(
   if ((stats.daily_goal_streak ?? 0) >= 30 && !earnedBadgeIds.includes('daily_goal_streak_30')) {
     newBadges.push('daily_goal_streak_30');
   }
-  if ((stats.daily_cards_learned ?? 0) >= 50 && !earnedBadgeIds.includes('overachiever')) {
+  if ((stats.cards_mastered_today ?? 0) >= 50 && !earnedBadgeIds.includes('overachiever')) {
     newBadges.push('overachiever');
   }
   // Note: speed_learner, night_owl, early_bird, weekend_warrior are awarded via specific events

@@ -6,17 +6,23 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trophy, ArrowLeftRight, PenLine, Check, X, Loader2, RotateCcw, Lightbulb, ChevronDown, ChevronUp, Volume2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Trophy, ArrowLeftRight, PenLine, Check, X, Loader2, RotateCcw, Lightbulb, ChevronDown, ChevronUp, Volume2, Sparkles, Moon, Sun } from 'lucide-react';
 import { useSpeech, TTSProvider, VoiceGender } from '@/hooks/use-speech';
 import { Input } from '@/components/ui/input';
 import type { CardStack, Flashcard, TestNote } from '@/lib/types';
 import Confetti from 'react-confetti';
 import { CARD_RATINGS } from '@/lib/constants';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
-import { shouldResetWeek, archiveWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
+import { shouldResetWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
 import { isNewDay, getTodayDate, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
 import { useBadgeChecker, buildBadgeStats } from '@/hooks/useBadgeChecker';
 import type { Badge as BadgeType } from '@/lib/types';
+import {
+  checkAndHandleStreakExpiration,
+  processCardMasteryChange,
+  checkAndTriggerTest,
+  completeTest,
+} from '@/lib/streak-system';
 import { STATS_UPDATED_EVENT } from '@/components/layout/AppLayout';
 
 interface Props {
@@ -24,12 +30,13 @@ interface Props {
   cards: Flashcard[];
 }
 
+// Duolingo-style rating colors
 const RATING_OPTIONS = [
-  { value: CARD_RATINGS.REALLY_DONT_KNOW, label: "Really Don't Know", gradient: 'from-red-400 to-red-500' },
-  { value: CARD_RATINGS.DONT_KNOW, label: "Don't Know", gradient: 'from-orange-400 to-orange-500' },
-  { value: CARD_RATINGS.NEUTRAL, label: 'Neutral', gradient: 'from-yellow-400 to-amber-500' },
-  { value: CARD_RATINGS.KINDA_KNOW, label: 'Kinda Know', gradient: 'from-green-400 to-emerald-500' },
-  { value: CARD_RATINGS.REALLY_KNOW, label: 'Really Know', gradient: 'from-blue-400 to-indigo-500' },
+  { value: CARD_RATINGS.REALLY_DONT_KNOW, label: "Really Don't Know", color: '#ff4b4b', shadow: '#cc3b3b' },
+  { value: CARD_RATINGS.DONT_KNOW, label: "Don't Know", color: '#ff9600', shadow: '#cc7800' },
+  { value: CARD_RATINGS.NEUTRAL, label: 'Neutral', color: '#ffc800', shadow: '#cca000' },
+  { value: CARD_RATINGS.KINDA_KNOW, label: 'Kinda Know', color: '#58cc02', shadow: '#46a302' },
+  { value: CARD_RATINGS.REALLY_KNOW, label: 'Really Know', color: '#1cb0f6', shadow: '#1899d6' },
 ];
 
 export default function StackLearningClient({ stack: initialStack, cards: initialCards }: Props) {
@@ -45,6 +52,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [wordTranslations, setWordTranslations] = useState<Record<string, any>>({});
   const [mistakes, setMistakes] = useState<any[]>([]);
   
+  // Streak system v2 - track stacks contributing to current 5-card cycle
+  const [stacksContributedThisSession] = useState<Set<string>>(new Set());
+  
   // Test mode state
   const [testMode, setTestMode] = useState(false);
   const [testCardIndex, setTestCardIndex] = useState(0);
@@ -59,8 +69,32 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [isLoadingBreakdown, setIsLoadingBreakdown] = useState(false);
   const [ttsProvider, setTtsProvider] = useState<TTSProvider>('browser');
   const [voiceGender, setVoiceGender] = useState<VoiceGender>('female');
+  const [isDarkMode, setIsDarkMode] = useState(false);
   
   const supabase = createClient();
+  
+  // Dark mode initialization
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('lockn-theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
+    setIsDarkMode(shouldBeDark);
+    if (shouldBeDark) {
+      document.documentElement.classList.add('dark');
+    }
+  }, []);
+  
+  const toggleDarkMode = () => {
+    const newIsDark = !isDarkMode;
+    setIsDarkMode(newIsDark);
+    if (newIsDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('lockn-theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('lockn-theme', 'light');
+    }
+  };
   
   // Handle saving audio hash to flashcard for cross-user caching
   const handleAudioHash = useCallback(async (hash: string, text: string) => {
@@ -215,6 +249,23 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const handleRating = async (rating: number) => {
     if (!currentCard) return;
 
+    // ============================================================
+    // STREAK SYSTEM V2 - REVIEW EXIT FLOW
+    // ============================================================
+    
+    // STEP 1: Check if streak has expired FIRST (prevents race conditions)
+    try {
+      const expirationResult = await checkAndHandleStreakExpiration(stack.user_id);
+      if (expirationResult.expired) {
+        console.log('Streak expired:', expirationResult.message);
+        // Notify nav to update streak display
+        window.dispatchEvent(new Event(STATS_UPDATED_EVENT));
+      }
+    } catch (e) {
+      console.error('Streak expiration check error:', e);
+    }
+
+    // Update flashcard with new rating
     await supabase
       .from('flashcards')
       .update({
@@ -234,80 +285,104 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
 
     const masteredCount = updatedCards.filter((c) => (c.user_rating || 1) >= 4).length;
     
+    // Update stack mastered count and cards_mastered (v2 field)
     await supabase
       .from('card_stacks')
-      .update({ mastered_count: masteredCount })
+      .update({ 
+        mastered_count: masteredCount,
+        cards_mastered: masteredCount,
+      })
       .eq('id', stack.id);
 
+    // Increment total reviews
     await supabase.rpc('increment', {
       table_name: 'user_stats',
       column_name: 'total_reviews',
       user_id_val: stack.user_id,
     });
 
-    // Track daily MASTERED cards for streak
-    const wasNotMasteredBefore = (currentCard.user_rating || 1) < CARD_RATINGS.KINDA_KNOW;
-    const wasMasteredBefore = (currentCard.user_rating || 1) >= CARD_RATINGS.KINDA_KNOW;
+    // STEP 2 & 3: Process card mastery change and check for streak increment
+    const oldRating = currentCard.user_rating || 1;
+    const wasNotMasteredBefore = oldRating < CARD_RATINGS.KINDA_KNOW;
+    const wasMasteredBefore = oldRating >= CARD_RATINGS.KINDA_KNOW;
     const isNowMastered = rating >= CARD_RATINGS.KINDA_KNOW;
+    const isNowNotMastered = rating < CARD_RATINGS.KINDA_KNOW;
     
-    
+    // Only process mastery changes (not neutral rating changes)
     if (wasNotMasteredBefore && isNowMastered) {
       try {
-        // Note: Don't select streak_awarded_today - column may not exist in older DBs
-        const { data: dailyStats, error: statsError } = await supabase
+        // Track this stack as contributing to the current 5-card cycle
+        stacksContributedThisSession.add(stack.id);
+        
+        // Process mastery change with new streak system
+        const masteryResult = await processCardMasteryChange(
+          stack.user_id,
+          stack.id,
+          oldRating,
+          rating,
+          stacksContributedThisSession
+        );
+        
+        if (masteryResult.streakIncremented) {
+          console.log('Streak incremented to:', masteryResult.newStreak);
+          // Clear the session tracking for next cycle
+          stacksContributedThisSession.clear();
+        }
+        
+        // Also update weekly stats counter
+        const today = getTodayDate();
+        const { data: dailyStats } = await supabase
           .from('user_stats')
-          .select('daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen, total_cards_mastered')
+          .select('total_cards_mastered, current_week_cards, current_week_start')
           .eq('user_id', stack.user_id)
           .single();
-
-
+          
         if (dailyStats) {
-          const today = getTodayDate();
-          const needsReset = isNewDay(dailyStats.daily_cards_date);
+          // Calculate weekly card updates (simple counter, resets on Sunday)
+          let newWeekCards = dailyStats.current_week_cards || 0;
+          let newWeekStart = dailyStats.current_week_start;
           
-          // Previous count BEFORE this card
-          const prevDailyCards = needsReset ? 0 : (dailyStats.daily_cards_learned || 0);
-          let newDailyCards = prevDailyCards + 1;
-          let newTotalMastered = (dailyStats.total_cards_mastered || 0) + 1;
-          let newStreak = dailyStats.current_streak || 0;
-          let newLongestStreak = dailyStats.longest_streak || 0;
-
-
-          // Award streak ONLY when crossing the 10-card threshold (not already at/above 10)
-          // This ensures streak is awarded exactly once per day
-          const crossingThreshold = prevDailyCards < STREAK_DAILY_REQUIREMENT && newDailyCards >= STREAK_DAILY_REQUIREMENT;
-          
-          if (!dailyStats.streak_frozen && crossingThreshold) {
-            newStreak += 1;
-            if (newStreak > newLongestStreak) {
-              newLongestStreak = newStreak;
-            }
+          // Check if we need to reset for a new week
+          if (shouldResetWeek(dailyStats.current_week_start)) {
+            newWeekCards = 0;
+            newWeekStart = getWeekStartUTC();
           }
-
-          const { error: updateError } = await supabase
+          
+          // Increment weekly cards (respecting cap)
+          if (newWeekCards < WEEKLY_CARD_CAP) {
+            newWeekCards += 1;
+          }
+          
+          await supabase
             .from('user_stats')
             .update({
-              daily_cards_learned: newDailyCards,
-              daily_cards_date: today,
-              current_streak: newStreak,
-              longest_streak: newLongestStreak,
+              total_cards_mastered: (dailyStats.total_cards_mastered || 0) + 1,
+              current_week_cards: newWeekCards,
+              current_week_start: newWeekStart,
               last_activity_date: today,
-              total_cards_mastered: newTotalMastered,
             })
             .eq('user_id', stack.user_id);
-          
-          
-          // Notify nav to update streak display
-          window.dispatchEvent(new Event(STATS_UPDATED_EVENT));
         }
+        
+        // Notify nav to update streak display
+        window.dispatchEvent(new Event(STATS_UPDATED_EVENT));
       } catch (e) {
-        console.error('Daily streak tracking error:', e);
+        console.error('Streak system v2 tracking error:', e);
       }
     }
 
     // Handle card downgrade from mastered to not mastered
-    if (wasMasteredBefore && !isNowMastered) {
+    if (wasMasteredBefore && isNowNotMastered) {
       try {
+        // Decrement cards_mastered_today via streak system
+        await processCardMasteryChange(
+          stack.user_id,
+          stack.id,
+          oldRating,
+          rating,
+          stacksContributedThisSession
+        );
+        
         const { data: userStats } = await supabase
           .from('user_stats')
           .select('total_cards_mastered')
@@ -325,21 +400,29 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             .eq('user_id', stack.user_id);
         }
 
-        // Reset test deadline if stack had one (mastery dropped)
+        // Reset test deadline and status if stack had one (mastery dropped)
         if (stack.test_deadline || stack.mastery_reached_at) {
           await supabase
             .from('card_stacks')
             .update({
               test_deadline: null,
               mastery_reached_at: null,
+              status: 'in_progress',
             })
             .eq('id', stack.id);
+          
+          // Delete associated test record if exists
+          await supabase
+            .from('stack_tests')
+            .delete()
+            .eq('stack_id', stack.id);
           
           // Update local stack state
           setStack(prev => ({
             ...prev,
             test_deadline: null,
             mastery_reached_at: null,
+            status: 'in_progress' as const,
           }));
         }
 
@@ -350,7 +433,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       }
     }
 
-    // Check if stack just reached 100% mastery and set test deadline
+    // STEP 4: Check if stack just reached 100% mastery and trigger test
     const masteredCards = updatedCards.filter(c => (c.user_rating || 1) >= CARD_RATINGS.KINDA_KNOW);
     const justReachedMastery = masteredCards.length === updatedCards.length;
     
@@ -359,16 +442,44 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         const masteryDate = new Date();
         const testDeadline = calculateTestDeadline(masteryDate, updatedCards.length);
         
+        // Update legacy fields on card_stacks
         await supabase
           .from('card_stacks')
           .update({
             mastery_reached_at: masteryDate.toISOString(),
             test_deadline: testDeadline.toISOString(),
             mastered_count: masteredCards.length,
+            cards_mastered: masteredCards.length,
           })
           .eq('id', stack.id);
+        
+        // Trigger test creation with new streak system v2
+        const testResult = await checkAndTriggerTest(
+          stack.user_id,
+          stack.id,
+          updatedCards.length,
+          true // allCardsMastered
+        );
+        
+        if (testResult.triggered) {
+          console.log('Test triggered:', testResult.testId);
+          // Update local stack state
+          setStack(prev => ({
+            ...prev,
+            mastery_reached_at: masteryDate.toISOString(),
+            test_deadline: testResult.displayDeadline || testDeadline.toISOString(),
+            status: 'pending_test' as const,
+          }));
+        } else {
+          console.log('Test not triggered:', testResult.message);
+          setStack(prev => ({
+            ...prev,
+            mastery_reached_at: masteryDate.toISOString(),
+            test_deadline: testDeadline.toISOString(),
+          }));
+        }
       } catch (e) {
-        console.error('Mastery deadline tracking error:', e);
+        console.error('Mastery deadline/test tracking error:', e);
       }
     }
 
@@ -415,12 +526,15 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
 
   if (!currentCard) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="bg-white rounded-3xl p-12 shadow-talka-lg text-center max-w-md">
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <div className="rounded-3xl p-12 text-center max-w-md" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}>
           <div className="text-6xl mb-6">🏆</div>
-          <h2 className="font-display text-3xl font-semibold gradient-text mb-4">All Done!</h2>
+          <h2 className="font-display text-3xl font-semibold mb-4" style={{ color: 'var(--accent-green)' }}>All Done!</h2>
           <Link href="/dashboard">
-            <Button className="bg-gradient-purple-pink text-white font-bold rounded-2xl px-8 py-4 shadow-purple">
+            <Button 
+              className="text-white font-bold rounded-2xl px-8 py-4 hover:-translate-y-0.5 transition-all"
+              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
+            >
               Back to Dashboard
             </Button>
           </Link>
@@ -430,13 +544,14 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col relative z-10">
+    <div className="min-h-screen flex flex-col relative z-10 transition-colors duration-300" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {showConfetti && <Confetti recycle={false} numberOfPieces={500} />}
 
       {/* Progress Bar */}
-      <div className="h-2 bg-slate-200">
+      <div className="h-2" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <motion.div
-          className="h-full bg-gradient-purple-pink"
+          className="h-full"
+          style={{ background: 'linear-gradient(to right, #58cc02, #1cb0f6)' }}
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.3 }}
@@ -444,9 +559,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       </div>
 
       {/* Header */}
-      <div className="px-3 sm:px-6 py-3 sm:py-4 bg-white border-b-2 border-slate-100 flex justify-between items-center">
+      <div className="px-3 sm:px-6 py-3 sm:py-4 border-b-2 flex justify-between items-center transition-colors duration-300" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
         <Link href="/dashboard">
-          <Button variant="ghost" className="text-slate-500 hover:text-slate-700 font-semibold rounded-xl px-2 sm:px-4">
+          <Button variant="ghost" className="font-semibold rounded-xl px-2 sm:px-4 hover:bg-[var(--bg-secondary)]" style={{ color: 'var(--text-secondary)' }}>
             <ArrowLeft className="h-5 w-5 sm:mr-2" />
             <span className="hidden sm:inline">Back</span>
           </Button>
@@ -456,7 +571,11 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             onClick={() => { setReverseMode(!reverseMode); setIsFlipped(false); }}
             variant="ghost"
             size="sm"
-            className={`font-semibold rounded-xl p-2 sm:px-3 ${reverseMode ? 'bg-talka-purple/10 text-talka-purple' : 'text-slate-500'}`}
+            className="font-semibold rounded-xl p-2 sm:px-3"
+            style={{ 
+              backgroundColor: reverseMode ? 'rgba(88, 204, 2, 0.15)' : 'transparent',
+              color: reverseMode ? 'var(--accent-green)' : 'var(--text-secondary)'
+            }}
             title="Reverse Mode"
           >
             <ArrowLeftRight className="h-5 w-5 sm:mr-1" />
@@ -469,7 +588,11 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             }}
             variant="ghost"
             size="sm"
-            className={`font-semibold rounded-xl p-2 sm:px-3 ${ttsProvider === 'elevenlabs' ? 'bg-gradient-to-r from-amber-400 to-orange-500 text-white' : 'text-slate-500'}`}
+            className="font-semibold rounded-xl p-2 sm:px-3"
+            style={{ 
+              background: ttsProvider === 'elevenlabs' ? 'linear-gradient(135deg, #ff9600, #ffaa00)' : 'transparent',
+              color: ttsProvider === 'elevenlabs' ? 'white' : 'var(--text-secondary)'
+            }}
             title={ttsProvider === 'elevenlabs' ? 'Using premium AI voices' : 'Using browser voices'}
           >
             <Sparkles className="h-5 w-5 sm:mr-1" />
@@ -479,19 +602,36 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             onClick={() => setVoiceGender(voiceGender === 'female' ? 'male' : 'female')}
             variant="ghost"
             size="sm"
-            className={`font-semibold rounded-xl p-2 sm:px-3 flex items-center gap-1 ${voiceGender === 'male' ? 'bg-blue-100 text-blue-600' : 'bg-pink-100 text-pink-600'}`}
+            className="font-semibold rounded-xl p-2 sm:px-3 flex items-center gap-1"
+            style={{ 
+              backgroundColor: voiceGender === 'male' ? 'rgba(28, 176, 246, 0.15)' : 'rgba(255, 150, 0, 0.15)',
+              color: voiceGender === 'male' ? '#1cb0f6' : '#ff9600'
+            }}
             title={`Click to switch to ${voiceGender === 'female' ? 'male' : 'female'} voice`}
           >
             <span className="text-lg">{voiceGender === 'female' ? '♀' : '♂'}</span>
           </Button>
-          <span className="text-slate-500 font-semibold px-2 sm:px-3 py-1 bg-slate-100 rounded-xl text-sm">
+          <span className="font-semibold px-2 sm:px-3 py-1 rounded-xl text-sm" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
             {currentIndex + 1}/{cards.length}
           </span>
           {stack.is_completed && (
-            <span className="hidden sm:flex px-3 py-1 bg-gradient-green-cyan text-white font-bold rounded-xl text-sm items-center gap-1">
+            <span className="hidden sm:flex px-3 py-1 text-white font-bold rounded-xl text-sm items-center gap-1" style={{ background: 'linear-gradient(135deg, #58cc02, #1cb0f6)' }}>
               <Trophy className="h-3 w-3" /> Complete
             </span>
           )}
+          {/* Dark Mode Toggle */}
+          <button
+            onClick={toggleDarkMode}
+            className="p-2 rounded-xl transition-all hover:scale-105"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}
+            title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {isDarkMode ? (
+              <Sun className="h-5 w-5" style={{ color: '#ffc800' }} />
+            ) : (
+              <Moon className="h-5 w-5" style={{ color: '#1cb0f6' }} />
+            )}
+          </button>
         </div>
       </div>
 
@@ -500,7 +640,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <div className="w-full max-w-2xl">
           {/* Stack Title */}
           <div className="text-center mb-4 sm:mb-6">
-            <h2 className="font-display text-xl sm:text-2xl font-semibold text-slate-800">
+            <h2 className="font-display text-xl sm:text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
               {capitalizeTitle(stack.title)} {getLanguageEmoji(stack.target_language)}
             </h2>
           </div>
@@ -508,11 +648,20 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           {/* Flashcard */}
           <motion.div
             onClick={() => setIsFlipped(!isFlipped)}
-            className="bg-white border-2 border-slate-200 rounded-3xl p-5 sm:p-8 pt-12 sm:pt-8 min-h-[300px] sm:min-h-[400px] flex flex-col justify-center cursor-pointer hover:shadow-talka-lg hover:border-talka-purple/30 transition-all duration-300 relative shadow-talka-md"
+            className="rounded-3xl p-5 sm:p-8 pt-12 sm:pt-8 min-h-[300px] sm:min-h-[400px] flex flex-col justify-center cursor-pointer transition-all duration-300 relative border-2"
+            style={{ 
+              backgroundColor: 'var(--bg-card)', 
+              borderColor: 'var(--border-color)',
+              boxShadow: 'var(--shadow-md)'
+            }}
+            whileHover={{ 
+              boxShadow: '0 8px 32px rgba(88, 204, 2, 0.15)',
+              borderColor: 'rgba(88, 204, 2, 0.3)'
+            }}
           >
             {/* Level Badge */}
             {stack.cefr_level && (
-              <span className="absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 sm:px-3 py-1 bg-gradient-green-cyan text-white font-bold rounded-xl text-xs sm:text-sm z-10">
+              <span className="absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 sm:px-3 py-1 text-white font-bold rounded-xl text-xs sm:text-sm z-10" style={{ background: 'linear-gradient(135deg, #58cc02, #1cb0f6)' }}>
                 {stack.cefr_level}
               </span>
             )}
@@ -529,7 +678,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                 >
                   <div className="text-center space-y-4">
                     <div className="flex items-center justify-center gap-3">
-                      <h3 className="font-display text-4xl md:text-5xl font-semibold text-slate-800 leading-tight">
+                      <h3 className="font-display text-4xl md:text-5xl font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
                         {reverseMode ? (
                           currentCard.native_translation
                         ) : (
@@ -551,11 +700,11 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           );
                         }}
                         disabled={isTTSLoading}
-                        className={`p-3 rounded-full transition-all hover:scale-110 active:scale-95 ${
-                          isSpeaking || isTTSLoading
-                            ? 'bg-talka-purple text-white animate-pulse'
-                            : 'bg-talka-purple/10 hover:bg-talka-purple/20 text-talka-purple'
-                        }`}
+                        className="p-3 rounded-full transition-all hover:scale-110 active:scale-95"
+                        style={{ 
+                          backgroundColor: isSpeaking || isTTSLoading ? '#58cc02' : 'rgba(88, 204, 2, 0.15)',
+                          color: isSpeaking || isTTSLoading ? 'white' : '#58cc02'
+                        }}
                         title={ttsProvider === 'elevenlabs' ? 'Premium AI voice' : 'Listen to pronunciation'}
                       >
                         {isTTSLoading ? (
@@ -570,23 +719,23 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           e.stopPropagation();
                           setVoiceGender(voiceGender === 'female' ? 'male' : 'female');
                         }}
-                        className={`p-2 rounded-full transition-all hover:scale-110 active:scale-95 text-sm font-bold ${
-                          voiceGender === 'male' 
-                            ? 'bg-blue-100 text-blue-600 hover:bg-blue-200' 
-                            : 'bg-pink-100 text-pink-600 hover:bg-pink-200'
-                        }`}
+                        className="p-2 rounded-full transition-all hover:scale-110 active:scale-95 text-sm font-bold"
+                        style={{ 
+                          backgroundColor: voiceGender === 'male' ? 'rgba(28, 176, 246, 0.15)' : 'rgba(255, 150, 0, 0.15)',
+                          color: voiceGender === 'male' ? '#1cb0f6' : '#ff9600'
+                        }}
                         title={`Switch to ${voiceGender === 'female' ? 'male' : 'female'} voice`}
                       >
                         {voiceGender === 'female' ? '♀' : '♂'}
                       </button>
                     </div>
                     {!reverseMode && (
-                      <span className="inline-block px-4 py-2 bg-talka-purple/10 text-talka-purple font-semibold rounded-xl">
+                      <span className="inline-block px-4 py-2 font-semibold rounded-xl" style={{ backgroundColor: 'rgba(88, 204, 2, 0.15)', color: '#58cc02' }}>
                         {currentCard.tone_advice}
                       </span>
                     )}
                   </div>
-                  <p className="text-slate-400 text-sm font-medium mt-8">
+                  <p className="text-sm font-medium mt-8" style={{ color: 'var(--text-muted)' }}>
                     Tap anywhere to flip ✨
                   </p>
                 </motion.div>
@@ -601,7 +750,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                 >
                   <div className="text-center space-y-4">
                     <div className="flex items-center justify-center gap-3">
-                      <h3 className="font-display text-3xl md:text-4xl font-semibold text-slate-800">
+                      <h3 className="font-display text-3xl md:text-4xl font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {reverseMode ? (
                           <WordHoverText
                             text={currentCard.target_phrase}
@@ -623,16 +772,18 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           );
                         }}
                         disabled={isTTSLoading}
-                        className={`p-2 rounded-full transition-all hover:scale-110 active:scale-95 ${
-                          isSpeaking ? 'bg-slate-300 text-slate-700' : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                        }`}
+                        className="p-2 rounded-full transition-all hover:scale-110 active:scale-95"
+                        style={{ 
+                          backgroundColor: isSpeaking ? 'var(--bg-secondary)' : 'var(--bg-secondary)',
+                          color: 'var(--text-secondary)'
+                        }}
                         title={ttsProvider === 'elevenlabs' ? 'Premium AI voice' : 'Listen to pronunciation'}
                       >
                         <Volume2 className="w-5 h-5" />
                       </button>
                     </div>
                     <div className="flex items-center justify-center gap-2">
-                      <p className="text-xl text-slate-500 font-medium">
+                      <p className="text-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
                         {reverseMode ? (
                           currentCard.native_translation
                         ) : (
@@ -654,9 +805,11 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           );
                         }}
                         disabled={isTTSLoading}
-                        className={`p-1.5 rounded-full transition-all hover:scale-110 active:scale-95 ${
-                          isSpeaking ? 'bg-talka-purple text-white' : 'bg-talka-purple/10 hover:bg-talka-purple/20 text-talka-purple'
-                        }`}
+                        className="p-1.5 rounded-full transition-all hover:scale-110 active:scale-95"
+                        style={{ 
+                          backgroundColor: isSpeaking ? '#58cc02' : 'rgba(88, 204, 2, 0.15)',
+                          color: isSpeaking ? 'white' : '#58cc02'
+                        }}
                         title={ttsProvider === 'elevenlabs' ? 'Premium AI voice' : 'Listen to pronunciation'}
                       >
                         <Volume2 className="w-4 h-4" />
@@ -668,7 +821,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   <button
                     onClick={(e) => { e.stopPropagation(); showBreakdown ? setShowBreakdown(false) : fetchBreakdown(currentCard); }}
                     disabled={isLoadingBreakdown}
-                    className="mx-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-amber-600 hover:text-amber-700 font-medium rounded-lg hover:bg-amber-50 transition-all disabled:opacity-50"
+                    className="mx-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition-all disabled:opacity-50"
+                    style={{ color: '#ff9600', backgroundColor: 'rgba(255, 150, 0, 0.1)' }}
                   >
                     {isLoadingBreakdown ? (
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -774,25 +928,27 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   </AnimatePresence>
 
                   <div className="flex items-center justify-center">
-                    <span className="px-4 py-2 bg-talka-purple/10 text-talka-purple font-semibold rounded-xl">
+                    <span className="px-4 py-2 font-semibold rounded-xl" style={{ backgroundColor: 'rgba(88, 204, 2, 0.15)', color: '#58cc02' }}>
                       {currentCard.tone_advice}
                     </span>
                   </div>
 
                   {currentCardTestResult && (
-                    <div className={`text-center px-4 py-2 rounded-xl text-sm font-semibold ${
-                      currentCardTestResult.passed 
-                        ? 'bg-green-100 text-green-600' 
-                        : 'bg-red-100 text-red-600'
-                    }`}>
+                    <div 
+                      className="text-center px-4 py-2 rounded-xl text-sm font-semibold"
+                      style={{ 
+                        backgroundColor: currentCardTestResult.passed ? 'rgba(88, 204, 2, 0.15)' : 'rgba(255, 75, 75, 0.15)',
+                        color: currentCardTestResult.passed ? '#58cc02' : '#ff4b4b'
+                      }}
+                    >
                       Test: {currentCardTestResult.passed ? 'Passed ✓' : 'Failed ✗'}
                       {currentCardTestResult.correction && (
-                        <span className="text-amber-500 ml-2">• Has correction</span>
+                        <span style={{ color: '#ff9600' }} className="ml-2">• Has correction</span>
                       )}
                     </div>
                   )}
 
-                  <p className="text-center text-slate-400 text-sm font-medium">
+                  <p className="text-center text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
                     Rate your knowledge below 👇
                   </p>
                 </motion.div>
@@ -811,16 +967,20 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                 className="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3"
               >
                 {RATING_OPTIONS.map((option, index) => (
-                  <Button
+                  <button
                     key={option.value}
                     onClick={() => handleRating(option.value)}
-                    className={`bg-gradient-to-r ${option.gradient} text-white font-semibold rounded-xl px-3 sm:px-4 py-4 sm:py-3 text-sm min-h-[56px] sm:min-h-0 hover:opacity-90 hover:-translate-y-0.5 transition-all shadow-md active:scale-95 ${
+                    className={`text-white font-bold rounded-2xl px-3 sm:px-4 py-4 sm:py-3 text-sm min-h-[56px] sm:min-h-0 hover:-translate-y-0.5 transition-all active:translate-y-0 ${
                       index === RATING_OPTIONS.length - 1 ? 'col-span-2 sm:col-span-1 max-w-[200px] mx-auto sm:max-w-none' : ''
                     }`}
+                    style={{ 
+                      backgroundColor: option.color,
+                      boxShadow: `0 4px 0 ${option.shadow}`
+                    }}
                   >
                     {option.label}
-                    {currentCard.user_rating === option.value && <Check className="ml-1 h-4 w-4" />}
-                  </Button>
+                    {currentCard.user_rating === option.value && <Check className="inline ml-1 h-4 w-4" />}
+                  </button>
                 ))}
               </motion.div>
             )}
@@ -830,7 +990,12 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           <div className="mt-6 flex justify-center">
             <Link href="/dashboard">
               <button 
-                className="inline-flex items-center justify-center bg-slate-100 border-2 border-slate-300 text-slate-600 hover:text-slate-800 hover:bg-slate-200 hover:border-slate-400 font-semibold rounded-xl px-6 py-3 transition-colors"
+                className="inline-flex items-center justify-center border-2 font-semibold rounded-xl px-6 py-3 transition-all hover:-translate-y-0.5"
+                style={{ 
+                  backgroundColor: 'var(--bg-secondary)', 
+                  borderColor: 'var(--border-color)',
+                  color: 'var(--text-secondary)'
+                }}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Return to Dashboard
@@ -845,27 +1010,29 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50"
         >
           <motion.div 
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
-            className="bg-white rounded-3xl p-6 sm:p-8 shadow-talka-lg max-w-md w-full text-center"
+            className="rounded-3xl p-6 sm:p-8 max-w-md w-full text-center"
+            style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}
           >
             <div className="text-6xl mb-4">🏆</div>
-            <h2 className="font-display text-3xl font-semibold gradient-text mb-4">Ready for the Test!</h2>
-            <p className="text-slate-500 font-medium mb-8">
+            <h2 className="font-display text-3xl font-semibold mb-4" style={{ color: '#58cc02' }}>Ready for the Test!</h2>
+            <p className="font-medium mb-8" style={{ color: 'var(--text-secondary)' }}>
               You've rated all cards as "Kinda Know" or "Really Know". Pass the test with 100% to complete this stack!
             </p>
             <div className="space-y-3">
-              <Button 
+              <button 
                 onClick={() => { setShowMasteredModal(false); setCurrentIndex(0); setIsFlipped(false); }}
-                className="w-full bg-gradient-blue-purple text-white font-bold rounded-2xl px-8 py-4 shadow-purple"
+                className="w-full text-white font-bold rounded-2xl px-8 py-4 hover:-translate-y-0.5 transition-all active:translate-y-0 flex items-center justify-center"
+                style={{ backgroundColor: '#1cb0f6', boxShadow: '0 4px 0 #1899d6' }}
               >
                 <RotateCcw className="h-5 w-5 mr-2" />
                 Review Again
-              </Button>
-              <Button 
+              </button>
+              <button 
                 onClick={() => {
                   setShowMasteredModal(false);
                   setTestMode(true);
@@ -874,14 +1041,20 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   setTestResults([]);
                   setCurrentFeedback(null);
                 }}
-                className="w-full bg-gradient-green-cyan text-white font-bold rounded-2xl px-8 py-4 shadow-green"
+                className="w-full text-white font-bold rounded-2xl px-8 py-4 hover:-translate-y-0.5 transition-all active:translate-y-0 flex items-center justify-center"
+                style={{ backgroundColor: '#58cc02', boxShadow: '0 4px 0 #46a302' }}
               >
                 <PenLine className="h-5 w-5 mr-2" />
                 Take Test
-              </Button>
+              </button>
               <Link href="/dashboard" className="block">
                 <button 
-                  className="w-full inline-flex items-center justify-center bg-slate-100 border-2 border-slate-300 text-slate-600 hover:text-slate-800 hover:bg-slate-200 hover:border-slate-400 font-semibold rounded-2xl px-8 py-4 transition-colors"
+                  className="w-full inline-flex items-center justify-center border-2 font-semibold rounded-2xl px-8 py-4 transition-all hover:-translate-y-0.5"
+                  style={{ 
+                    backgroundColor: 'var(--bg-secondary)', 
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-secondary)'
+                  }}
                 >
                   Return to Dashboard
                 </button>
@@ -896,31 +1069,32 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50"
         >
           <motion.div 
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
-            className="bg-white rounded-3xl sm:rounded-3xl p-5 sm:p-8 shadow-talka-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            className="rounded-3xl sm:rounded-3xl p-5 sm:p-8 max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}
           >
             {/* Progress */}
             <div className="mb-4 sm:mb-6">
-              <div className="flex justify-between text-sm font-semibold text-slate-500 mb-2">
+              <div className="flex justify-between text-sm font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
                 <span>Question {testCardIndex + 1} of {cards.length}</span>
                 <span>{Math.round((testCardIndex / cards.length) * 100)}%</span>
               </div>
-              <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                 <div 
-                  className="h-full bg-gradient-purple-pink transition-all duration-300"
-                  style={{ width: `${(testCardIndex / cards.length) * 100}%` }}
+                  className="h-full transition-all duration-300"
+                  style={{ width: `${(testCardIndex / cards.length) * 100}%`, background: 'linear-gradient(to right, #58cc02, #1cb0f6)' }}
                 />
               </div>
             </div>
 
             {/* Question */}
             <div className="text-center mb-6 sm:mb-8">
-              <p className="text-slate-500 font-medium mb-2 text-sm sm:text-base">Translate to {stack.target_language}:</p>
-              <h3 className="font-display text-xl sm:text-2xl md:text-3xl font-semibold text-slate-800">
+              <p className="font-medium mb-2 text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>Translate to {stack.target_language}:</p>
+              <h3 className="font-display text-xl sm:text-2xl md:text-3xl font-semibold" style={{ color: 'var(--text-primary)' }}>
                 {cards[testCardIndex]?.native_translation}
               </h3>
             </div>
@@ -932,7 +1106,12 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   value={testAnswer}
                   onChange={(e) => setTestAnswer(e.target.value)}
                   placeholder={`Type your answer in ${stack.target_language}...`}
-                  className="bg-slate-50 border-2 border-slate-200 rounded-2xl text-base sm:text-lg py-4 sm:py-6 h-14 sm:h-16 font-medium focus:border-talka-purple focus:ring-0 placeholder:text-slate-400"
+                  className="rounded-2xl text-base sm:text-lg py-4 sm:py-6 h-14 sm:h-16 font-medium focus:ring-2 focus:ring-[#58cc02]"
+                  style={{ 
+                    backgroundColor: 'var(--bg-secondary)', 
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-primary)'
+                  }}
                   disabled={isGrading}
                   autoComplete="off"
                   autoCapitalize="off"
@@ -942,10 +1121,11 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                     }
                   }}
                 />
-                <Button
+                <button
                   onClick={handleGradeAnswer}
                   disabled={!testAnswer.trim() || isGrading}
-                  className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 min-h-[56px] shadow-purple disabled:opacity-50 active:scale-[0.98]"
+                  className="w-full text-white font-bold rounded-2xl py-4 min-h-[56px] disabled:opacity-50 active:translate-y-0 hover:-translate-y-0.5 transition-all flex items-center justify-center"
+                  style={{ backgroundColor: '#58cc02', boxShadow: '0 4px 0 #46a302' }}
                 >
                   {isGrading ? (
                     <>
@@ -955,7 +1135,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   ) : (
                     'Submit Answer ✨'
                   )}
-                </Button>
+                </button>
               </div>
             ) : (
               <motion.div
@@ -964,53 +1144,55 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                 className="space-y-4"
               >
                 {/* Result */}
-                <div className={`flex items-center justify-center gap-3 p-4 rounded-2xl ${
-                  currentFeedback.passed ? 'bg-green-100' : 'bg-red-100'
-                }`}>
+                <div 
+                  className="flex items-center justify-center gap-3 p-4 rounded-2xl"
+                  style={{ 
+                    backgroundColor: currentFeedback.passed ? 'rgba(88, 204, 2, 0.15)' : 'rgba(255, 75, 75, 0.15)'
+                  }}
+                >
                   {currentFeedback.passed ? (
-                    <Check className="h-6 w-6 text-green-500" />
+                    <Check className="h-6 w-6" style={{ color: '#58cc02' }} />
                   ) : (
-                    <X className="h-6 w-6 text-red-500" />
+                    <X className="h-6 w-6" style={{ color: '#ff4b4b' }} />
                   )}
-                  <span className={`text-lg font-bold ${
-                    currentFeedback.passed ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <span className="text-lg font-bold" style={{ color: currentFeedback.passed ? '#58cc02' : '#ff4b4b' }}>
                     {currentFeedback.passed ? 'Correct! 🎉' : 'Not quite right'}
                   </span>
                 </div>
 
-                <div className="bg-slate-50 rounded-2xl p-4 border-2 border-slate-100">
-                  <p className="text-slate-400 text-sm font-semibold mb-1">Your answer:</p>
-                  <p className="text-slate-700 font-medium">{testAnswer}</p>
+                <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                  <p className="text-sm font-semibold mb-1" style={{ color: 'var(--text-muted)' }}>Your answer:</p>
+                  <p className="font-medium" style={{ color: 'var(--text-primary)' }}>{testAnswer}</p>
                 </div>
 
-                <div className="bg-green-50 rounded-2xl p-4 border-2 border-green-100">
-                  <p className="text-green-600 text-sm font-semibold mb-1">Correct answer:</p>
-                  <p className="text-green-700 font-bold">{cards[testCardIndex]?.target_phrase}</p>
+                <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'rgba(88, 204, 2, 0.1)', borderColor: 'rgba(88, 204, 2, 0.3)' }}>
+                  <p className="text-sm font-semibold mb-1" style={{ color: '#58cc02' }}>Correct answer:</p>
+                  <p className="font-bold" style={{ color: '#58cc02' }}>{cards[testCardIndex]?.target_phrase}</p>
                 </div>
 
                 {currentFeedback.correction && (
-                  <div className="bg-amber-50 rounded-2xl p-4 border-2 border-amber-200">
-                    <p className="text-amber-600 text-sm font-semibold mb-1">Suggested correction:</p>
-                    <p className="text-amber-700 font-medium">{currentFeedback.correction}</p>
+                  <div className="rounded-2xl p-4 border-2" style={{ backgroundColor: 'rgba(255, 150, 0, 0.1)', borderColor: 'rgba(255, 150, 0, 0.3)' }}>
+                    <p className="text-sm font-semibold mb-1" style={{ color: '#ff9600' }}>Suggested correction:</p>
+                    <p className="font-medium" style={{ color: '#ff9600' }}>{currentFeedback.correction}</p>
                   </div>
                 )}
 
-                <p className="text-slate-500 text-center font-medium italic">{currentFeedback.feedback}</p>
+                <p className="text-center font-medium italic" style={{ color: 'var(--text-secondary)' }}>{currentFeedback.feedback}</p>
 
-                <Button
+                <button
                   onClick={handleNextTestCard}
-                  className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 shadow-purple"
+                  className="w-full text-white font-bold rounded-2xl py-4 hover:-translate-y-0.5 transition-all active:translate-y-0"
+                  style={{ backgroundColor: '#58cc02', boxShadow: '0 4px 0 #46a302' }}
                 >
                   {testCardIndex < cards.length - 1 ? 'Next Question →' : 'See Results 🏆'}
-                </Button>
+                </button>
               </motion.div>
             )}
 
             <Link href="/dashboard" className="block">
-              <Button variant="ghost" className="w-full mt-4 text-slate-400 hover:text-slate-600 font-semibold">
+              <button className="w-full mt-4 font-semibold py-2 transition-colors" style={{ color: 'var(--text-muted)' }}>
                 Cancel Test
-              </Button>
+              </button>
             </Link>
           </motion.div>
         </motion.div>
@@ -1021,47 +1203,48 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-slate-900/90 backdrop-blur-sm flex items-center justify-center p-6 z-50"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50"
         >
           <motion.div 
             initial={{ scale: 0.9, y: 20 }}
             animate={{ scale: 1, y: 0 }}
-            className="bg-white rounded-3xl p-8 shadow-talka-lg max-w-lg w-full text-center"
+            className="rounded-3xl p-8 max-w-lg w-full text-center"
+            style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}
           >
             {testResults.filter(r => r.passed).length === cards.length ? (
               <>
                 <div className="text-7xl mb-4">🏆</div>
-                <h2 className="font-display text-3xl font-semibold gradient-text mb-2">Perfect Score!</h2>
-                <p className="text-green-500 text-xl font-bold mb-6">100% - Stack Complete! 🎉</p>
+                <h2 className="font-display text-3xl font-semibold mb-2" style={{ color: '#58cc02' }}>Perfect Score!</h2>
+                <p className="text-xl font-bold mb-6" style={{ color: '#58cc02' }}>100% - Stack Complete! 🎉</p>
               </>
             ) : (
               <>
-                <div className="w-24 h-24 rounded-full bg-gradient-purple-pink flex items-center justify-center mx-auto mb-4">
+                <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'linear-gradient(135deg, #ff9600, #ffaa00)' }}>
                   <span className="text-3xl font-bold text-white">
                     {Math.round((testResults.filter(r => r.passed).length / cards.length) * 100)}%
                   </span>
                 </div>
-                <h2 className="font-display text-3xl font-semibold text-slate-800 mb-2">Test Complete</h2>
-                <p className="text-slate-500 font-medium mb-6">
+                <h2 className="font-display text-3xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Test Complete</h2>
+                <p className="font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>
                   {testResults.filter(r => r.passed).length} of {cards.length} correct
                 </p>
               </>
             )}
 
             {testResults.some(r => r.correction) && (
-              <div className="bg-slate-50 rounded-2xl p-4 mb-6 text-left max-h-48 overflow-y-auto border-2 border-slate-100">
-                <p className="text-slate-500 text-sm font-semibold mb-2">Notes for review:</p>
+              <div className="rounded-2xl p-4 mb-6 text-left max-h-48 overflow-y-auto border-2" style={{ backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)' }}>
+                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>Notes for review:</p>
                 {testResults.filter(r => r.correction).map((note, idx) => (
-                  <div key={idx} className="mb-2 pb-2 border-b border-slate-200 last:border-0">
-                    <p className="text-sm font-medium text-slate-700">{note.targetPhrase}</p>
-                    <p className="text-xs text-amber-600 font-medium">{note.correction}</p>
+                  <div key={idx} className="mb-2 pb-2 last:border-0" style={{ borderBottom: '1px solid var(--border-color)' }}>
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{note.targetPhrase}</p>
+                    <p className="text-xs font-medium" style={{ color: '#ff9600' }}>{note.correction}</p>
                   </div>
                 ))}
               </div>
             )}
 
             <div className="space-y-3">
-              <Button
+              <button
                 onClick={() => {
                   setTestComplete(false);
                   setTestMode(true);
@@ -1070,13 +1253,19 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                   setTestResults([]);
                   setCurrentFeedback(null);
                 }}
-                className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 shadow-purple"
+                className="w-full text-white font-bold rounded-2xl py-4 hover:-translate-y-0.5 transition-all active:translate-y-0"
+                style={{ backgroundColor: '#ff9600', boxShadow: '0 4px 0 #cc7800' }}
               >
                 Retake Test
-              </Button>
+              </button>
               <Link href="/dashboard" className="block">
                 <button 
-                  className="w-full inline-flex items-center justify-center bg-slate-100 border-2 border-slate-300 text-slate-600 hover:text-slate-800 hover:bg-slate-200 hover:border-slate-400 font-semibold rounded-2xl py-4 transition-colors"
+                  className="w-full inline-flex items-center justify-center border-2 font-semibold rounded-2xl py-4 transition-all hover:-translate-y-0.5"
+                  style={{ 
+                    backgroundColor: 'var(--bg-secondary)', 
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-secondary)'
+                  }}
                 >
                   Back to Dashboard
                 </button>
@@ -1159,44 +1348,64 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           completion_date: isComplete ? new Date().toISOString() : stack.completion_date,
           last_test_date: new Date().toISOString(),
           test_deadline: null,
+          status: isComplete ? 'completed' : 'pending_test',
         })
         .eq('id', stack.id);
+
+      // STREAK SYSTEM V2: Handle test completion with freeze/unfreeze logic
+      if (isComplete) {
+        try {
+          // Get the test record for this stack
+          const { data: testRecord } = await supabase
+            .from('stack_tests')
+            .select('id')
+            .eq('stack_id', stack.id)
+            .single();
+          
+          if (testRecord) {
+            const completionResult = await completeTest(testRecord.id, true);
+            console.log('Test completion result:', completionResult);
+            
+            if (completionResult.unfrozen) {
+              // Toast or notification could be added here
+              console.log('Streak unfrozen! New streak:', completionResult.newStreak);
+            }
+          }
+        } catch (e) {
+          console.error('Streak system v2 test completion error:', e);
+        }
+      }
 
       if (passedCount > 0) {
         try {
           const { data: userStats } = await supabase
             .from('user_stats')
-            .select('current_week_cards, current_week_start, weekly_cards_history, pause_weekly_tracking, daily_cards_learned, daily_cards_date, current_streak, longest_streak, streak_frozen, streak_frozen_stacks, total_cards_mastered, tests_completed, perfect_test_streak, daily_goal_streak, ice_breaker_count')
+            .select('current_week_cards, current_week_start, cards_mastered_today, last_mastery_date, current_streak, longest_streak, streak_frozen, streak_frozen_stacks, total_cards_mastered, tests_completed, perfect_test_streak, daily_goal_streak, ice_breaker_count')
             .eq('user_id', stack.user_id)
             .single();
 
           if (userStats) {
             let newWeekCards = userStats.current_week_cards || 0;
-            let newHistory = userStats.weekly_cards_history || [];
             let newWeekStart = userStats.current_week_start;
             let newTotalMastered = (userStats.total_cards_mastered || 0) + passedCount;
 
-            if (!userStats.pause_weekly_tracking) {
-              if (shouldResetWeek(userStats.current_week_start)) {
-                if (userStats.current_week_cards > 0 && userStats.current_week_start) {
-                  newHistory = archiveWeek(userStats.current_week_cards, newHistory, userStats.current_week_start);
-                }
-                newWeekCards = 0;
-                newWeekStart = getWeekStartUTC();
-              }
-
-              const cardsToAdd = Math.min(passedCount, WEEKLY_CARD_CAP - newWeekCards);
-              newWeekCards += cardsToAdd;
+            // Reset week counter if new week
+            if (shouldResetWeek(userStats.current_week_start)) {
+              newWeekCards = 0;
+              newWeekStart = getWeekStartUTC();
             }
 
+            const cardsToAdd = Math.min(passedCount, WEEKLY_CARD_CAP - newWeekCards);
+            newWeekCards += cardsToAdd;
+
             const today = getTodayDate();
-            const needsReset = isNewDay(userStats.daily_cards_date);
-            let newDailyCards = needsReset ? passedCount : (userStats.daily_cards_learned || 0) + passedCount;
+            const needsReset = isNewDay(userStats.last_mastery_date);
+            let newDailyCards = needsReset ? passedCount : (userStats.cards_mastered_today || 0) + passedCount;
             let newStreak = userStats.current_streak || 0;
             let newLongestStreak = userStats.longest_streak || 0;
 
             if (!userStats.streak_frozen) {
-              const previousDaily = needsReset ? 0 : (userStats.daily_cards_learned || 0);
+              const previousDaily = needsReset ? 0 : (userStats.cards_mastered_today || 0);
               if (previousDaily < STREAK_DAILY_REQUIREMENT && newDailyCards >= STREAK_DAILY_REQUIREMENT) {
                 newStreak += 1;
                 if (newStreak > newLongestStreak) {
@@ -1217,7 +1426,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
               : 0; // Reset if not perfect
             
             // Daily goal streak: increment if we just hit the daily goal today
-            const previousDaily = needsReset ? 0 : (userStats.daily_cards_learned || 0);
+            const previousDaily = needsReset ? 0 : (userStats.cards_mastered_today || 0);
             const justMetDailyGoal = previousDaily < STREAK_DAILY_REQUIREMENT && newDailyCards >= STREAK_DAILY_REQUIREMENT;
             const newDailyGoalStreak = justMetDailyGoal 
               ? (userStats.daily_goal_streak || 0) + 1 
@@ -1233,10 +1442,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
               .update({
                 current_week_cards: newWeekCards,
                 current_week_start: newWeekStart,
-                weekly_cards_history: newHistory,
                 total_cards_mastered: newTotalMastered,
-                daily_cards_learned: newDailyCards,
-                daily_cards_date: today,
+                cards_mastered_today: newDailyCards,
+                last_mastery_date: today,
                 current_streak: newStreak,
                 longest_streak: newLongestStreak,
                 last_activity_date: today,
@@ -1268,7 +1476,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                     current_streak: newStreak,
                     longest_streak: newLongestStreak,
                     total_cards_mastered: newTotalMastered,
-                    daily_cards_learned: newDailyCards,
+                    cards_mastered_today: newDailyCards,
                   },
                   {
                     tests_completed: newTestsCompleted,

@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { LogOut } from 'lucide-react';
+import { LogOut, Snowflake } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import AuthModal from '@/components/auth/AuthModal';
 import { NotificationBell } from '@/components/notifications';
+import ThemeToggle from '@/components/dashboard/ThemeToggle';
 
 interface TopNavProps {
   streak?: number;
@@ -17,6 +18,7 @@ interface TopNavProps {
   avatarUrl?: string;
   isLoggedIn?: boolean;
   userId?: string;
+  dataLoaded?: boolean;
 }
 
 const navLinks = [
@@ -25,7 +27,7 @@ const navLinks = [
   { href: '/leaderboard', label: 'Leaderboards', requiresAuth: true },
 ];
 
-export default function TopNav({ streak = 0, streakFrozen = false, displayName = 'U', avatarUrl, isLoggedIn = false, userId }: TopNavProps) {
+export default function TopNav({ streak = 0, streakFrozen = false, displayName = 'U', avatarUrl, isLoggedIn = false, userId, dataLoaded = false }: TopNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -55,12 +57,12 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
   };
 
   return (
-    <nav className="hidden md:flex bg-white px-8 py-5 shadow-talka-sm sticky top-0 z-[100] justify-between items-center">
+    <nav className="hidden md:flex bg-[var(--bg-card)] dark:bg-[var(--bg-card)] px-8 py-5 shadow-[var(--shadow-sm)] border-b-2 border-[var(--border-color)] sticky top-0 z-[100] justify-between items-center transition-all duration-300">
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2">
-        <Logo size="lg" />
-        <span className="font-display text-3xl font-semibold gradient-text">
-          LOCKN
+        <Logo size="xl" />
+        <span className="font-display text-3xl font-semibold text-[#58cc02]">
+          Lockn
         </span>
       </Link>
 
@@ -80,8 +82,8 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
                   setShowAuthModal(true);
                 }}
                 className={cn(
-                  'px-6 py-3 rounded-[20px] font-semibold text-base transition-all duration-300',
-                  'text-slate-500 hover:text-slate-800 hover:bg-talka-purple/10 hover:-translate-y-0.5'
+                  'px-6 py-3 rounded-xl font-bold text-base transition-all duration-200',
+                  'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
                 )}
               >
                 {link.label}
@@ -94,10 +96,10 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
               key={link.href}
               href={link.href}
               className={cn(
-                'px-6 py-3 rounded-[20px] font-semibold text-base transition-all duration-300',
+                'px-6 py-3 rounded-xl font-bold text-base transition-all duration-200',
                 isActive
-                  ? 'bg-gradient-purple-pink text-white shadow-purple'
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-talka-purple/10 hover:-translate-y-0.5'
+                  ? 'text-[#58cc02] bg-[rgba(88,204,2,0.1)]'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
               )}
             >
               {link.label}
@@ -109,35 +111,40 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
       {/* User Section - Only show when logged in */}
       {isLoggedIn ? (
         <div className="flex items-center gap-4">
-          {/* Streak Badge - Always show streak, add frozen indicator when needed */}
-          <div className="flex items-center gap-2">
-            {/* Main Streak */}
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
+          {/* Streak Badge - Shows skeleton until data loaded, then snowflake when frozen or fire when active */}
+          {!dataLoaded ? (
+            <div className="streak-badge flex items-center gap-2 px-4 py-2 rounded-[20px] font-bold text-white relative overflow-hidden bg-slate-300 dark:bg-slate-600 animate-pulse" style={{ minWidth: '70px', height: '36px' }} />
+          ) : (
             <div 
-              className="flex items-center gap-2 px-4 py-2 rounded-[20px] font-bold text-white bg-gradient-orange-yellow shadow-orange"
-              title={`${streak} day streak`}
+              className="streak-badge flex items-center gap-2 px-4 py-2 rounded-[20px] font-bold text-white relative overflow-hidden"
+              style={{ 
+                background: streakFrozen 
+                  ? 'linear-gradient(135deg, #1cb0f6, #00d4ff)' 
+                  : 'linear-gradient(135deg, #ff9600, #ffaa00)' 
+              }}
+              title={streakFrozen ? `${streak} day streak (frozen)` : `${streak} day streak`}
             >
-              🔥 {streak}
+              {streakFrozen ? (
+                <Snowflake className="h-5 w-5 text-white" strokeWidth={2.5} />
+              ) : (
+                <span className="streak-icon text-xl animate-[flameFlicker_1.5s_ease-in-out_infinite]">🔥</span>
+              )}
+              <span>{streak}</span>
             </div>
-            {/* Frozen Indicator - Shows alongside streak when frozen */}
-            {streakFrozen && (
-              <div 
-                className="flex items-center gap-1 px-3 py-2 rounded-[20px] font-bold text-white bg-gradient-to-r from-cyan-400 to-blue-500 shadow-[0_4px_14px_rgba(34,211,238,0.4)] animate-pulse"
-                title="Streak frozen! Complete pending tests to unfreeze."
-              >
-                ❄️ <span className="text-xs">FROZEN</span>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Notifications Bell */}
           {userId && <NotificationBell userId={userId} />}
           
-          {/* Avatar + Username */}
+          {/* Avatar */}
           <Link 
             href="/dashboard?tab=profile"
-            className="flex items-center gap-3 cursor-pointer transition-all duration-300 hover:scale-105"
+            className="flex items-center gap-3 cursor-pointer transition-all duration-200 hover:scale-105"
           >
-            <div className="w-12 h-12 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-lg text-white shadow-blue overflow-hidden">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1cb0f6] to-[#1a9ad6] flex items-center justify-center font-bold text-lg text-white shadow-[var(--shadow-sm)] overflow-hidden">
               {avatarUrl ? (
                 <img 
                   src={avatarUrl} 
@@ -148,15 +155,12 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
                 getInitials(displayName)
               )}
             </div>
-            <span className="font-semibold text-slate-700 hidden lg:inline">
-              {displayName}
-            </span>
           </Link>
 
           {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-3 rounded-[20px] font-semibold text-slate-500 hover:text-red-500 hover:bg-red-50 transition-all duration-300"
+            className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold text-[var(--text-secondary)] hover:text-[#ff4b4b] hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
             title="Logout"
           >
             <LogOut className="h-5 w-5" />
@@ -164,12 +168,15 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
         </div>
       ) : (
         <div className="flex items-center gap-3">
+          {/* Theme Toggle */}
+          <ThemeToggle />
+          
           <button
             onClick={() => {
               setAuthModalMode('login');
               setShowAuthModal(true);
             }}
-            className="px-6 py-3 rounded-[20px] font-semibold text-base text-slate-600 hover:text-talka-purple hover:bg-talka-purple/10 transition-all duration-300"
+            className="px-6 py-3 rounded-xl font-bold text-base text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all duration-200"
           >
             Sign In
           </button>
@@ -178,9 +185,9 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
               setAuthModalMode('signup');
               setShowAuthModal(true);
             }}
-            className="px-6 py-3 rounded-[20px] font-semibold text-base bg-gradient-purple-pink text-white shadow-purple hover:-translate-y-0.5 transition-all duration-300"
+            className="px-6 py-3 rounded-xl font-bold text-base bg-[#58cc02] text-white shadow-[0_4px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"
           >
-            Get Started ✨
+            Get Started
           </button>
         </div>
       )}

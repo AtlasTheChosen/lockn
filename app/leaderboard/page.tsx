@@ -4,22 +4,24 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/hooks/use-session';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, RefreshCw, Trophy, TrendingUp, Calendar, Target, ArrowLeft, Crown, Medal } from 'lucide-react';
+import { AlertCircle, RefreshCw, Calendar, Target, ArrowLeft, Flame, Snowflake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { calculateWeeklyAverage } from '@/lib/weekly-stats';
 import { AppLayout } from '@/components/layout';
 
 interface LeaderboardUser {
   id: string;
   display_name: string | null;
   avatar_url: string | null;
-  daily_cards_learned: number;
-  weekly_average: number;
+  current_week_cards: number;
   total_cards_mastered: number;
+  // Streak system v2 fields
+  current_streak: number;
+  longest_streak: number;
+  streak_frozen: boolean;
 }
 
-type FilterType = 'today' | 'weekly_avg' | 'total';
+type FilterType = 'longest_streak' | 'this_week' | 'total';
 
 export default function LeaderboardPage() {
   const router = useRouter();
@@ -29,7 +31,7 @@ export default function LeaderboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('today');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('longest_streak');
 
   const loadLeaderboardData = useCallback(async () => {
     try {
@@ -51,14 +53,16 @@ export default function LeaderboardPage() {
       
       const combinedUsers: LeaderboardUser[] = (profilesData || []).map((profile: any) => {
         const userStats = statsMap.get(profile.id) as any;
-        const weeklyHistory = userStats?.weekly_cards_history || [];
         return {
           id: profile.id,
           display_name: profile.display_name,
           avatar_url: profile.avatar_url,
-          daily_cards_learned: userStats?.daily_cards_learned || 0,
-          weekly_average: calculateWeeklyAverage(weeklyHistory),
+          current_week_cards: userStats?.current_week_cards || 0,
           total_cards_mastered: userStats?.total_cards_mastered || 0,
+          // Streak system v2 fields
+          current_streak: userStats?.current_streak || 0,
+          longest_streak: userStats?.longest_streak || 0,
+          streak_frozen: userStats?.streak_frozen || false,
         };
       });
 
@@ -98,10 +102,14 @@ export default function LeaderboardPage() {
   const getSortedUsers = (metric: FilterType) => {
     return [...users].sort((a, b) => {
       switch (metric) {
-        case 'today':
-          return b.daily_cards_learned - a.daily_cards_learned;
-        case 'weekly_avg':
-          return b.weekly_average - a.weekly_average;
+        case 'longest_streak':
+          // Sort by longest_streak (primary), current_streak (secondary)
+          if (b.longest_streak !== a.longest_streak) {
+            return b.longest_streak - a.longest_streak;
+          }
+          return b.current_streak - a.current_streak;
+        case 'this_week':
+          return b.current_week_cards - a.current_week_cards;
         case 'total':
           return b.total_cards_mastered - a.total_cards_mastered;
         default:
@@ -119,10 +127,10 @@ export default function LeaderboardPage() {
 
   const getValue = (user: LeaderboardUser, metric: FilterType) => {
     switch (metric) {
-      case 'today':
-        return user.daily_cards_learned;
-      case 'weekly_avg':
-        return user.weekly_average;
+      case 'longest_streak':
+        return user.longest_streak;
+      case 'this_week':
+        return user.current_week_cards;
       case 'total':
         return user.total_cards_mastered;
     }
@@ -130,10 +138,10 @@ export default function LeaderboardPage() {
 
   const getLabel = (metric: FilterType) => {
     switch (metric) {
-      case 'today':
-        return 'mastered today';
-      case 'weekly_avg':
-        return 'cards/week avg';
+      case 'longest_streak':
+        return 'day best streak';
+      case 'this_week':
+        return 'cards this week';
       case 'total':
         return 'total mastered';
     }
@@ -144,16 +152,16 @@ export default function LeaderboardPage() {
     return (
       <AppLayout>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <Skeleton className="h-8 w-48 mb-8 bg-slate-200" />
+          <Skeleton className="h-8 w-48 mb-8" style={{ backgroundColor: 'var(--bg-secondary)' }} />
           <div className="space-y-4">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="bg-white rounded-3xl p-5 shadow-talka-sm">
+              <div key={i} className="rounded-3xl p-5" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
                 <div className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-full bg-slate-200" />
-                  <Skeleton className="h-14 w-14 rounded-full bg-slate-200" />
+                  <Skeleton className="h-12 w-12 rounded-full" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+                  <Skeleton className="h-14 w-14 rounded-full" style={{ backgroundColor: 'var(--bg-secondary)' }} />
                   <div className="flex-1">
-                    <Skeleton className="h-5 w-32 mb-2 bg-slate-200" />
-                    <Skeleton className="h-4 w-24 bg-slate-200" />
+                    <Skeleton className="h-5 w-32 mb-2" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+                    <Skeleton className="h-4 w-24" style={{ backgroundColor: 'var(--bg-secondary)' }} />
                   </div>
                 </div>
               </div>
@@ -173,13 +181,14 @@ export default function LeaderboardPage() {
     return (
       <AppLayout>
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="bg-red-50 border-2 border-red-200 rounded-3xl p-8 text-center">
-            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="font-display text-xl font-semibold text-red-700 mb-2">Error Loading Leaderboard</h2>
-            <p className="text-slate-600 mb-6">{error}</p>
+          <div className="rounded-3xl p-8 text-center" style={{ backgroundColor: 'rgba(255, 75, 75, 0.1)', border: '2px solid rgba(255, 75, 75, 0.3)' }}>
+            <AlertCircle className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--accent-red)' }} />
+            <h2 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--accent-red)' }}>Error Loading Leaderboard</h2>
+            <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>{error}</p>
             <Button 
               onClick={loadLeaderboardData} 
-              className="bg-gradient-purple-pink text-white font-bold rounded-2xl px-6 py-3"
+              className="text-white font-bold rounded-2xl px-6 py-3"
+              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Retry
@@ -199,15 +208,16 @@ export default function LeaderboardPage() {
         <div className="mb-8 animate-fade-in">
           <Link 
             href="/dashboard"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-200 rounded-2xl font-semibold text-slate-700 hover:border-talka-purple hover:-translate-x-1 transition-all mb-6"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold hover:-translate-x-1 transition-all mb-6"
+            style={{ backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
           >
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Link>
-          <h1 className="font-display text-4xl font-semibold gradient-text flex items-center gap-3">
+          <h1 className="font-display text-4xl font-semibold flex items-center gap-3" style={{ color: 'var(--accent-orange)' }}>
             🏆 Leaderboard
           </h1>
-          <p className="text-slate-500 font-medium mt-2">
+          <p className="font-medium mt-2" style={{ color: 'var(--text-secondary)' }}>
             See how you rank against other learners
           </p>
         </div>
@@ -215,46 +225,46 @@ export default function LeaderboardPage() {
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-8 animate-fade-in stagger-1">
           <button
-            onClick={() => setActiveFilter('today')}
-            className={`px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
-              activeFilter === 'today'
-                ? 'bg-slate-800 text-white'
-                : 'bg-white border-2 border-slate-200 text-slate-500 hover:border-talka-purple hover:-translate-y-0.5'
-            }`}
+            onClick={() => setActiveFilter('longest_streak')}
+            className="px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2"
+            style={activeFilter === 'longest_streak' 
+              ? { backgroundColor: 'var(--accent-orange)', color: 'white', boxShadow: '0 4px 0 #c2410c' }
+              : { backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
+            }
           >
-            <Calendar className="h-4 w-4" />
-            🔥 Today
+            <Flame className="h-4 w-4" />
+            🔥 Best Streak
           </button>
           <button
-            onClick={() => setActiveFilter('weekly_avg')}
-            className={`px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
-              activeFilter === 'weekly_avg'
-                ? 'bg-slate-800 text-white'
-                : 'bg-white border-2 border-slate-200 text-slate-500 hover:border-talka-purple hover:-translate-y-0.5'
-            }`}
+            onClick={() => setActiveFilter('this_week')}
+            className="px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2"
+            style={activeFilter === 'this_week' 
+              ? { backgroundColor: 'var(--accent-blue)', color: 'white', boxShadow: '0 4px 0 #0369a1' }
+              : { backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
+            }
           >
-            <TrendingUp className="h-4 w-4" />
-            📈 Avg/Week
+            <Calendar className="h-4 w-4" />
+            📅 This Week
           </button>
           <button
             onClick={() => setActiveFilter('total')}
-            className={`px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2 ${
-              activeFilter === 'total'
-                ? 'bg-slate-800 text-white'
-                : 'bg-white border-2 border-slate-200 text-slate-500 hover:border-talka-purple hover:-translate-y-0.5'
-            }`}
+            className="px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2"
+            style={activeFilter === 'total' 
+              ? { backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 4px 0 var(--accent-green-dark)' }
+              : { backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
+            }
           >
             <Target className="h-4 w-4" />
-            🏆 Total
+            📚 Total
           </button>
         </div>
 
         {/* Leaderboard List */}
         <div className="space-y-4">
           {sortedUsers.length === 0 ? (
-            <div className="bg-white rounded-3xl p-12 text-center shadow-talka-sm">
+            <div className="rounded-3xl p-12 text-center" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
               <div className="text-6xl mb-4 opacity-50">🏆</div>
-              <h3 className="font-display text-xl font-semibold text-slate-700">No users on the leaderboard yet</h3>
+              <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>No users on the leaderboard yet</h3>
             </div>
           ) : (
             sortedUsers.map((user, index) => {
@@ -264,24 +274,32 @@ export default function LeaderboardPage() {
               return (
                 <div
                   key={user.id}
-                  className={`bg-white rounded-[20px] p-5 flex items-center gap-5 transition-all hover:translate-x-2 hover:shadow-talka-md animate-fade-in ${
-                    isCurrentUser ? 'border-2 border-talka-purple bg-gradient-to-r from-talka-purple/5 to-talka-pink/5' : 'shadow-talka-sm'
-                  }`}
-                  style={{ animationDelay: `${index * 0.1}s` }}
+                  className="rounded-[20px] p-5 flex items-center gap-5 transition-all hover:translate-x-2 animate-fade-in"
+                  style={{ 
+                    backgroundColor: 'var(--bg-card)', 
+                    boxShadow: 'var(--shadow-sm)',
+                    border: isCurrentUser ? '2px solid var(--accent-green)' : '1px solid var(--border-color)',
+                    animationDelay: `${index * 0.1}s`
+                  }}
                 >
                   {/* Rank Badge */}
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 ${
-                    rank === 1 
-                      ? 'bg-gradient-orange-yellow text-white shadow-orange' 
-                      : rank === 2 
-                        ? 'bg-gradient-to-br from-slate-300 to-slate-400 text-white' 
-                        : 'bg-slate-100 text-slate-500 border-2 border-slate-200'
-                  }`}>
+                  <div 
+                    className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0"
+                    style={
+                      rank === 1 
+                        ? { backgroundColor: 'var(--accent-orange)', color: 'white', boxShadow: '0 3px 0 #c2410c' }
+                        : rank === 2 
+                          ? { backgroundColor: '#94a3b8', color: 'white' }
+                          : rank === 3
+                            ? { backgroundColor: '#cd7f32', color: 'white' }
+                            : { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '2px solid var(--border-color)' }
+                    }
+                  >
                     {rank === 1 ? '👑' : rank}
                   </div>
 
                   {/* Avatar */}
-                  <div className="w-14 h-14 rounded-full bg-gradient-cyan-blue flex items-center justify-center font-bold text-xl text-white shadow-blue flex-shrink-0 overflow-hidden">
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl text-white flex-shrink-0 overflow-hidden" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))' }}>
                     {user.avatar_url ? (
                       <img 
                         src={user.avatar_url}
@@ -295,16 +313,36 @@ export default function LeaderboardPage() {
 
                   {/* User Info */}
                   <div className="flex-1 min-w-0">
-                    <p className="font-display text-lg font-semibold text-slate-800 truncate">
+                    <p className="font-display text-lg font-semibold truncate flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                       {user.display_name || 'Anonymous'}
                       {isCurrentUser && (
-                        <span className="ml-2 px-2 py-0.5 bg-gradient-purple-pink text-white text-xs font-bold rounded-lg">
+                        <span className="px-2 py-0.5 text-white text-xs font-bold rounded-lg" style={{ backgroundColor: 'var(--accent-green)' }}>
                           You
                         </span>
                       )}
+                      {/* Frozen indicator for streak view */}
+                      {user.streak_frozen && activeFilter === 'longest_streak' && (
+                        <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-lg" style={{ backgroundColor: 'rgba(28, 176, 246, 0.2)', color: 'var(--accent-blue)' }} title="Streak frozen - pending test">
+                          <Snowflake className="h-3 w-3" />
+                          Frozen
+                        </span>
+                      )}
                     </p>
-                    <p className="text-slate-500 text-sm font-medium">
-                      📊 {getValue(user, activeFilter)} {getLabel(activeFilter)}
+                    <p className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
+                      {activeFilter === 'longest_streak' ? (
+                        <>
+                          🔥 {getValue(user, activeFilter)} {getLabel(activeFilter)}
+                          {user.current_streak > 0 && (
+                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                              (current: {user.current_streak}{user.streak_frozen ? ' ❄️' : ''})
+                            </span>
+                          )}
+                        </>
+                      ) : activeFilter === 'this_week' ? (
+                        <>📅 {getValue(user, activeFilter)} {getLabel(activeFilter)}</>
+                      ) : (
+                        <>📚 {getValue(user, activeFilter)} {getLabel(activeFilter)}</>
+                      )}
                     </p>
                   </div>
                 </div>

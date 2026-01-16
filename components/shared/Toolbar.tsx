@@ -97,13 +97,13 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
   };
 
   return (
-    <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-background/60" style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <Logo size="lg" />
-            <span className="text-2xl font-bold gradient-text">LOCKN</span>
+            <Logo size="xl" />
+            <span className="text-2xl font-bold" style={{ color: 'var(--accent-green)' }}>LOCKN</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -172,32 +172,32 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                       </span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent align="end" className="w-56 rounded-2xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                     <DropdownMenuLabel>
                       <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none">
+                        <p className="text-sm font-medium leading-none" style={{ color: 'var(--text-primary)' }}>
                           {profile?.display_name || 'User'}
                         </p>
-                        <p className="text-xs leading-none text-muted-foreground">
+                        <p className="text-xs leading-none" style={{ color: 'var(--text-muted)' }}>
                           {profile?.email}
                         </p>
                       </div>
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator style={{ backgroundColor: 'var(--border-color)' }} />
                     <Link href="/dashboard?tab=profile">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
                         <UserIcon className="mr-2 h-4 w-4" />
                         <span>Profile Settings</span>
                       </DropdownMenuItem>
                     </Link>
                     <Link href="/account">
-                      <DropdownMenuItem>
+                      <DropdownMenuItem className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>
                     </Link>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogout}>
+                    <DropdownMenuSeparator style={{ backgroundColor: 'var(--border-color)' }} />
+                    <DropdownMenuItem onClick={handleLogout} className="rounded-xl" style={{ color: 'var(--accent-red)' }}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Logout</span>
                     </DropdownMenuItem>
@@ -259,7 +259,7 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t">
+          <div className="md:hidden py-4" style={{ borderTop: '1px solid var(--border-color)' }}>
             <div className="flex flex-col gap-2">
               {navItems.map((item) => {
                 const Icon = item.icon;

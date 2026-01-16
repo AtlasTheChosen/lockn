@@ -39,10 +39,10 @@ export async function GET() {
       return NextResponse.json({ error: profilesError.message }, { status: 500 });
     }
 
-    // Fetch all user stats
+    // Fetch all user stats - include streak fields for v2 leaderboard
     const { data: stats, error: statsError } = await supabase
       .from('user_stats')
-      .select('user_id, current_week_cards, weekly_cards_history, total_cards_mastered, daily_cards_learned');
+      .select('user_id, current_week_cards, total_cards_mastered, cards_mastered_today, current_streak, longest_streak, streak_frozen');
 
     if (statsError) {
       console.error('[Leaderboard API] Stats error:', statsError);

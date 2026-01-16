@@ -131,17 +131,18 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
   };
 
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Guest Header - Only on mobile (TopNav handles desktop) */}
       {!isLoggedIn && (
         <motion.nav
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="md:hidden bg-white px-4 sm:px-6 py-4 shadow-talka-sm sticky top-0 z-40 flex justify-between items-center"
+          className="md:hidden px-4 sm:px-6 py-4 sticky top-0 z-40 flex justify-between items-center"
+          style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}
         >
           <Link href="/" className="flex items-center gap-2">
-            <Logo size="md" className="sm:w-12 sm:h-12" />
-            <span className="font-display text-2xl sm:text-3xl font-semibold gradient-text">
+            <Logo size="lg" />
+            <span className="font-display text-2xl sm:text-3xl font-semibold" style={{ color: 'var(--accent-green)' }}>
               LOCKN
             </span>
           </Link>
@@ -152,7 +153,8 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              className="text-slate-600 font-semibold hover:text-talka-purple hover:bg-talka-purple/10 rounded-2xl px-3 sm:px-6 text-sm sm:text-base"
+              className="font-semibold rounded-2xl px-3 sm:px-6 text-sm sm:text-base"
+              style={{ color: 'var(--text-secondary)' }}
             >
               Sign In
             </Button>
@@ -161,7 +163,8 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 setAuthModalMode('signup');
                 setShowAuthModal(true);
               }}
-              className="bg-gradient-purple-pink text-white font-bold rounded-2xl px-4 sm:px-6 text-sm sm:text-base shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              className="text-white font-bold rounded-2xl px-4 sm:px-6 text-sm sm:text-base hover:-translate-y-0.5 transition-all"
+              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
             >
               <span className="hidden sm:inline">Get Started ✨</span>
               <span className="sm:hidden">Start ✨</span>
@@ -179,7 +182,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
             transition={{ duration: 0.6 }}
             className="text-center mb-6 sm:mb-8"
           >
-            <p className="text-base sm:text-lg text-slate-500 mb-3 sm:mb-4 font-medium animate-fade-in">
+            <p className="text-base sm:text-lg mb-3 sm:mb-4 font-medium animate-fade-in" style={{ color: 'var(--text-secondary)' }}>
               Hey there, language champion!
             </p>
             <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight mb-4 sm:mb-6 gradient-text-warm animate-fade-in stagger-1">
@@ -192,9 +195,10 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="bg-white rounded-3xl p-6 md:p-8 shadow-talka-md mb-8 animate-fade-in stagger-2 relative z-10"
+          className="rounded-3xl p-6 md:p-8 mb-8 animate-fade-in stagger-2 relative z-10"
+          style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-md)' }}
         >
-          <h3 className="font-display text-2xl font-semibold mb-6 flex items-center gap-2">
+          <h3 className="font-display text-2xl font-semibold mb-6 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
             ✨ Create Your Learning Stack
           </h3>
           
@@ -202,7 +206,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
             {/* Search Input */}
             <div className="flex flex-col gap-3 sm:gap-4 mb-6">
               <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 pointer-events-none" />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 pointer-events-none" style={{ color: 'var(--text-muted)' }} />
                 <input
                   type="text"
                   value={searchValue}
@@ -214,14 +218,20 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                     }
                   }}
                   placeholder="Try: 'ordering tapas in Barcelona'..."
-                  className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl pl-12 pr-4 py-4 h-14 sm:h-auto text-base sm:text-lg text-slate-800 font-medium placeholder:text-slate-400 placeholder:font-normal focus:outline-none focus:border-talka-purple focus:bg-white focus:shadow-[0_0_0_4px_rgba(167,139,250,0.15)] transition-all"
+                  className="w-full rounded-2xl pl-12 pr-4 py-4 h-14 sm:h-auto text-base sm:text-lg font-medium focus:outline-none transition-all"
+                  style={{ 
+                    backgroundColor: 'var(--bg-secondary)', 
+                    border: '2px solid var(--border-color)', 
+                    color: 'var(--text-primary)',
+                  }}
                 />
               </div>
               <button
                 type="button"
                 onClick={() => handleSubmit()}
                 disabled={!searchValue.trim() || !selectedLanguage}
-                className="w-full sm:w-auto bg-gradient-green-cyan text-white font-bold rounded-2xl px-8 py-4 min-h-[56px] shadow-green hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-green active:scale-[0.98]"
+                className="w-full sm:w-auto text-white font-bold rounded-2xl px-8 py-4 min-h-[56px] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-[0.98]"
+                style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
               >
                 Create Magic! 🎨
               </button>
@@ -243,16 +253,16 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
             <div className={`grid grid-cols-1 ${isLoggedIn ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 sm:gap-6`}>
               {/* Language Selector */}
               <div>
-                <label className="block text-sm font-semibold text-slate-500 mb-2 sm:mb-3">
+                <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
                   🌍 Language
                 </label>
                 <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
-                  <SelectTrigger className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl h-14 py-3 sm:py-4 font-semibold focus:border-talka-purple focus:ring-0 text-slate-800">
+                  <SelectTrigger className="w-full rounded-2xl h-14 py-3 sm:py-4 font-semibold focus:ring-0" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}>
                     <SelectValue>
                       {selectedLanguage} {getLanguageEmoji(selectedLanguage)}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-2 border-slate-200 rounded-2xl max-h-[50vh]">
+                  <SelectContent className="rounded-2xl max-h-[50vh]" style={{ backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)' }}>
                     {SUPPORTED_LANGUAGES.map((lang) => (
                       <SelectItem key={lang.code} value={lang.name} className="rounded-xl font-medium py-3">
                         {lang.name} {getLanguageEmoji(lang.name)}
@@ -264,16 +274,16 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
 
               {/* Level Selector */}
               <div>
-                <label className="block text-sm font-semibold text-slate-500 mb-2 sm:mb-3">
+                <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
                   📊 Level
                 </label>
                 <Select value={selectedLevel} onValueChange={handleLevelChange}>
-                  <SelectTrigger className="w-full bg-slate-50 border-2 border-slate-200 rounded-2xl h-14 py-3 sm:py-4 font-semibold focus:border-talka-purple focus:ring-0 text-slate-800">
+                  <SelectTrigger className="w-full rounded-2xl h-14 py-3 sm:py-4 font-semibold focus:ring-0" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}>
                     <SelectValue>
                       {selectedLevel} - {CEFR_LEVELS.find(l => l.code === selectedLevel)?.description}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="bg-white border-2 border-slate-200 rounded-2xl max-h-[50vh]">
+                  <SelectContent className="rounded-2xl max-h-[50vh]" style={{ backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)' }}>
                     {CEFR_LEVELS.map((level) => (
                       <SelectItem key={level.code} value={level.code} className="rounded-xl font-medium py-3">
                         {level.code} - {level.description}
@@ -286,7 +296,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
               {/* Card Count - only for logged-in users */}
               {isLoggedIn && (
                 <div>
-                  <label className="block text-sm font-semibold text-slate-500 mb-2 sm:mb-3">
+                  <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
                     🎴 Cards
                   </label>
                   <div className="flex gap-2">
@@ -295,11 +305,11 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                         key={count}
                         type="button"
                         onClick={() => handleCardCountChange(count)}
-                        className={`flex-1 rounded-xl h-14 py-3 sm:py-4 font-semibold transition-all active:scale-95 ${
-                          selectedCardCount === count
-                            ? 'bg-gradient-purple-pink text-white shadow-purple'
-                            : 'bg-slate-50 border-2 border-slate-200 text-slate-600 hover:border-talka-purple hover:bg-white'
-                        }`}
+                        className="flex-1 rounded-xl h-14 py-3 sm:py-4 font-semibold transition-all active:scale-95"
+                        style={selectedCardCount === count
+                          ? { backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }
+                          : { backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
+                        }
                       >
                         {count}
                       </Button>
@@ -318,7 +328,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
           transition={{ delay: 0.3, duration: 0.6 }}
           className="animate-fade-in stagger-3"
         >
-          <p className="text-center text-slate-500 font-semibold mb-4 sm:mb-6 text-sm sm:text-base">
+          <p className="text-center font-semibold mb-4 sm:mb-6 text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
             🎲 Need inspiration? Try one of these!
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
@@ -330,7 +340,12 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + index * 0.05 }}
-                className="p-3 sm:p-5 bg-white border-2 border-slate-200 rounded-2xl text-center font-semibold text-slate-700 text-sm sm:text-base hover:border-talka-pink hover:-translate-y-1 hover:shadow-talka-md hover:text-talka-pink transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-none active:scale-95"
+                className="p-3 sm:p-5 rounded-2xl text-center font-semibold text-sm sm:text-base hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-95"
+                style={{ 
+                  backgroundColor: 'var(--bg-card)', 
+                  border: '2px solid var(--border-color)', 
+                  color: 'var(--text-primary)' 
+                }}
               >
                 <span className="block text-xl sm:text-2xl mb-1">{suggestion.emoji}</span>
                 <span className="block leading-tight">{suggestion.text}</span>

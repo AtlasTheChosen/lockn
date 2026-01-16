@@ -29,6 +29,8 @@ export interface UserProfile {
   updated_at: string;
 }
 
+export type StackStatus = 'in_progress' | 'pending_test' | 'completed';
+
 export interface CardStack {
   id: string;
   user_id: string;
@@ -50,6 +52,10 @@ export interface CardStack {
   // Grace period for pending tests
   mastery_reached_at: string | null;
   test_deadline: string | null;
+  // Streak system v2 fields
+  status: StackStatus;
+  cards_mastered: number;
+  contributed_to_streak: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -85,12 +91,6 @@ export interface Flashcard {
   audio_hash?: string; // Hash for audio cache lookup
 }
 
-export interface WeeklyCardEntry {
-  week: string; // ISO week format: "2024-W52"
-  count: number;
-  reset_at: string; // UTC timestamp
-}
-
 export interface UserStats {
   id: string;
   user_id: string;
@@ -100,15 +100,17 @@ export interface UserStats {
   total_stacks_completed: number;
   total_cards_mastered: number;
   total_reviews: number;
-  // Weekly cards tracking
-  weekly_cards_history: WeeklyCardEntry[];
+  // Weekly cards tracking (simple counter, resets Sunday)
   current_week_cards: number;
   current_week_start: string | null;
-  pause_weekly_tracking: boolean;
   last_card_learned_at: string | null;
-  // Daily streak tracking (10 cards/day requirement)
-  daily_cards_learned: number;
-  daily_cards_date: string | null;
+  // Streak system v2 fields (5 cards/day requirement)
+  timezone: string;
+  cards_mastered_today: number;
+  last_mastery_date: string | null;
+  streak_deadline: string | null;
+  display_deadline: string | null;
+  streak_awarded_today: boolean; // Whether today's streak has been earned (for revert tracking)
   // Streak freeze for pending tests
   streak_frozen: boolean;
   streak_frozen_stacks: string[]; // Stack IDs with overdue tests
@@ -233,6 +235,44 @@ export interface SharedStack {
   sharer_profile?: FriendProfile;
 }
 
+// ============================================================
+// STREAK SYSTEM V2 TYPES
+// ============================================================
+
+export type TestStatus = 'pending' | 'passed' | 'failed';
+
+export interface StackTest {
+  id: string;
+  user_id: string;
+  stack_id: string;
+  stack_size: number;
+  all_cards_mastered_at: string;
+  test_deadline: string;
+  display_deadline: string;
+  test_status: TestStatus;
+  has_frozen_streak: boolean;
+  can_unfreeze_streak: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface StreakDeadlines {
+  displayDeadline: Date;  // 11:59pm tomorrow in user's timezone
+  actualDeadline: Date;   // +2 hours grace period
+}
+
+export interface StreakCheckResult {
+  expired: boolean;
+  longestPreserved?: number;
+}
+
+export interface CardMasteryResult {
+  cardsMasteredToday: number;
+  streakIncremented: boolean;
+  testTriggered: boolean;
+  stacksLocked: string[];
+}
+
 export interface PublicProfile {
   id: string;
   display_name?: string;
@@ -246,5 +286,5 @@ export interface PublicProfile {
   current_streak: number;
   total_cards_mastered: number;
   total_stacks_completed: number;
-  weekly_average: number;
+  current_week_cards: number;
 }

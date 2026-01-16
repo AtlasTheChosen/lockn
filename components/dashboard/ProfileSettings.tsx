@@ -193,18 +193,19 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   return (
     <div className="space-y-6">
       {/* Profile Avatar Picker */}
-      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in">
+      <div className="rounded-3xl p-6 animate-fade-in" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
         <div className="flex items-center gap-2 mb-4">
-          <User className="h-5 w-5 text-talka-purple" />
-          <h3 className="font-display text-xl font-semibold text-slate-800">Your Profile</h3>
+          <User className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+          <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Your Profile</h3>
         </div>
-        <p className="text-slate-500 text-sm font-medium mb-6">
+        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>
           Choose your avatar from 25 cute options!
         </p>
         <div className="flex items-center gap-6 mb-6">
           <button
             onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-            className="w-24 h-24 rounded-full bg-gradient-cyan-blue flex items-center justify-center text-3xl font-bold text-white shadow-blue ring-4 ring-white overflow-hidden hover:ring-talka-purple transition-all cursor-pointer group relative"
+            className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-white ring-4 overflow-hidden transition-all cursor-pointer group relative"
+            style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))', ringColor: 'var(--bg-card)' }}
           >
             <img 
               src={avatarUrl} 
@@ -216,10 +217,10 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
             </div>
           </button>
           <div>
-            <p className="font-display text-xl font-semibold text-slate-800">{displayName || 'Your Name'}</p>
-            <p className="text-slate-500 font-medium">{profile.email}</p>
+            <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{displayName || 'Your Name'}</p>
+            <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>{profile.email}</p>
             <Link href={`/profile/${profile.id}`}>
-              <Button variant="link" className="text-talka-purple p-0 h-auto mt-2 font-semibold">
+              <Button variant="link" className="p-0 h-auto mt-2 font-semibold" style={{ color: 'var(--accent-green)' }}>
                 View public profile →
               </Button>
             </Link>
@@ -228,8 +229,8 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
 
         {/* Avatar Picker Grid */}
         {showAvatarPicker && (
-          <div className="border-t pt-6">
-            <p className="text-sm font-medium text-slate-600 mb-4">Select your avatar:</p>
+          <div className="pt-6" style={{ borderTop: '1px solid var(--border-color)' }}>
+            <p className="text-sm font-medium mb-4" style={{ color: 'var(--text-secondary)' }}>Select your avatar:</p>
             <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3">
               {Array.from({ length: AVATAR_COUNT }, (_, i) => i + 1).map((id) => {
                 const url = getAvatarUrl(id);
@@ -300,13 +301,13 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
       </div>
 
       {/* Profile Information */}
-      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-1">
-        <h3 className="font-display text-xl font-semibold text-slate-800 mb-2">Profile Information</h3>
-        <p className="text-slate-500 text-sm font-medium mb-6">Update your personal information</p>
+      <div className="rounded-3xl p-6 animate-fade-in stagger-1" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
+        <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Profile Information</h3>
+        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Update your personal information</p>
         
         <div className="space-y-4">
           <div>
-            <Label htmlFor="display-name" className="text-slate-700 font-semibold">
+            <Label htmlFor="display-name" className="font-semibold" style={{ color: 'var(--text-primary)' }}>
               Display Name
             </Label>
             <Input
@@ -314,12 +315,19 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               placeholder="Enter your display name"
-              className="bg-slate-50 border-2 border-slate-200 rounded-2xl mt-2 font-medium focus:border-talka-purple focus:ring-0"
+              className="rounded-2xl mt-2 font-medium focus:ring-0"
+              style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
               maxLength={50}
             />
             {/* Display name change warning */}
             {isDisplayNameChanged && (
-              <div className={`mt-2 p-3 rounded-xl text-sm ${canChangeDisplayName() ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-600'}`}>
+              <div 
+                className="mt-2 p-3 rounded-xl text-sm"
+                style={canChangeDisplayName() 
+                  ? { backgroundColor: 'rgba(251, 146, 60, 0.2)', color: 'var(--accent-orange)' }
+                  : { backgroundColor: 'rgba(255, 75, 75, 0.2)', color: 'var(--accent-red)' }
+                }
+              >
                 {canChangeDisplayName() ? (
                   <p className="font-medium">⚠️ You can only change your display name once per month.</p>
                 ) : (
@@ -330,7 +338,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
           </div>
 
           <div>
-            <Label htmlFor="bio" className="text-slate-700 font-semibold">
+            <Label htmlFor="bio" className="font-semibold" style={{ color: 'var(--text-primary)' }}>
               Bio
             </Label>
             <Textarea
@@ -338,45 +346,47 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
               value={bio}
               onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO_LENGTH))}
               placeholder="Tell others about yourself..."
-              className="bg-slate-50 border-2 border-slate-200 rounded-2xl mt-2 min-h-[100px] resize-none font-medium focus:border-talka-purple focus:ring-0"
+              className="rounded-2xl mt-2 min-h-[100px] resize-none font-medium focus:ring-0"
+              style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
               maxLength={MAX_BIO_LENGTH}
             />
-            <p className="text-xs text-slate-400 mt-1 text-right font-medium">
+            <p className="text-xs mt-1 text-right font-medium" style={{ color: 'var(--text-muted)' }}>
               {bio.length}/{MAX_BIO_LENGTH}
             </p>
           </div>
 
           <div>
-            <Label htmlFor="email" className="text-slate-700 font-semibold">
+            <Label htmlFor="email" className="font-semibold" style={{ color: 'var(--text-primary)' }}>
               Email Address
             </Label>
             <Input
               id="email"
               value={profile.email}
               disabled
-              className="bg-slate-100 border-2 border-slate-200 text-slate-400 rounded-2xl mt-2 font-medium"
+              className="rounded-2xl mt-2 font-medium"
+              style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-muted)' }}
             />
-            <p className="text-xs text-slate-400 mt-1 font-medium">Email cannot be changed</p>
+            <p className="text-xs mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>Email cannot be changed</p>
           </div>
         </div>
       </div>
 
       {/* Languages Learning */}
-      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-2">
+      <div className="rounded-3xl p-6 animate-fade-in stagger-2" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
         <div className="flex items-center gap-2 mb-2">
-          <Globe className="h-5 w-5 text-talka-blue" />
-          <h3 className="font-display text-xl font-semibold text-slate-800">Languages I'm Learning</h3>
+          <Globe className="h-5 w-5" style={{ color: 'var(--accent-blue)' }} />
+          <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Languages I'm Learning</h3>
         </div>
-        <p className="text-slate-500 text-sm font-medium mb-6">Show others what languages you're studying</p>
+        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Show others what languages you're studying</p>
         
         <div className="flex gap-3 mb-4">
           <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-            <SelectTrigger className="bg-slate-50 border-2 border-slate-200 rounded-2xl flex-1 font-medium focus:border-talka-purple focus:ring-0">
+            <SelectTrigger className="rounded-2xl flex-1 font-medium focus:ring-0" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}>
               <SelectValue placeholder="Select a language" />
             </SelectTrigger>
-            <SelectContent className="bg-white border-2 border-slate-200 rounded-2xl">
+            <SelectContent className="rounded-2xl" style={{ backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)' }}>
               {AVAILABLE_LANGUAGES.filter(l => !languagesLearning.includes(l.code)).map((lang) => (
-                <SelectItem key={lang.code} value={lang.code} className="font-medium rounded-xl">
+                <SelectItem key={lang.code} value={lang.code} className="font-medium rounded-xl" style={{ color: 'var(--text-primary)' }}>
                   {lang.emoji} {lang.name}
                 </SelectItem>
               ))}
@@ -385,7 +395,8 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
           <Button
             onClick={handleAddLanguage}
             disabled={!selectedLanguage}
-            className="bg-gradient-purple-pink text-white font-bold rounded-2xl px-6 shadow-purple disabled:opacity-50"
+            className="text-white font-bold rounded-2xl px-6 disabled:opacity-50"
+            style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
           >
             Add
           </Button>
@@ -398,7 +409,8 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
               return (
                 <span
                   key={langCode}
-                  className="px-4 py-2 bg-gradient-blue-purple text-white font-semibold rounded-xl text-sm flex items-center gap-2"
+                  className="px-4 py-2 text-white font-semibold rounded-xl text-sm flex items-center gap-2"
+                  style={{ background: 'linear-gradient(to right, var(--accent-blue), var(--accent-green))' }}
                 >
                   {lang.emoji} {lang.name}
                   <button
@@ -412,39 +424,39 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
             })}
           </div>
         ) : (
-          <p className="text-slate-400 text-sm font-medium italic">No languages added yet</p>
+          <p className="text-sm font-medium italic" style={{ color: 'var(--text-muted)' }}>No languages added yet</p>
         )}
       </div>
 
       {/* Achievement Badges */}
-      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-3">
+      <div className="rounded-3xl p-6 animate-fade-in stagger-3" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
         <div className="flex items-center gap-2 mb-2">
-          <Trophy className="h-5 w-5 text-talka-yellow" />
-          <h3 className="font-display text-xl font-semibold text-slate-800">My Achievements</h3>
+          <Trophy className="h-5 w-5" style={{ color: 'var(--accent-yellow)' }} />
+          <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>My Achievements</h3>
         </div>
-        <p className="text-slate-500 text-sm font-medium mb-6">Badges you've earned through your learning journey</p>
+        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Badges you've earned through your learning journey</p>
         <AchievementBadges badges={badges} showAll size="lg" />
       </div>
 
       {/* Privacy */}
-      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-4">
-        <h3 className="font-display text-xl font-semibold text-slate-800 mb-2">Privacy</h3>
-        <p className="text-slate-500 text-sm font-medium mb-6">Control who can see your profile</p>
+      <div className="rounded-3xl p-6 animate-fade-in stagger-4" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
+        <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Privacy</h3>
+        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Control who can see your profile</p>
         
-        <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
+        <div className="flex items-center justify-between rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
           <div className="flex items-center gap-4">
             {profilePublic ? (
-              <div className="w-10 h-10 rounded-xl bg-green-100 flex items-center justify-center">
-                <Eye className="h-5 w-5 text-green-500" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(88, 204, 2, 0.2)' }}>
+                <Eye className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center">
-                <EyeOff className="h-5 w-5 text-slate-500" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                <EyeOff className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
               </div>
             )}
             <div>
-              <Label className="text-slate-700 font-semibold">Public Profile</Label>
-              <p className="text-sm text-slate-500">
+              <Label className="font-semibold" style={{ color: 'var(--text-primary)' }}>Public Profile</Label>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 {profilePublic
                   ? 'Anyone can view your profile and stats'
                   : 'Only friends can view your profile'}
@@ -459,15 +471,15 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
       </div>
 
       {/* Notifications */}
-      <div className="bg-white rounded-3xl p-6 shadow-talka-sm animate-fade-in stagger-5">
-        <h3 className="font-display text-xl font-semibold text-slate-800 mb-2">Notifications</h3>
-        <p className="text-slate-500 text-sm font-medium mb-6">Manage your notification preferences</p>
+      <div className="rounded-3xl p-6 animate-fade-in stagger-5" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
+        <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Notifications</h3>
+        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Manage your notification preferences</p>
         
         <div className="space-y-4">
-          <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
+          <div className="flex items-center justify-between rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
             <div>
-              <Label className="text-slate-700 font-semibold">Email Notifications</Label>
-              <p className="text-sm text-slate-500">Receive updates via email</p>
+              <Label className="font-semibold" style={{ color: 'var(--text-primary)' }}>Email Notifications</Label>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Receive updates via email</p>
             </div>
             <Switch
               checked={notificationPrefs.email}
@@ -476,10 +488,10 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
               }
             />
           </div>
-          <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
+          <div className="flex items-center justify-between rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
             <div>
-              <Label className="text-slate-700 font-semibold">Friend Requests</Label>
-              <p className="text-sm text-slate-500">Get notified of new friend requests</p>
+              <Label className="font-semibold" style={{ color: 'var(--text-primary)' }}>Friend Requests</Label>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Get notified of new friend requests</p>
             </div>
             <Switch
               checked={notificationPrefs.friend_requests}
@@ -488,10 +500,10 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
               }
             />
           </div>
-          <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
+          <div className="flex items-center justify-between rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
             <div>
-              <Label className="text-slate-700 font-semibold">Streak Reminders</Label>
-              <p className="text-sm text-slate-500">Daily reminders to maintain your streak</p>
+              <Label className="font-semibold" style={{ color: 'var(--text-primary)' }}>Streak Reminders</Label>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Daily reminders to maintain your streak</p>
             </div>
             <Switch
               checked={notificationPrefs.streak_reminders}
@@ -506,16 +518,16 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
       {/* Message */}
       {message && (
         <div
-          className={`flex items-center gap-3 p-4 rounded-2xl animate-fade-in ${
-            message.type === 'success'
-              ? 'bg-green-100 text-green-700 border-2 border-green-200'
-              : 'bg-red-100 text-red-700 border-2 border-red-200'
-          }`}
+          className="flex items-center gap-3 p-4 rounded-2xl animate-fade-in"
+          style={message.type === 'success' 
+            ? { backgroundColor: 'rgba(88, 204, 2, 0.15)', color: 'var(--accent-green)', border: '2px solid rgba(88, 204, 2, 0.3)' }
+            : { backgroundColor: 'rgba(255, 75, 75, 0.15)', color: 'var(--accent-red)', border: '2px solid rgba(255, 75, 75, 0.3)' }
+          }
         >
           {message.type === 'success' ? (
-            <Check className="h-5 w-5 text-green-500" />
+            <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
           ) : (
-            <AlertCircle className="h-5 w-5 text-red-500" />
+            <AlertCircle className="h-5 w-5" style={{ color: 'var(--accent-red)' }} />
           )}
           <span className="font-semibold">{message.text}</span>
         </div>
@@ -525,7 +537,8 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
       <Button
         onClick={handleSaveProfile}
         disabled={saving}
-        className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-4 shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50"
+        className="w-full text-white font-bold rounded-2xl py-4 hover:-translate-y-0.5 transition-all disabled:opacity-50 active:translate-y-1"
+        style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
       >
         {saving ? (
           <>

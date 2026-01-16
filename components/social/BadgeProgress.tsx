@@ -72,10 +72,10 @@ export const BADGE_THRESHOLDS: Record<string, { current: (stats: BadgeStats) => 
   'first_test': { current: (s) => s.tests_completed ?? 0, target: 1 },
   
   // Performance badges
-  'daily_goal': { current: (s) => s.daily_cards_learned ?? 0, target: 10 },
+  'daily_goal': { current: (s) => s.cards_mastered_today ?? 0, target: 10 },
   'daily_goal_streak_7': { current: (s) => s.daily_goal_streak ?? 0, target: 7 },
   'daily_goal_streak_30': { current: (s) => s.daily_goal_streak ?? 0, target: 30 },
-  'overachiever': { current: (s) => s.daily_cards_learned ?? 0, target: 50 },
+  'overachiever': { current: (s) => s.cards_mastered_today ?? 0, target: 50 },
   'speed_learner': { current: () => 0, target: 1 }, // Event-based
   'night_owl': { current: () => 0, target: 1 }, // Event-based
   'early_bird': { current: () => 0, target: 1 }, // Event-based
@@ -110,7 +110,7 @@ export interface BadgeStats {
   ice_breaker_count?: number;
   tests_completed?: number;
   perfect_test_streak?: number;
-  daily_cards_learned?: number;
+  cards_mastered_today?: number; // Replaces daily_cards_learned
   daily_goal_streak?: number;
   languages_count?: number;
   is_premium?: boolean;
@@ -264,7 +264,7 @@ export default function BadgeProgress({
   
   if (filteredBadges.length === 0) {
     return (
-      <div className="text-sm text-slate-500 italic text-center py-4">
+      <div className="text-sm italic text-center py-4" style={{ color: 'var(--text-muted)' }}>
         {showOnlyUpcoming ? 'No badges in progress' : 'No badges available'}
       </div>
     );
@@ -298,17 +298,17 @@ export default function BadgeProgress({
                     )}
                   </div>
                 </TooltipTrigger>
-                <TooltipContent side="top" className="bg-slate-800 border-slate-700 max-w-xs">
+                <TooltipContent side="top" className="max-w-xs rounded-xl" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
                   <div className="text-center">
-                    <p className="font-semibold text-white">{badge.name}</p>
-                    <p className="text-xs text-slate-400">{badge.description}</p>
+                    <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{badge.name}</p>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{badge.description}</p>
                     {badge.isEarned ? (
-                      <p className="text-xs text-green-400 mt-1">
+                      <p className="text-xs mt-1" style={{ color: 'var(--accent-green)' }}>
                         Earned {new Date(badge.earnedAt!).toLocaleDateString()}
                       </p>
                     ) : (
                       <div className="mt-2">
-                        <div className="flex justify-between text-xs text-slate-500 mb-1">
+                        <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--text-muted)' }}>
                           <span>{badge.requirement}</span>
                           <span>{badge.currentValue}/{badge.targetValue}</span>
                         </div>

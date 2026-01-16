@@ -7,11 +7,13 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import GradientIcon from '@/components/ui/GradientIcons';
 import AuthModal from '@/components/auth/AuthModal';
+import { Snowflake } from 'lucide-react';
 
 interface BottomNavProps {
   streak?: number;
   streakFrozen?: boolean;
   isLoggedIn?: boolean;
+  dataLoaded?: boolean;
 }
 
 const navItems = [
@@ -20,7 +22,7 @@ const navItems = [
   { href: '/leaderboard', label: 'Ranks', icon: 'crown' as const, requiresAuth: true },
 ];
 
-export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn = false }: BottomNavProps) {
+export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn = false, dataLoaded = false }: BottomNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -46,37 +48,29 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
 
   return (
     <>
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-2 shadow-[0_-4px_16px_rgba(0,0,0,0.08)] z-50 flex justify-around items-center safe-area-x">
-        {/* Streak Badge - Only show when logged in */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--bg-card)] backdrop-blur-md border-t-2 border-[var(--border-color)] pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] px-2 shadow-[var(--shadow-md)] z-50 flex justify-around items-center safe-area-x transition-colors duration-300">
+        {/* Streak Badge - Only show when logged in, show skeleton until data loaded */}
         {isLoggedIn && (
-          <div className="flex items-center gap-1">
-            {/* Main Streak */}
+          !dataLoaded ? (
+            <div className="streak-badge flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl font-bold min-w-[48px] min-h-[48px] justify-center bg-slate-300 dark:bg-slate-600 animate-pulse" />
+          ) : (
             <div 
-              className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl font-bold text-white min-w-[48px] min-h-[48px] justify-center bg-gradient-orange-yellow"
-              title={`${streak} day streak`}
+              className="streak-badge flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl font-bold text-white min-w-[48px] min-h-[48px] justify-center relative overflow-hidden"
+              style={{ 
+                background: streakFrozen 
+                  ? 'linear-gradient(135deg, #1cb0f6, #00d4ff)' 
+                  : 'linear-gradient(135deg, #ff9600, #ffaa00)' 
+              }}
+              title={streakFrozen ? `${streak} day streak (frozen)` : `${streak} day streak`}
             >
-              <GradientIcon 
-                name="fire" 
-                size={20} 
-                colors={['#ffffff', '#ffffff']}
-              />
-              <span className="text-xs">{streak}</span>
+              {streakFrozen ? (
+                <Snowflake className="h-5 w-5 text-white" strokeWidth={2.5} />
+              ) : (
+                <span className="text-lg animate-[flameFlicker_1.5s_ease-in-out_infinite]">🔥</span>
+              )}
+              <span className="text-xs font-extrabold">{streak}</span>
             </div>
-            {/* Frozen Indicator */}
-            {streakFrozen && (
-              <div 
-                className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl font-bold text-white min-h-[48px] justify-center bg-gradient-to-r from-cyan-400 to-blue-500 animate-pulse"
-                title="Streak frozen!"
-              >
-                <GradientIcon 
-                  name="snowflake" 
-                  size={18} 
-                  colors={['#ffffff', '#ffffff']}
-                />
-                <span className="text-[9px]">ICE</span>
-              </div>
-            )}
-          </div>
+          )
         )}
         
         {navItems.map((item) => {
@@ -90,15 +84,15 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
                 key={item.href}
                 onClick={() => setShowAuthModal(true)}
                 className={cn(
-                  'flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 min-w-[48px] min-h-[48px] justify-center active:scale-95'
+                  'flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 min-w-[48px] min-h-[48px] justify-center active:scale-95'
                 )}
               >
                 <GradientIcon 
                   name={item.icon} 
                   size={22} 
-                  colors={['#a78bfa', '#fb7185']}
+                  colors={['#58cc02', '#6cd302']}
                 />
-                <span className="text-[10px] sm:text-xs font-semibold text-slate-500">{item.label}</span>
+                <span className="text-[10px] sm:text-xs font-bold text-[var(--text-secondary)]">{item.label}</span>
               </button>
             );
           }
@@ -108,20 +102,20 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
               key={item.href}
               href={item.href}
               className={cn(
-                'flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 min-w-[48px] min-h-[48px] justify-center active:scale-95',
+                'flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 min-w-[48px] min-h-[48px] justify-center active:scale-95',
                 isActive
-                  ? 'bg-gradient-purple-pink'
+                  ? 'bg-[rgba(88,204,2,0.1)]'
                   : ''
               )}
             >
               <GradientIcon 
                 name={item.icon} 
                 size={22} 
-                colors={isActive ? ['#ffffff', '#ffffff'] : ['#a78bfa', '#fb7185']}
+                colors={isActive ? ['#58cc02', '#6cd302'] : ['#777777', '#777777']}
               />
               <span className={cn(
-                "text-[10px] sm:text-xs font-semibold",
-                isActive ? 'text-white' : 'text-slate-500'
+                "text-[10px] sm:text-xs font-bold",
+                isActive ? 'text-[#58cc02]' : 'text-[var(--text-secondary)]'
               )}>{item.label}</span>
             </Link>
           );
@@ -131,27 +125,27 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
         {isLoggedIn ? (
           <button
             onClick={handleLogout}
-            className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 active:scale-95 min-w-[48px] min-h-[48px] justify-center group"
+            className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 active:scale-95 min-w-[48px] min-h-[48px] justify-center group"
           >
             <GradientIcon 
               name="exit"
               size={22} 
-              colors={['#94a3b8', '#ef4444']}
+              colors={['#777777', '#ff4b4b']}
               className="group-hover:scale-110 transition-transform"
             />
-            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 group-hover:text-red-500">Exit</span>
+            <span className="text-[10px] sm:text-xs font-bold text-[var(--text-secondary)] group-hover:text-[#ff4b4b]">Exit</span>
           </button>
         ) : (
           <button
             onClick={() => setShowAuthModal(true)}
-            className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition-all duration-300 active:scale-95 min-w-[48px] min-h-[48px] justify-center bg-gradient-purple-pink"
+            className="flex flex-col items-center gap-1 px-3 sm:px-4 py-2 rounded-xl transition-all duration-200 active:scale-95 min-w-[48px] min-h-[48px] justify-center bg-[#58cc02]"
           >
             <GradientIcon 
               name="user"
               size={22} 
               colors={['#ffffff', '#ffffff']}
             />
-            <span className="text-[10px] sm:text-xs font-semibold text-white">Sign Up</span>
+            <span className="text-[10px] sm:text-xs font-bold text-white">Sign Up</span>
           </button>
         )}
       </nav>

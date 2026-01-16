@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import DashboardMain from './DashboardMain';
 import ProfileSettings from './ProfileSettings';
 import FriendsSection from './FriendsSection';
+import AchievementsSection from './AchievementsSection';
 import GradientIcon from '@/components/ui/GradientIcons';
 import type { CardStack, UserStats, UserProfile } from '@/lib/types';
 
@@ -56,16 +57,13 @@ export default function DashboardTabs({
     mastery_reached_at: stack.mastery_reached_at || undefined,
     test_deadline: stack.test_deadline || undefined,
     last_test_date: stack.last_test_date || undefined,
+    // Streak system v2 fields
+    status: stack.status,
+    contributed_to_streak: stack.contributed_to_streak ?? false,
   }));
 
-  // Calculate weekly average from history
-  const calculateWeeklyAvg = () => {
-    const history = stats?.weekly_cards_history ?? [];
-    if (history.length === 0) return 0;
-    
-    const totalCards = history.reduce((sum, week) => sum + (week.count || 0), 0);
-    return Math.round(totalCards / history.length);
-  };
+  // Compute total mastered from actual stacks (more reliable than counter)
+  const computedTotalMastered = stacks.reduce((sum, stack) => sum + (stack.mastered_count ?? 0), 0);
 
   // Use database values directly for accurate stats
   const displayStats = stats
@@ -73,35 +71,32 @@ export default function DashboardTabs({
         total_cards_reviewed: stats.total_reviews ?? 0,
         current_streak: stats.current_streak ?? 0,
         longest_streak: stats.longest_streak ?? 0,
-        // Use the actual database value for total mastered cards
-        total_mastered: stats.total_cards_mastered ?? 0,
-        // Use the actual database value for this week's cards
-        current_week_cards: stats.current_week_cards ?? 0,
-        // Calculate weekly average from history
-        weekly_average: calculateWeeklyAvg(),
-        weekly_cards_history: stats.weekly_cards_history ?? [],
-        pause_weekly_tracking: stats.pause_weekly_tracking ?? false,
-        daily_cards_learned: stats.daily_cards_learned ?? 0,
-        daily_cards_date: stats.daily_cards_date ?? null,
+        // Use computed value from stacks instead of counter (always accurate)
+        total_mastered: computedTotalMastered,
+        current_week_cards: stats.current_week_cards ?? 0, // Resets Sunday at midnight
         streak_frozen: stats.streak_frozen ?? false,
         streak_frozen_stacks: stats.streak_frozen_stacks ?? [],
+        // Streak system v2 fields (consolidated - removed legacy daily_cards_learned)
+        cards_mastered_today: stats.cards_mastered_today ?? 0,
+        last_mastery_date: stats.last_mastery_date ?? null,
+        display_deadline: stats.display_deadline ?? null,
+        streak_deadline: stats.streak_deadline ?? null,
       }
     : null;
 
-  const router = useRouter();
-  
   const tabs = [
     { id: 'overview', label: 'Overview', mobileLabel: 'Overview', icon: 'chartUp' as const },
     { id: 'profile', label: 'Profile', mobileLabel: 'Profile', icon: 'user' as const },
     { id: 'friends', label: 'Friends', mobileLabel: 'Friends', icon: 'users' as const },
-    { id: 'achievements', label: 'Achievements', mobileLabel: 'Awards', icon: 'trophy' as const, href: '/dashboard/achievements' },
+    { id: 'achievements', label: 'Achievements', mobileLabel: 'Awards', icon: 'trophy' as const },
   ];
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* Tab Navigation - extra padding for iPhone notch/Dynamic Island */}
       <div 
-        className="bg-white/95 backdrop-blur-md shadow-talka-sm sticky top-0 md:top-[76px] z-30 pt-[max(1rem,calc(env(safe-area-inset-top,0px)+0.75rem))] md:pt-0"
+        className="backdrop-blur-md sticky top-0 md:top-[76px] z-30 pt-[max(1rem,calc(env(safe-area-inset-top,0px)+0.75rem))] md:pt-0"
+        style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}
       >
         <div className="max-w-7xl mx-auto px-[max(0.75rem,env(safe-area-inset-left,0px))] sm:px-4 lg:px-8 pr-[max(0.75rem,env(safe-area-inset-right,0px))]">
           <div className="flex gap-2 sm:gap-2 py-2 sm:py-3">
@@ -110,23 +105,17 @@ export default function DashboardTabs({
               return (
                 <button
                   key={tab.id}
-                  onClick={() => {
-                    if ('href' in tab && tab.href) {
-                      router.push(tab.href);
-                    } else {
-                      setActiveTab(tab.id);
-                    }
-                  }}
-                  className={`flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex-1 active:scale-95 ${
-                    isActive
-                      ? 'bg-gradient-purple-pink text-white shadow-purple'
-                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
-                  }`}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="flex flex-col sm:flex-row items-center justify-center gap-0.5 sm:gap-2 px-3 sm:px-5 py-2 sm:py-3 rounded-xl sm:rounded-2xl font-semibold transition-all flex-1 active:scale-95"
+                  style={isActive
+                    ? { backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }
+                    : { color: 'var(--text-secondary)' }
+                  }
                 >
                   <GradientIcon 
                     name={tab.icon} 
                     size={20} 
-                    colors={isActive ? ['#ffffff', '#ffffff'] : ['#a78bfa', '#fb7185']}
+                    colors={isActive ? ['#ffffff', '#ffffff'] : ['#58cc02', '#1cb0f6']}
                     className="flex-shrink-0"
                   />
                   <span className="text-[10px] sm:text-sm">{tab.mobileLabel}</span>
@@ -139,12 +128,12 @@ export default function DashboardTabs({
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <DashboardMain stacks={displayStacks} stats={displayStats} userName={userName} onShowTutorial={onShowTutorial} />
+        <DashboardMain stacks={displayStacks} stats={displayStats} userName={userName} onUpdate={onUpdate} onShowTutorial={onShowTutorial} />
       )}
 
       {activeTab === 'profile' && (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="font-display text-3xl font-semibold gradient-text mb-8 animate-fade-in">
+          <h1 className="font-display text-3xl font-semibold mb-8 animate-fade-in" style={{ color: 'var(--accent-green)' }}>
             ⚙️ Profile Settings
           </h1>
           {profile ? (
@@ -154,18 +143,22 @@ export default function DashboardTabs({
               onUpdate={onUpdate} 
             />
           ) : (
-            <div className="text-center text-slate-400 py-12">Loading profile...</div>
+            <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>Loading profile...</div>
           )}
         </div>
       )}
 
       {activeTab === 'friends' && (
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="font-display text-3xl font-semibold gradient-text mb-8 animate-fade-in">
+          <h1 className="font-display text-3xl font-semibold mb-8 animate-fade-in" style={{ color: 'var(--accent-green)' }}>
             👥 Friends
           </h1>
           <FriendsSection userId={userId} accessToken={accessToken} />
         </div>
+      )}
+
+      {activeTab === 'achievements' && (
+        <AchievementsSection userId={userId} profile={profile} />
       )}
     </div>
   );

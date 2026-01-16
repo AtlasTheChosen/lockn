@@ -54,8 +54,24 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Blocking script to prevent theme flash - runs before first paint
+  const themeScript = `
+    (function() {
+      try {
+        var theme = localStorage.getItem('lockn-theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (theme === 'dark' || (!theme && prefersDark)) {
+          document.documentElement.classList.add('dark');
+        }
+      } catch (e) {}
+    })();
+  `;
+
   return (
     <html lang="en" className={`${quicksand.variable} ${fredoka.variable}`} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className={quicksand.className} suppressHydrationWarning>
         <AuthProvider>
           <MobilePreviewProvider>
