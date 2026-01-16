@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion, AnimatePresence, type Variants } from "framer-motion"
 import { cn } from "@/lib/utils"
 import { Eye, EyeOff, Check, AlertCircle } from "lucide-react"
 
@@ -13,7 +13,7 @@ const sizeConfig = {
 }
 
 // Shake animation for error state
-const shakeAnimation = {
+const shakeAnimation: Variants = {
   shake: {
     x: [0, -8, 8, -6, 6, -4, 4, -2, 2, 0],
     transition: { duration: 0.5, ease: "easeInOut" },

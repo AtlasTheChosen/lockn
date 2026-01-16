@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { X, Loader2, Mail, Lock, Eye, EyeOff, ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ function calculatePasswordStrength(password: string): {
 }
 
 // Shake animation for form errors
-const shakeAnimation = {
+const shakeAnimation: Variants = {
   shake: {
     x: [0, -10, 10, -8, 8, -5, 5, -2, 2, 0],
     transition: { duration: 0.5, ease: 'easeInOut' },
