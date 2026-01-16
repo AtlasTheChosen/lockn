@@ -89,7 +89,8 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <motion.button
-        ref={ref as unknown as React.Ref<HTMLButtonElement>}
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        ref={ref as any}
         data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
         disabled={isDisabled}
