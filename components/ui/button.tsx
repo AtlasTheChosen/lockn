@@ -89,7 +89,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 
     return (
       <motion.button
-        ref={ref as React.RefObject<HTMLButtonElement> | React.RefCallback<HTMLButtonElement> | null}
+        ref={ref as unknown as React.Ref<HTMLButtonElement>}
         data-slot="button"
         className={cn(buttonVariants({ variant, size, className }))}
         disabled={isDisabled}
