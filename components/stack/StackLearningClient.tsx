@@ -2,10 +2,21 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { ArrowLeft, Trophy, ArrowLeftRight, PenLine, Check, X, Loader2, RotateCcw, Lightbulb, ChevronDown, ChevronUp, Volume2, Sparkles, Moon, Sun } from 'lucide-react';
 import { useSpeech, TTSProvider, VoiceGender } from '@/hooks/use-speech';
 import { Input } from '@/components/ui/input';
@@ -40,6 +51,7 @@ const RATING_OPTIONS = [
 ];
 
 export default function StackLearningClient({ stack: initialStack, cards: initialCards }: Props) {
+  const router = useRouter();
   const { checkAndAwardBadges, awardEventBasedBadge, checkTimeBadge } = useBadgeChecker();
   const [stack, setStack] = useState(initialStack);
   const [originalCards] = useState(initialCards);
@@ -67,9 +79,11 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [breakdownData, setBreakdownData] = useState<Record<string, any>>({});
   const [isLoadingBreakdown, setIsLoadingBreakdown] = useState(false);
-  const [ttsProvider, setTtsProvider] = useState<TTSProvider>('browser');
+  const [ttsProvider, setTtsProvider] = useState<TTSProvider>('elevenlabs'); // Now uses OpenAI TTS
   const [voiceGender, setVoiceGender] = useState<VoiceGender>('female');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showExitWarning, setShowExitWarning] = useState(false);
+  const [cardsMasteredToday, setCardsMasteredToday] = useState(0);
   
   const supabase = createClient();
   
@@ -83,6 +97,30 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       document.documentElement.classList.add('dark');
     }
   }, []);
+  
+  // Fetch current cards mastered today on mount
+  useEffect(() => {
+    const fetchCardsMastered = async () => {
+      const { data } = await supabase
+        .from('user_stats')
+        .select('cards_mastered_today')
+        .eq('user_id', stack.user_id)
+        .single();
+      if (data) {
+        setCardsMasteredToday(data.cards_mastered_today || 0);
+      }
+    };
+    fetchCardsMastered();
+  }, [stack.user_id, supabase]);
+  
+  // Handle exit button click - warn if below streak requirement
+  const handleExitClick = () => {
+    if (cardsMasteredToday < STREAK_DAILY_REQUIREMENT) {
+      setShowExitWarning(true);
+    } else {
+      router.push('/dashboard');
+    }
+  };
   
   const toggleDarkMode = () => {
     const newIsDark = !isDarkMode;
@@ -132,7 +170,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     setShowBreakdown(false);
   }, [currentIndex]);
 
-  // Preload audio for next cards when using ElevenLabs (makes playback instant)
+  // Preload audio for next cards when using AI TTS (makes playback instant)
   useEffect(() => {
     if (ttsProvider !== 'elevenlabs' || !stack.target_language) return;
     
@@ -323,6 +361,9 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           stacksContributedThisSession
         );
         
+        // Update local state for exit warning
+        setCardsMasteredToday(masteryResult.cardsMasteredToday);
+        
         if (masteryResult.streakIncremented) {
           console.log('Streak incremented to:', masteryResult.newStreak);
           // Clear the session tracking for next cycle
@@ -375,13 +416,16 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     if (wasMasteredBefore && isNowNotMastered) {
       try {
         // Decrement cards_mastered_today via streak system
-        await processCardMasteryChange(
+        const downgradeResult = await processCardMasteryChange(
           stack.user_id,
           stack.id,
           oldRating,
           rating,
           stacksContributedThisSession
         );
+        
+        // Update local state for exit warning
+        setCardsMasteredToday(downgradeResult.cardsMasteredToday);
         
         const { data: userStats } = await supabase
           .from('user_stats')
@@ -560,12 +604,15 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
 
       {/* Header */}
       <div className="px-3 sm:px-6 py-3 sm:py-4 border-b-2 flex justify-between items-center transition-colors duration-300" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
-        <Link href="/dashboard">
-          <Button variant="ghost" className="font-semibold rounded-xl px-2 sm:px-4 hover:bg-[var(--bg-secondary)]" style={{ color: 'var(--text-secondary)' }}>
-            <ArrowLeft className="h-5 w-5 sm:mr-2" />
-            <span className="hidden sm:inline">Back</span>
-          </Button>
-        </Link>
+        <Button 
+          variant="ghost" 
+          onClick={handleExitClick}
+          className="font-semibold rounded-xl px-2 sm:px-4 hover:bg-[var(--bg-secondary)]" 
+          style={{ color: 'var(--text-secondary)' }}
+        >
+          <ArrowLeft className="h-5 w-5 sm:mr-2" />
+          <span className="hidden sm:inline">Back</span>
+        </Button>
         <div className="flex items-center gap-1 sm:gap-3">
           <Button
             onClick={() => { setReverseMode(!reverseMode); setIsFlipped(false); }}
@@ -590,13 +637,13 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             size="sm"
             className="font-semibold rounded-xl p-2 sm:px-3"
             style={{ 
-              background: ttsProvider === 'elevenlabs' ? 'linear-gradient(135deg, #ff9600, #ffaa00)' : 'transparent',
+              background: ttsProvider === 'elevenlabs' ? 'linear-gradient(135deg, #58cc02, #1cb0f6)' : 'transparent',
               color: ttsProvider === 'elevenlabs' ? 'white' : 'var(--text-secondary)'
             }}
-            title={ttsProvider === 'elevenlabs' ? 'Using premium AI voices' : 'Using browser voices'}
+            title={ttsProvider === 'elevenlabs' ? 'Using AI voices (OpenAI)' : 'Using browser voices'}
           >
             <Sparkles className="h-5 w-5 sm:mr-1" />
-            <span className="hidden sm:inline">{ttsProvider === 'elevenlabs' ? 'Premium' : 'Voice'}</span>
+            <span className="hidden sm:inline">{ttsProvider === 'elevenlabs' ? 'AI' : 'Browser'}</span>
           </Button>
           <Button
             onClick={() => setVoiceGender(voiceGender === 'female' ? 'male' : 'female')}
@@ -705,7 +752,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           backgroundColor: isSpeaking || isTTSLoading ? '#58cc02' : 'rgba(88, 204, 2, 0.15)',
                           color: isSpeaking || isTTSLoading ? 'white' : '#58cc02'
                         }}
-                        title={ttsProvider === 'elevenlabs' ? 'Premium AI voice' : 'Listen to pronunciation'}
+                        title={ttsProvider === 'elevenlabs' ? 'AI voice (OpenAI)' : 'Listen to pronunciation'}
                       >
                         {isTTSLoading ? (
                           <Loader2 className="w-6 h-6 animate-spin" />
@@ -777,7 +824,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           backgroundColor: isSpeaking ? 'var(--bg-secondary)' : 'var(--bg-secondary)',
                           color: 'var(--text-secondary)'
                         }}
-                        title={ttsProvider === 'elevenlabs' ? 'Premium AI voice' : 'Listen to pronunciation'}
+                        title={ttsProvider === 'elevenlabs' ? 'AI voice (OpenAI)' : 'Listen to pronunciation'}
                       >
                         <Volume2 className="w-5 h-5" />
                       </button>
@@ -810,7 +857,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           backgroundColor: isSpeaking ? '#58cc02' : 'rgba(88, 204, 2, 0.15)',
                           color: isSpeaking ? 'white' : '#58cc02'
                         }}
-                        title={ttsProvider === 'elevenlabs' ? 'Premium AI voice' : 'Listen to pronunciation'}
+                        title={ttsProvider === 'elevenlabs' ? 'AI voice (OpenAI)' : 'Listen to pronunciation'}
                       >
                         <Volume2 className="w-4 h-4" />
                       </button>
@@ -1274,6 +1321,34 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           </motion.div>
         </motion.div>
       )}
+      
+      {/* Exit Warning Dialog */}
+      <AlertDialog open={showExitWarning} onOpenChange={setShowExitWarning}>
+        <AlertDialogContent className="bg-slate-900 border-slate-700">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              ⚠️ Streak at Risk!
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-300">
+              You've only mastered <span className="font-bold text-orange-400">{cardsMasteredToday}</span> of <span className="font-bold text-green-400">{STREAK_DAILY_REQUIREMENT}</span> cards today. 
+              Leaving now means you won't maintain your streak! 
+              <br /><br />
+              Master <span className="font-bold text-blue-400">{STREAK_DAILY_REQUIREMENT - cardsMasteredToday}</span> more card{STREAK_DAILY_REQUIREMENT - cardsMasteredToday !== 1 ? 's' : ''} to keep your streak going.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="bg-slate-800 text-white border-slate-700 hover:bg-slate-700">
+              Keep Learning
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => router.push('/dashboard')}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              Leave Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 

@@ -173,12 +173,12 @@ export function useSpeech(options: UseSpeechOptions = {}) {
     window.speechSynthesis.speak(utterance);
   }, [isSupported, findBestVoice]);
 
-  // ElevenLabs TTS (premium) with multi-tier caching:
+  // OpenAI TTS with multi-tier caching:
   // 1. Card audio_url (permanent, stored in DB) - FREE
   // 2. Client-side memory cache (session-based) - FREE
   // 3. Supabase Storage (server-side persistent) - FREE
-  // 4. Generate new with ElevenLabs (costs credits) - only if all caches miss
-  const speakWithElevenLabs = useCallback(async (
+  // 4. Generate new with OpenAI TTS (low cost) - only if all caches miss
+  const speakWithOpenAI = useCallback(async (
     text: string, 
     language: string = 'English',
     options?: { cardId?: string; audioUrl?: string }
@@ -231,7 +231,7 @@ export function useSpeech(options: UseSpeechOptions = {}) {
         return;
       }
 
-      // TIER 3 & 4: Server will check Supabase Storage, then ElevenLabs
+      // TIER 3 & 4: Server will check Supabase Storage, then OpenAI
       setIsLoading(true);
       console.log(`[TTS] MISS all client tiers: "${text.substring(0, 20)}..." - calling server`);
 
@@ -293,11 +293,11 @@ export function useSpeech(options: UseSpeechOptions = {}) {
     const currentProvider = providerRef.current;
     
     if (currentProvider === 'elevenlabs') {
-      speakWithElevenLabs(text, language, options);
+      speakWithOpenAI(text, language, options);
     } else {
       speakWithBrowser(text, language);
     }
-  }, [speakWithElevenLabs, speakWithBrowser]);
+  }, [speakWithOpenAI, speakWithBrowser]);
 
   const stop = useCallback(() => {
     if (typeof window !== 'undefined' && window.speechSynthesis) {
@@ -313,7 +313,7 @@ export function useSpeech(options: UseSpeechOptions = {}) {
   return { 
     speak, 
     speakWithBrowser,
-    speakWithElevenLabs,
+    speakWithOpenAI,
     stop, 
     isSupported, 
     isSpeaking, 
