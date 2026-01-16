@@ -155,7 +155,7 @@ export default function ThemeToggle({ className = '', size = 'md' }: ThemeToggle
                   opacity: [0.4, 1, 0.4],
                   scale: [0.8, 1, 0.8],
                 }}
-                exit={{ opacity: 0, scale: 0 }}
+                exit={{ opacity: 0, scale: 0, transition: { duration: 0.2 } }}
                 transition={{
                   opacity: {
                     duration: 2,
@@ -167,7 +167,6 @@ export default function ThemeToggle({ className = '', size = 'md' }: ThemeToggle
                     repeat: Infinity,
                     delay: star.delay,
                   },
-                  exit: { duration: 0.2 },
                 }}
               />
             ))}
