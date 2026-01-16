@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion"
 type SkeletonVariant = "text" | "title" | "avatar" | "card" | "button" | "image"
 type AspectRatio = "16:9" | "4:3" | "1:1" | "3:4" | "9:16"
 
-interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+interface SkeletonProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onAnimationStart' | 'onAnimationEnd' | 'onAnimationIteration'> {
   variant?: SkeletonVariant
   width?: string | number
   height?: string | number
