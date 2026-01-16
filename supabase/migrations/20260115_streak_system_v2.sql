@@ -48,6 +48,15 @@ BEGIN
   END IF;
 END $$;
 
+-- Add streak_awarded_today for tracking if today's streak has been earned (for revert tracking)
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'user_stats' AND column_name = 'streak_awarded_today') THEN
+    ALTER TABLE user_stats ADD COLUMN streak_awarded_today boolean DEFAULT false;
+  END IF;
+END $$;
+
 -- Add streak_deadline (actual expiration with grace period)
 DO $$
 BEGIN

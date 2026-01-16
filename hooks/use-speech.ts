@@ -275,7 +275,7 @@ export function useSpeech(options: UseSpeechOptions = {}) {
 
       await audio.play();
     } catch (error) {
-      console.error('ElevenLabs TTS error:', error);
+      console.error('OpenAI TTS error:', error);
       // Fallback to browser TTS
       speakWithBrowser(text, language);
     } finally {

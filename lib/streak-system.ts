@@ -261,7 +261,7 @@ export async function processCardMasteryChange(
   }
   
   // Update user stats
-  await supabase
+  const { error: updateError } = await supabase
     .from('user_stats')
     .update(updateData)
     .eq('user_id', userId);
@@ -730,7 +730,7 @@ export async function executeStackDeletion(
     // Fetch current stats to preserve longest and update total mastered
     const { data: stats } = await supabase
       .from('user_stats')
-      .select('current_streak, longest_streak, total_cards_mastered')
+      .select('current_streak, longest_streak, total_cards_mastered, current_week_cards')
       .eq('user_id', userId)
       .single();
     
@@ -739,8 +739,9 @@ export async function executeStackDeletion(
       stats?.longest_streak || 0
     );
     
-    // Subtract the deleted stack's mastered cards from total
+    // Subtract the deleted stack's mastered cards from totals
     const newTotalMastered = Math.max(0, (stats?.total_cards_mastered || 0) - masteredCardsInStack);
+    const newWeekCards = Math.max(0, (stats?.current_week_cards || 0) - masteredCardsInStack);
     
     // Reset streak, unlock all stacks, and subtract mastered cards
     await supabase
@@ -753,6 +754,7 @@ export async function executeStackDeletion(
         display_deadline: null,
         longest_streak: newLongest,
         total_cards_mastered: newTotalMastered,
+        current_week_cards: newWeekCards,
       })
       .eq('user_id', userId);
     
@@ -769,18 +771,22 @@ export async function executeStackDeletion(
       .eq('user_id', userId)
       .eq('test_status', 'pending');
   } else if (masteredCardsInStack > 0) {
-    // Even if not resetting streak, still subtract mastered cards from total
+    // Even if not resetting streak, still subtract mastered cards from totals
     const { data: stats } = await supabase
       .from('user_stats')
-      .select('total_cards_mastered')
+      .select('total_cards_mastered, current_week_cards')
       .eq('user_id', userId)
       .single();
     
     const newTotalMastered = Math.max(0, (stats?.total_cards_mastered || 0) - masteredCardsInStack);
+    const newWeekCards = Math.max(0, (stats?.current_week_cards || 0) - masteredCardsInStack);
     
     await supabase
       .from('user_stats')
-      .update({ total_cards_mastered: newTotalMastered })
+      .update({ 
+        total_cards_mastered: newTotalMastered,
+        current_week_cards: newWeekCards,
+      })
       .eq('user_id', userId);
   }
   

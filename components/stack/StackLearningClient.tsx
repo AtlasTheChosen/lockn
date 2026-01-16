@@ -429,17 +429,19 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         
         const { data: userStats } = await supabase
           .from('user_stats')
-          .select('total_cards_mastered')
+          .select('total_cards_mastered, current_week_cards')
           .eq('user_id', stack.user_id)
           .single();
 
         if (userStats) {
           const newTotalMastered = Math.max(0, (userStats.total_cards_mastered || 0) - 1);
+          const newWeekCards = Math.max(0, (userStats.current_week_cards || 0) - 1);
           
           await supabase
             .from('user_stats')
             .update({
               total_cards_mastered: newTotalMastered,
+              current_week_cards: newWeekCards,
             })
             .eq('user_id', stack.user_id);
         }
