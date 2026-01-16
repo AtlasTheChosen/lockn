@@ -7,7 +7,12 @@ import { motion, AnimatePresence } from "framer-motion"
 type SkeletonVariant = "text" | "title" | "avatar" | "card" | "button" | "image"
 type AspectRatio = "16:9" | "4:3" | "1:1" | "3:4" | "9:16"
 
-interface SkeletonProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onAnimationStart' | 'onAnimationEnd' | 'onAnimationIteration'> {
+interface SkeletonProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 
+  // Animation handlers (conflict with Framer Motion)
+  'onAnimationStart' | 'onAnimationEnd' | 'onAnimationIteration' |
+  // Drag handlers (conflict with Framer Motion drag gestures)
+  'onDrag' | 'onDragEnd' | 'onDragEnter' | 'onDragExit' | 'onDragLeave' | 'onDragOver' | 'onDragStart' | 'onDrop'
+> {
   variant?: SkeletonVariant
   width?: string | number
   height?: string | number
