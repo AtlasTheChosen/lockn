@@ -205,7 +205,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
           <button
             onClick={() => setShowAvatarPicker(!showAvatarPicker)}
             className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-white ring-4 overflow-hidden transition-all cursor-pointer group relative"
-            style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))', ringColor: 'var(--bg-card)' }}
+            style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))', '--tw-ring-color': 'var(--bg-card)' } as React.CSSProperties}
           >
             <img 
               src={avatarUrl} 
