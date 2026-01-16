@@ -1,125 +1,813 @@
-'use client';
+"use client"
+import { motion } from "framer-motion"
 
-import React, { useId } from 'react';
-
-interface IconDefinition {
-  path: string;
-  viewBox: string;
-  strokeWidth?: number;
-}
-
+// Gradient icon props
 interface GradientIconProps {
-  name: keyof typeof iconPaths;
-  size?: number;
-  className?: string;
-  colors?: [string, string];
+  size?: number
+  gradientStart?: string
+  gradientEnd?: string
+  className?: string
+  isActive?: boolean
+  glowEffect?: boolean
 }
 
-const iconPaths: Record<string, IconDefinition> = {
-  rocket: {
-    path: 'M12 2L15 8.5L22 9L16.5 14L18 21L12 17.5L6 21L7.5 14L2 9L9 8.5L12 2Z',
-    viewBox: '0 0 24 24',
-  },
-  fire: {
-    path: 'M12 2C12 2 7 6 7 11C7 14.31 9.69 17 13 17C16.31 17 19 14.31 19 11C19 6 14 2 14 2C14 2 13.5 4.5 12 6.5C10.5 4.5 10 2 10 2C10 2 8 5 8 8.5C8 10.43 9.57 12 11.5 12C11.5 12 11 10 12 8C13 10 12.5 12 12.5 12C14.43 12 16 10.43 16 8.5C16 5 14 2 14 2L12 2Z',
-    viewBox: '0 0 24 24',
-  },
-  chartUp: {
-    path: 'M3 17L7 13L11 17L18 10L21 13V21H3V17Z M18 8L21 5M21 5L18 2M21 5H15',
-    viewBox: '0 0 24 24',
-  },
-  lightning: {
-    path: 'M13 2L3 14H12L11 22L21 10H12L13 2Z',
-    viewBox: '0 0 24 24',
-  },
-  snowflake: {
-    path: 'M12 2V6M12 18V22M6 12H2M22 12H18M5.64 5.64L8.46 8.46M15.54 15.54L18.36 18.36M18.36 5.64L15.54 8.46M8.46 15.54L5.64 18.36M12 8V16M8 12H16',
-    viewBox: '0 0 24 24',
-    strokeWidth: 2,
-  },
-  stack: {
-    path: 'M3 7L12 2L21 7M3 7L12 12M3 7V17L12 22M21 7L12 12M21 7V17L12 22M12 12V22',
-    viewBox: '0 0 24 24',
-  },
-  trophy: {
-    path: 'M6 9C6 10.5 6.5 11.5 7 12C7.5 12.5 8 13 8 14V17H16V14C16 13 16.5 12.5 17 12C17.5 11.5 18 10.5 18 9M6 9H2C2 11 3 13 5 14M6 9V5C6 4 7 3 8 3H16C17 3 18 4 18 5V9M18 9H22C22 11 21 13 19 14M8 17V19C8 20 9 21 10 21H14C15 21 16 20 16 19V17',
-    viewBox: '0 0 24 24',
-  },
-  crown: {
-    path: 'M2 8L7 12L12 6L17 12L22 8V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V8Z M7 12V20 M17 12V20 M12 6V20',
-    viewBox: '0 0 24 24',
-  },
-  sparkles: {
-    path: 'M12 2L13.5 7.5L19 9L13.5 10.5L12 16L10.5 10.5L5 9L10.5 7.5L12 2Z M6 16L7 18.5L9.5 19.5L7 20.5L6 23L5 20.5L2.5 19.5L5 18.5L6 16Z M18 16L19 18.5L21.5 19.5L19 20.5L18 23L17 20.5L14.5 19.5L17 18.5L18 16Z',
-    viewBox: '0 0 24 24',
-  },
-  target: {
-    path: 'M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2Z M12 6C15.31 6 18 8.69 18 12C18 15.31 15.31 18 12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6Z M12 10C10.9 10 10 10.9 10 12C10 13.1 10.9 14 12 14C13.1 14 14 13.1 14 12C14 10.9 13.1 10 12 10Z',
-    viewBox: '0 0 24 24',
-  },
-  // Additional icons for the app
-  user: {
-    path: 'M12 2C9.24 2 7 4.24 7 7C7 9.76 9.24 12 12 12C14.76 12 17 9.76 17 7C17 4.24 14.76 2 12 2Z M12 14C7 14 3 16.24 3 19V21C3 21.55 3.45 22 4 22H20C20.55 22 21 21.55 21 21V19C21 16.24 17 14 12 14Z',
-    viewBox: '0 0 24 24',
-  },
-  users: {
-    path: 'M16 4C16 6.21 14.21 8 12 8C9.79 8 8 6.21 8 4C8 1.79 9.79 0 12 0C14.21 0 16 1.79 16 4Z M12 10C7 10 3 12.69 3 16V18H21V16C21 12.69 17 10 12 10Z M5 4C5 5.66 3.66 7 2 7V9C4.76 9 7 6.76 7 4H5Z M19 4H17C17 6.76 19.24 9 22 9V7C20.34 7 19 5.66 19 4Z',
-    viewBox: '0 0 24 24',
-  },
-  home: {
-    path: 'M3 12L5 10M5 10L12 3L19 10M5 10V20C5 20.55 5.45 21 6 21H9V15C9 14.45 9.45 14 10 14H14C14.55 14 15 14.45 15 15V21H18C18.55 21 19 20.55 19 20V10M19 10L21 12',
-    viewBox: '0 0 24 24',
-  },
-  exit: {
-    path: 'M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9M16 17L21 12M21 12L16 7M21 12H9',
-    viewBox: '0 0 24 24',
-  },
-  settings: {
-    path: 'M12 15C13.6569 15 15 13.6569 15 12C15 10.3431 13.6569 9 12 9C10.3431 9 9 10.3431 9 12C9 13.6569 10.3431 15 12 15Z M19.4 15C19.2669 15.3016 19.2272 15.6362 19.286 15.9606C19.3448 16.285 19.4995 16.5843 19.73 16.82L19.79 16.88C19.976 17.0657 20.1235 17.2863 20.2241 17.5291C20.3248 17.7719 20.3766 18.0322 20.3766 18.295C20.3766 18.5578 20.3248 18.8181 20.2241 19.0609C20.1235 19.3037 19.976 19.5243 19.79 19.71C19.6043 19.896 19.3837 20.0435 19.1409 20.1441C18.8981 20.2448 18.6378 20.2966 18.375 20.2966C18.1122 20.2966 17.8519 20.2448 17.6091 20.1441C17.3663 20.0435 17.1457 19.896 16.96 19.71L16.9 19.65C16.6643 19.4195 16.365 19.2648 16.0406 19.206C15.7162 19.1472 15.3816 19.1869 15.08 19.32C14.7842 19.4468 14.532 19.6572 14.3543 19.9255C14.1766 20.1938 14.0813 20.5082 14.08 20.83V21C14.08 21.5304 13.8693 22.0391 13.4942 22.4142C13.1191 22.7893 12.6104 23 12.08 23C11.5496 23 11.0409 22.7893 10.6658 22.4142C10.2907 22.0391 10.08 21.5304 10.08 21V20.91C10.0723 20.579 9.96512 20.258 9.77251 19.9887C9.5799 19.7194 9.31074 19.5143 9 19.4C8.69838 19.2669 8.36381 19.2272 8.03941 19.286C7.71502 19.3448 7.41568 19.4995 7.18 19.73L7.12 19.79C6.93425 19.976 6.71368 20.1235 6.47088 20.2241C6.22808 20.3248 5.96783 20.3766 5.705 20.3766C5.44217 20.3766 5.18192 20.3248 4.93912 20.2241C4.69632 20.1235 4.47575 19.976 4.29 19.79C4.10405 19.6043 3.95653 19.3837 3.85588 19.1409C3.75523 18.8981 3.70343 18.6378 3.70343 18.375C3.70343 18.1122 3.75523 17.8519 3.85588 17.6091C3.95653 17.3663 4.10405 17.1457 4.29 16.96L4.35 16.9C4.58054 16.6643 4.73519 16.365 4.794 16.0406C4.85282 15.7162 4.81312 15.3816 4.68 15.08C4.55324 14.7842 4.34276 14.532 4.07447 14.3543C3.80618 14.1766 3.49179 14.0813 3.17 14.08H3C2.46957 14.08 1.96086 13.8693 1.58579 13.4942C1.21071 13.1191 1 12.6104 1 12.08C1 11.5496 1.21071 11.0409 1.58579 10.6658C1.96086 10.2907 2.46957 10.08 3 10.08H3.09C3.42099 10.0723 3.742 9.96512 4.0113 9.77251C4.28059 9.5799 4.48572 9.31074 4.6 9C4.73312 8.69838 4.77282 8.36381 4.714 8.03941C4.65519 7.71502 4.50054 7.41568 4.27 7.18L4.21 7.12C4.02405 6.93425 3.87653 6.71368 3.77588 6.47088C3.67523 6.22808 3.62343 5.96783 3.62343 5.705C3.62343 5.44217 3.67523 5.18192 3.77588 4.93912C3.87653 4.69632 4.02405 4.47575 4.21 4.29C4.39575 4.10405 4.61632 3.95653 4.85912 3.85588C5.10192 3.75523 5.36217 3.70343 5.625 3.70343C5.88783 3.70343 6.14808 3.75523 6.39088 3.85588C6.63368 3.95653 6.85425 4.10405 7.04 4.29L7.1 4.35C7.33568 4.58054 7.63502 4.73519 7.95941 4.794C8.28381 4.85282 8.61838 4.81312 8.92 4.68H9C9.29577 4.55324 9.54802 4.34276 9.72569 4.07447C9.90337 3.80618 9.99872 3.49179 10 3.17V3C10 2.46957 10.2107 1.96086 10.5858 1.58579C10.9609 1.21071 11.4696 1 12 1C12.5304 1 13.0391 1.21071 13.4142 1.58579C13.7893 1.96086 14 2.46957 14 3V3.09C14.0013 3.41179 14.0966 3.72618 14.2743 3.99447C14.452 4.26276 14.7042 4.47324 15 4.6C15.3016 4.73312 15.6362 4.77282 15.9606 4.714C16.285 4.65519 16.5843 4.50054 16.82 4.27L16.88 4.21C17.0657 4.02405 17.2863 3.87653 17.5291 3.77588C17.7719 3.67523 18.0322 3.62343 18.295 3.62343C18.5578 3.62343 18.8181 3.67523 19.0609 3.77588C19.3037 3.87653 19.5243 4.02405 19.71 4.21C19.896 4.39575 20.0435 4.61632 20.1441 4.85912C20.2448 5.10192 20.2966 5.36217 20.2966 5.625C20.2966 5.88783 20.2448 6.14808 20.1441 6.39088C20.0435 6.63368 19.896 6.85425 19.71 7.04L19.65 7.1C19.4195 7.33568 19.2648 7.63502 19.206 7.95941C19.1472 8.28381 19.1869 8.61838 19.32 8.92V9C19.4468 9.29577 19.6572 9.54802 19.9255 9.72569C20.1938 9.90337 20.5082 9.99872 20.83 10H21C21.5304 10 22.0391 10.2107 22.4142 10.5858C22.7893 10.9609 23 11.4696 23 12C23 12.5304 22.7893 13.0391 22.4142 13.4142C22.0391 13.7893 21.5304 14 21 14H20.91C20.5882 14.0013 20.2738 14.0966 20.0055 14.2743C19.7372 14.452 19.5268 14.7042 19.4 15Z',
-    viewBox: '0 0 24 24',
-  },
-};
+// Unique gradient ID generator
+const useGradientId = (prefix: string) => `${prefix}-${Math.random().toString(36).substr(2, 9)}`
 
-export default function GradientIcon({ 
-  name, 
-  size = 24, 
-  className = '',
-  colors = ['#a78bfa', '#fb7185']
+// ============ DASHBOARD TAB ICONS (gradient stroke style) ============
+
+export function OverviewIcon({
+  size = 24,
+  gradientStart = "#58cc02",
+  gradientEnd = "#1cb0f6",
+  className = "",
+  isActive = false,
 }: GradientIconProps) {
-  const icon = iconPaths[name];
-  const uniqueId = useId();
-  
-  if (!icon) return null;
-  
-  const gradientId = `grad-${uniqueId}`;
-  
+  const gradientId = useGradientId("overview")
+
   return (
-    <svg 
-      width={size} 
-      height={size} 
-      viewBox={icon.viewBox} 
-      fill="none" 
-      xmlns="http://www.w3.org/2000/svg"
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
       className={className}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
     >
       <defs>
-        <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={colors[0]} />
-          <stop offset="100%" stopColor={colors[1]} />
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
         </linearGradient>
       </defs>
-      <path 
-        d={icon.path} 
-        stroke={`url(#${gradientId})`}
-        strokeWidth={icon.strokeWidth || 2}
-        strokeLinecap="round" 
+      {/* Simple bar chart - 4 bars */}
+      <motion.rect
+        x="3"
+        y="14"
+        width="4"
+        height="7"
+        rx="1"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+        opacity={isActive ? 1 : 0.7}
+      />
+      <motion.rect
+        x="9"
+        y="10"
+        width="4"
+        height="11"
+        rx="1"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+        opacity={isActive ? 1 : 0.85}
+      />
+      <motion.rect
+        x="15"
+        y="6"
+        width="4"
+        height="15"
+        rx="1"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+        animate={isActive ? { scaleY: [1, 1.05, 1] } : {}}
+        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
+        style={{ transformOrigin: "bottom" }}
+      />
+      {/* Trend line */}
+      <motion.path
+        d="M5 12L11 8L17 4"
+        stroke={isActive ? `url(#${gradientId})` : "currentColor"}
+        strokeWidth="2"
+        strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
+        opacity={0.6}
       />
-    </svg>
-  );
+    </motion.svg>
+  )
 }
 
-// Export icon names for type safety
-export type IconName = keyof typeof iconPaths;
+export function ProfileIcon({
+  size = 24,
+  gradientStart = "#58cc02",
+  gradientEnd = "#1cb0f6",
+  className = "",
+  isActive = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("profile")
 
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Head - filled circle */}
+      <circle cx="12" cy="8" r="4" fill={isActive ? `url(#${gradientId})` : "currentColor"} />
+      {/* Body - filled arc */}
+      <path
+        d="M4 21C4 16.5817 7.58172 13 12 13C16.4183 13 20 16.5817 20 21"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+      />
+    </motion.svg>
+  )
+}
+
+export function FriendsIcon({
+  size = 24,
+  gradientStart = "#58cc02",
+  gradientEnd = "#1cb0f6",
+  className = "",
+  isActive = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("friends")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Left person */}
+      <circle cx="8" cy="7" r="3" fill={isActive ? `url(#${gradientId})` : "currentColor"} opacity={0.8} />
+      <path
+        d="M2 20C2 16.134 5.13401 13 9 13C10.5 13 11.5 13.5 12 14"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+        opacity={0.8}
+      />
+      {/* Right person (slightly in front) */}
+      <circle cx="16" cy="8" r="3.5" fill={isActive ? `url(#${gradientId})` : "currentColor"} />
+      <path
+        d="M10 21C10 16.5817 12.6863 13 16 13C19.3137 13 22 16.5817 22 21"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+      />
+    </motion.svg>
+  )
+}
+
+export function TrophyIcon({
+  size = 24,
+  gradientStart = "#ffc800",
+  gradientEnd = "#ff9600",
+  className = "",
+  isActive = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("trophy")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Trophy cup body */}
+      <motion.path
+        d="M7 4H17V10C17 13.3137 14.7614 16 12 16C9.23858 16 7 13.3137 7 10V4Z"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+        animate={isActive ? { scale: [1, 1.03, 1] } : {}}
+        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+      />
+      {/* Left handle */}
+      <path
+        d="M7 6H5C4 6 3 7 3 8C3 9.5 4 10 5 10H7"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+        opacity={0.8}
+      />
+      {/* Right handle */}
+      <path
+        d="M17 6H19C20 6 21 7 21 8C21 9.5 20 10 19 10H17"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+        opacity={0.8}
+      />
+      {/* Stem and base */}
+      <rect x="10" y="16" width="4" height="3" fill={isActive ? `url(#${gradientId})` : "currentColor"} />
+      <rect x="7" y="19" width="10" height="2" rx="1" fill={isActive ? `url(#${gradientId})` : "currentColor"} />
+    </motion.svg>
+  )
+}
+
+// ============ FRIENDS SUB-TAB ICONS ============
+
+export function FriendsListIcon({
+  size = 24,
+  gradientStart = "#58cc02",
+  gradientEnd = "#1cb0f6",
+  className = "",
+  isActive = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("friendslist")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Center person (front) */}
+      <circle cx="12" cy="8" r="3" fill={isActive ? `url(#${gradientId})` : "currentColor"} />
+      <path
+        d="M6 20C6 16.134 8.68629 13 12 13C15.3137 13 18 16.134 18 20"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+      />
+      {/* Left person (back) */}
+      <circle cx="5" cy="9" r="2.5" fill={isActive ? `url(#${gradientId})` : "currentColor"} opacity={0.5} />
+      <path
+        d="M1 19C1 16.5 2.5 14 5 14C6 14 6.5 14.5 7 15"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+        opacity={0.5}
+      />
+      {/* Right person (back) */}
+      <circle cx="19" cy="9" r="2.5" fill={isActive ? `url(#${gradientId})` : "currentColor"} opacity={0.5} />
+      <path
+        d="M23 19C23 16.5 21.5 14 19 14C18 14 17.5 14.5 17 15"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+        opacity={0.5}
+      />
+    </motion.svg>
+  )
+}
+
+export function RequestsIcon({
+  size = 24,
+  gradientStart = "#58cc02",
+  gradientEnd = "#1cb0f6",
+  className = "",
+  isActive = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("requests")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Person */}
+      <circle cx="10" cy="8" r="3.5" fill={isActive ? `url(#${gradientId})` : "currentColor"} />
+      <path
+        d="M3 21C3 16.5817 6.13401 13 10 13C11.5 13 13 13.5 14 14.5"
+        fill={isActive ? `url(#${gradientId})` : "currentColor"}
+      />
+      {/* Plus sign */}
+      <motion.g
+        animate={isActive ? { scale: [1, 1.2, 1] } : {}}
+        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+      >
+        <circle cx="18" cy="16" r="5" fill={isActive ? `url(#${gradientId})` : "currentColor"} />
+        <path d="M18 13.5V18.5M15.5 16H20.5" stroke="white" strokeWidth="2" strokeLinecap="round" />
+      </motion.g>
+    </motion.svg>
+  )
+}
+
+export function BlockedIcon({
+  size = 24,
+  gradientStart = "#ff4b4b",
+  gradientEnd = "#ff9600",
+  className = "",
+  isActive = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("blocked")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Circle with slash cutout */}
+      <circle cx="12" cy="12" r="9" fill={isActive ? `url(#${gradientId})` : "currentColor"} />
+      {/* Slash (white to cut through) */}
+      <path d="M6 6L18 18" stroke="var(--bg-primary, white)" strokeWidth="3" strokeLinecap="round" />
+    </motion.svg>
+  )
+}
+
+// ============ BADGE CATEGORY ICONS (filled style with glow) ============
+
+export function StreakBadgeIcon({
+  size = 24,
+  gradientStart = "#ff9600",
+  gradientEnd = "#ff4b4b",
+  className = "",
+  isActive = false,
+  glowEffect = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("streakbadge")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      style={{
+        filter: glowEffect ? `drop-shadow(0 0 8px ${gradientStart}80)` : undefined,
+      }}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+        <linearGradient id={`${gradientId}-inner`} x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stopColor="#ffc800" />
+          <stop offset="100%" stopColor="#ff9600" />
+        </linearGradient>
+      </defs>
+      {/* Main flame - full symmetrical shape */}
+      <motion.path
+        d="M12 2C12 2 8 6 8 10C8 11.5 8.5 13 9.5 14C9 13 9 12 9.5 11C10 10 11 9 12 8C13 9 14 10 14.5 11C15 12 15 13 14.5 14C15.5 13 16 11.5 16 10C16 6 12 2 12 2Z"
+        fill={`url(#${gradientId})`}
+        animate={
+          isActive
+            ? {
+                scaleY: [1, 1.08, 1],
+                scaleX: [1, 0.95, 1],
+              }
+            : {}
+        }
+        transition={{ duration: 0.6, repeat: Number.POSITIVE_INFINITY }}
+        style={{ transformOrigin: "center bottom" }}
+      />
+      {/* Lower/outer flame */}
+      <motion.path
+        d="M12 22C7 22 4 18 4 14C4 10 7 7 8 6C8 8 9 9 10 9C10 7 11 5 12 4C13 5 14 7 14 9C15 9 16 8 16 6C17 7 20 10 20 14C20 18 17 22 12 22Z"
+        fill={`url(#${gradientId})`}
+        animate={
+          isActive
+            ? {
+                scaleY: [1, 1.05, 1],
+                scaleX: [1, 0.97, 1],
+              }
+            : {}
+        }
+        transition={{ duration: 0.8, repeat: Number.POSITIVE_INFINITY }}
+        style={{ transformOrigin: "center bottom" }}
+      />
+      {/* Inner bright core */}
+      <motion.path
+        d="M12 20C9 20 7 17.5 7 15C7 13 8 11 9 10C9 11.5 10 12.5 11 12.5C11 11 11.5 9.5 12 9C12.5 9.5 13 11 13 12.5C14 12.5 15 11.5 15 10C16 11 17 13 17 15C17 17.5 15 20 12 20Z"
+        fill={`url(#${gradientId}-inner)`}
+        animate={
+          isActive
+            ? {
+                opacity: [1, 0.85, 1],
+              }
+            : {}
+        }
+        transition={{ duration: 0.5, repeat: Number.POSITIVE_INFINITY }}
+      />
+    </motion.svg>
+  )
+}
+
+export function CardsBadgeIcon({
+  size = 24,
+  gradientStart = "#58cc02",
+  gradientEnd = "#1cb0f6",
+  className = "",
+  isActive = false,
+  glowEffect = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("cardsbadge")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      style={{
+        filter: glowEffect ? `drop-shadow(0 0 8px ${gradientStart}80)` : undefined,
+      }}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Back card */}
+      <rect x="5" y="3" width="14" height="16" rx="3" fill={`url(#${gradientId})`} opacity="0.4" />
+      {/* Front card */}
+      <motion.rect
+        x="4"
+        y="5"
+        width="14"
+        height="16"
+        rx="3"
+        fill={`url(#${gradientId})`}
+        animate={isActive ? { rotate: [-2, 2, -2] } : {}}
+        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY }}
+      />
+      {/* Card content */}
+      <rect x="7" y="9" width="8" height="2" rx="1" fill="white" opacity="0.6" />
+      <rect x="7" y="13" width="5" height="2" rx="1" fill="white" opacity="0.4" />
+    </motion.svg>
+  )
+}
+
+export function StacksBadgeIcon({
+  size = 24,
+  gradientStart = "#1cb0f6",
+  gradientEnd = "#a560e8",
+  className = "",
+  isActive = false,
+  glowEffect = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("stacksbadge")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      style={{
+        filter: glowEffect ? `drop-shadow(0 0 8px ${gradientStart}80)` : undefined,
+      }}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Bottom layer */}
+      <motion.rect x="3" y="14" width="18" height="4" rx="2" fill={`url(#${gradientId})`} opacity="0.4" />
+      {/* Middle layer */}
+      <motion.rect
+        x="3"
+        y="9"
+        width="18"
+        height="4"
+        rx="2"
+        fill={`url(#${gradientId})`}
+        opacity="0.7"
+        animate={isActive ? { y: [9, 8.5, 9] } : {}}
+        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, delay: 0.1 }}
+      />
+      {/* Top layer */}
+      <motion.rect
+        x="3"
+        y="4"
+        width="18"
+        height="4"
+        rx="2"
+        fill={`url(#${gradientId})`}
+        animate={isActive ? { y: [4, 3, 4] } : {}}
+        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+      />
+    </motion.svg>
+  )
+}
+
+export function SocialBadgeIcon({
+  size = 24,
+  gradientStart = "#58cc02",
+  gradientEnd = "#ffc800",
+  className = "",
+  isActive = false,
+  glowEffect = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("socialbadge")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      style={{
+        filter: glowEffect ? `drop-shadow(0 0 8px ${gradientStart}80)` : undefined,
+      }}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Center node */}
+      <circle cx="12" cy="12" r="4" fill={`url(#${gradientId})`} />
+      {/* Outer nodes */}
+      <motion.circle
+        cx="12"
+        cy="4"
+        r="2.5"
+        fill={`url(#${gradientId})`}
+        animate={isActive ? { scale: [1, 1.2, 1] } : {}}
+        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, delay: 0 }}
+      />
+      <motion.circle
+        cx="19"
+        cy="9"
+        r="2.5"
+        fill={`url(#${gradientId})`}
+        animate={isActive ? { scale: [1, 1.2, 1] } : {}}
+        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, delay: 0.25 }}
+      />
+      <motion.circle
+        cx="19"
+        cy="17"
+        r="2.5"
+        fill={`url(#${gradientId})`}
+        animate={isActive ? { scale: [1, 1.2, 1] } : {}}
+        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, delay: 0.5 }}
+      />
+      <motion.circle
+        cx="5"
+        cy="17"
+        r="2.5"
+        fill={`url(#${gradientId})`}
+        animate={isActive ? { scale: [1, 1.2, 1] } : {}}
+        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, delay: 0.75 }}
+      />
+      <motion.circle
+        cx="5"
+        cy="9"
+        r="2.5"
+        fill={`url(#${gradientId})`}
+        animate={isActive ? { scale: [1, 1.2, 1] } : {}}
+        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, delay: 1 }}
+      />
+      {/* Connection lines */}
+      <path
+        d="M12 8V6.5M15 10L17 8M15 14L17 15.5M9 14L7 15.5M9 10L7 8"
+        stroke={`url(#${gradientId})`}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        opacity="0.6"
+      />
+    </motion.svg>
+  )
+}
+
+export function SpecialBadgeIcon({
+  size = 24,
+  gradientStart = "#ffc800",
+  gradientEnd = "#ff9600",
+  className = "",
+  isActive = false,
+  glowEffect = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("specialbadge")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      style={{
+        filter: glowEffect ? `drop-shadow(0 0 8px ${gradientStart}80)` : undefined,
+      }}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Main star */}
+      <motion.path
+        d="M12 2L14.4 8.2L21 9L16.5 13.3L17.8 20L12 16.8L6.2 20L7.5 13.3L3 9L9.6 8.2L12 2Z"
+        fill={`url(#${gradientId})`}
+        animate={isActive ? { rotate: [0, 5, -5, 0] } : {}}
+        transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY }}
+      />
+      {/* Sparkles */}
+      <motion.circle
+        cx="19"
+        cy="5"
+        r="1.5"
+        fill={gradientEnd}
+        animate={isActive ? { scale: [0.8, 1.2, 0.8], opacity: [0.5, 1, 0.5] } : {}}
+        transition={{ duration: 1.2, repeat: Number.POSITIVE_INFINITY }}
+      />
+      <motion.circle
+        cx="5"
+        cy="6"
+        r="1"
+        fill={gradientStart}
+        animate={isActive ? { scale: [1, 0.6, 1], opacity: [1, 0.5, 1] } : {}}
+        transition={{ duration: 1.5, repeat: Number.POSITIVE_INFINITY, delay: 0.3 }}
+      />
+      <motion.circle
+        cx="20"
+        cy="15"
+        r="0.8"
+        fill={gradientEnd}
+        animate={isActive ? { scale: [0.6, 1, 0.6], opacity: [0.6, 1, 0.6] } : {}}
+        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, delay: 0.6 }}
+      />
+    </motion.svg>
+  )
+}
+
+export function RecoveryBadgeIcon({
+  size = 24,
+  gradientStart = "#1cb0f6",
+  gradientEnd = "#a560e8",
+  className = "",
+  isActive = false,
+  glowEffect = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("recoverybadge")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      style={{
+        filter: glowEffect ? `drop-shadow(0 0 8px ${gradientStart}80)` : undefined,
+      }}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Snowflake */}
+      <motion.g
+        animate={isActive ? { rotate: [0, 30, 0] } : {}}
+        transition={{ duration: 4, repeat: Number.POSITIVE_INFINITY }}
+        style={{ transformOrigin: "center" }}
+      >
+        <path
+          d="M12 2V22M2 12H22M4.93 4.93L19.07 19.07M19.07 4.93L4.93 19.07"
+          stroke={`url(#${gradientId})`}
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+        {/* Crystal branches */}
+        <path
+          d="M12 5L10 7M12 5L14 7M12 19L10 17M12 19L14 17M5 12L7 10M5 12L7 14M19 12L17 10M19 12L17 14"
+          stroke={`url(#${gradientId})`}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </motion.g>
+      {/* Center crystal */}
+      <circle cx="12" cy="12" r="2" fill={`url(#${gradientId})`} />
+    </motion.svg>
+  )
+}
+
+export function ProgressBadgeIcon({
+  size = 24,
+  gradientStart = "#58cc02",
+  gradientEnd = "#1cb0f6",
+  className = "",
+  isActive = false,
+  glowEffect = false,
+}: GradientIconProps) {
+  const gradientId = useGradientId("progressbadge")
+
+  return (
+    <motion.svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      className={className}
+      style={{
+        filter: glowEffect ? `drop-shadow(0 0 8px ${gradientStart}80)` : undefined,
+      }}
+      whileHover={{ scale: 1.15 }}
+      whileTap={{ scale: 0.95 }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="50%" y1="100%" x2="50%" y2="0%">
+          <stop offset="0%" stopColor={gradientStart} />
+          <stop offset="100%" stopColor={gradientEnd} />
+        </linearGradient>
+      </defs>
+      {/* Rocket body */}
+      <motion.path
+        d="M12 2C12 2 8 6 8 12C8 15 9 18 12 21C15 18 16 15 16 12C16 6 12 2 12 2Z"
+        fill={`url(#${gradientId})`}
+        animate={isActive ? { y: [0, -3, 0] } : {}}
+        transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+      />
+      {/* Window */}
+      <circle cx="12" cy="10" r="2" fill="white" opacity="0.6" />
+      {/* Fins */}
+      <path d="M8 14L5 17L8 16" fill={gradientStart} opacity="0.7" />
+      <path d="M16 14L19 17L16 16" fill={gradientStart} opacity="0.7" />
+      {/* Flame */}
+      <motion.path
+        d="M10 20L12 24L14 20"
+        fill="#ff9600"
+        animate={isActive ? { scaleY: [1, 1.3, 1], opacity: [1, 0.7, 1] } : {}}
+        transition={{ duration: 0.3, repeat: Number.POSITIVE_INFINITY }}
+      />
+    </motion.svg>
+  )
+}
+
+// ============ EXPORT ALL ICONS ============
+
+export const GradientIcons = {
+  // Dashboard tabs
+  Overview: OverviewIcon,
+  Profile: ProfileIcon,
+  Friends: FriendsIcon,
+  Trophy: TrophyIcon,
+
+  // Friends sub-tabs
+  FriendsList: FriendsListIcon,
+  Requests: RequestsIcon,
+  Blocked: BlockedIcon,
+
+  // Badge categories
+  StreakBadge: StreakBadgeIcon,
+  CardsBadge: CardsBadgeIcon,
+  StacksBadge: StacksBadgeIcon,
+  SocialBadge: SocialBadgeIcon,
+  SpecialBadge: SpecialBadgeIcon,
+  RecoveryBadge: RecoveryBadgeIcon,
+  ProgressBadge: ProgressBadgeIcon,
+}
+
+export default GradientIcons

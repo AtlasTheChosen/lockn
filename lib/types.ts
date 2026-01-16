@@ -4,7 +4,6 @@ export interface UserProfile {
   display_name?: string;
   display_name_changed_at?: string;
   avatar_url?: string;
-  bio?: string;
   badges?: Badge[];
   languages_learning?: string[];
   profile_public?: boolean;
@@ -161,6 +160,7 @@ export interface FriendProfile {
   display_name?: string;
   avatar_url?: string;
   is_online?: boolean;
+  languages_learning?: string[];
 }
 
 // ============================================================
@@ -277,7 +277,6 @@ export interface PublicProfile {
   id: string;
   display_name?: string;
   avatar_url?: string;
-  bio?: string;
   badges: Badge[];
   languages_learning: string[];
   profile_public: boolean;

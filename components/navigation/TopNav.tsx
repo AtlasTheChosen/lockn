@@ -2,10 +2,11 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { LogOut, Snowflake } from 'lucide-react';
+import { LogOut, Snowflake, Flame, ChevronDown, User, Settings, Home, LayoutDashboard, Trophy } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import AuthModal from '@/components/auth/AuthModal';
 import { NotificationBell } from '@/components/notifications';
@@ -22,29 +23,195 @@ interface TopNavProps {
 }
 
 const navLinks = [
-  { href: '/', label: 'Home', requiresAuth: false },
-  { href: '/dashboard', label: 'Dashboard', requiresAuth: true },
-  { href: '/leaderboard', label: 'Leaderboards', requiresAuth: true },
+  { href: '/', label: 'Home', icon: Home, requiresAuth: false },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requiresAuth: true },
+  { href: '/leaderboard', label: 'Leaderboards', icon: Trophy, requiresAuth: true },
 ];
 
-export default function TopNav({ streak = 0, streakFrozen = false, displayName = 'U', avatarUrl, isLoggedIn = false, userId, dataLoaded = false }: TopNavProps) {
+// Animated Streak Badge Component
+function StreakBadge({ count, isFrozen }: { count: number; isFrozen: boolean }) {
+  return (
+    <motion.div
+      className={cn(
+        'relative flex items-center gap-1.5 rounded-xl px-4 py-2',
+        'font-bold text-white text-sm',
+        'shadow-md'
+      )}
+      style={{
+        background: isFrozen
+          ? 'linear-gradient(135deg, #1cb0f6 0%, #00d4ff 100%)'
+          : 'linear-gradient(135deg, #ff9600 0%, #ffaa00 100%)',
+      }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      title={isFrozen ? `${count} day streak (frozen)` : `${count} day streak`}
+    >
+      {/* Pulse glow effect */}
+      <motion.div
+        className="absolute inset-0 rounded-xl opacity-50"
+        style={{
+          background: isFrozen
+            ? 'linear-gradient(135deg, #1cb0f6 0%, #00d4ff 100%)'
+            : 'linear-gradient(135deg, #ff9600 0%, #ffaa00 100%)',
+          filter: 'blur(8px)',
+        }}
+        animate={{
+          opacity: [0.3, 0.6, 0.3],
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      />
+
+      {/* Icon */}
+      <motion.span
+        className="relative z-10"
+        animate={isFrozen ? { opacity: [0.8, 1, 0.8] } : { scale: [1, 1.1, 1] }}
+        transition={{
+          duration: isFrozen ? 2 : 1.5,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      >
+        {isFrozen ? <Snowflake className="h-5 w-5" strokeWidth={2.5} /> : <Flame className="h-5 w-5" />}
+      </motion.span>
+
+      {/* Count */}
+      <span className="relative z-10">{count}</span>
+    </motion.div>
+  );
+}
+
+// User Avatar with Dropdown
+function UserAvatar({
+  displayName,
+  avatarUrl,
+  onLogout,
+}: {
+  displayName: string;
+  avatarUrl?: string;
+  onLogout: () => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const getInitials = (name: string) => name.substring(0, 2).toUpperCase();
+
+  return (
+    <div className="relative">
+      <motion.button
+        className={cn('relative flex items-center gap-2 rounded-full p-0.5', 'transition-all duration-300', 'group')}
+        onClick={() => setIsOpen(!isOpen)}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        {/* Avatar */}
+        <div className="relative h-11 w-11 overflow-hidden rounded-full bg-gradient-to-br from-[#1cb0f6] to-[#1a9ad6] shadow-[var(--shadow-sm)]">
+          {avatarUrl ? (
+            <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover scale-110" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center font-bold text-lg text-white">
+              {getInitials(displayName)}
+            </div>
+          )}
+        </div>
+
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 text-[var(--text-secondary)] transition-transform duration-200',
+            isOpen && 'rotate-180'
+          )}
+        />
+      </motion.button>
+
+      {/* Dropdown */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop to close on outside click */}
+            <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+            
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className={cn(
+                'absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl z-50',
+                'bg-[var(--bg-card)] border-2 border-[var(--border-color)]',
+                'shadow-lg backdrop-blur-md'
+              )}
+            >
+              <div className="p-2">
+                <Link
+                  href="/dashboard?tab=profile"
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2',
+                    'text-[var(--text-primary)] transition-colors duration-150',
+                    'hover:bg-[var(--bg-secondary)]'
+                  )}
+                  onClick={() => setIsOpen(false)}
+                >
+                  <User className="h-4 w-4" />
+                  <span className="font-medium">Profile</span>
+                </Link>
+                <Link
+                  href="/account"
+                  className={cn(
+                    'flex items-center gap-3 rounded-lg px-3 py-2',
+                    'text-[var(--text-primary)] transition-colors duration-150',
+                    'hover:bg-[var(--bg-secondary)]'
+                  )}
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span className="font-medium">Settings</span>
+                </Link>
+                <hr className="my-2 border-[var(--border-color)]" />
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    onLogout();
+                  }}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-lg px-3 py-2',
+                    'text-[var(--text-secondary)] transition-colors duration-150',
+                    'hover:bg-red-50 hover:text-[#ff4b4b]',
+                    'dark:hover:bg-red-950/30'
+                  )}
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span className="font-medium">Log out</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export default function TopNav({
+  streak = 0,
+  streakFrozen = false,
+  displayName = 'U',
+  avatarUrl,
+  isLoggedIn = false,
+  userId,
+  dataLoaded = false,
+}: TopNavProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const supabase = createClient();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
 
-  const getInitials = (name: string) => {
-    return name.substring(0, 2).toUpperCase();
-  };
-
   const handleLogout = async () => {
     try {
-      // Actually sign out from Supabase
       await supabase.auth.signOut();
-      
-      // Clear any remaining auth storage
-      Object.keys(localStorage).forEach(key => {
+      Object.keys(localStorage).forEach((key) => {
         if (key.includes('supabase') || key.includes('sb-') || key.includes('auth')) {
           localStorage.removeItem(key);
         }
@@ -52,27 +219,37 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
     } catch (e) {
       console.error('Logout error:', e);
     }
-    // Redirect to home
     window.location.href = '/';
   };
 
   return (
-    <nav className="hidden md:flex bg-[var(--bg-card)] dark:bg-[var(--bg-card)] px-8 py-5 shadow-[var(--shadow-sm)] border-b-2 border-[var(--border-color)] sticky top-0 z-[100] justify-between items-center transition-all duration-300">
+    <motion.nav
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.4, ease: 'easeOut' }}
+      className={cn(
+        'hidden md:flex sticky top-0 z-[100]',
+        'w-full items-center justify-between',
+        'px-8 py-5',
+        'bg-[var(--bg-card)]/80 backdrop-blur-xl',
+        'border-b-2 border-[var(--border-color)]',
+        'shadow-[var(--shadow-sm)]',
+        'transition-all duration-300'
+      )}
+    >
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2">
-        <Logo size="xl" />
-        <span className="font-display text-3xl font-semibold text-[#58cc02]">
-          Lockn
-        </span>
+        <motion.div className="flex items-center gap-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+          <Logo size="xl" />
+          <span className="font-display text-3xl font-semibold text-[#58cc02]">Lockn</span>
+        </motion.div>
       </Link>
 
       {/* Nav Links */}
-      <div className="flex gap-2">
+      <nav className="flex gap-1">
         {navLinks.map((link) => {
-          const isActive = pathname === link.href || 
-            (link.href !== '/' && pathname.startsWith(link.href));
-          
-          // If not logged in and link requires auth, show auth modal instead
+          const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
+
           if (!isLoggedIn && link.requiresAuth) {
             return (
               <button
@@ -82,95 +259,80 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
                   setShowAuthModal(true);
                 }}
                 className={cn(
-                  'px-6 py-3 rounded-xl font-bold text-base transition-all duration-200',
+                  'px-6 py-3 rounded-xl font-bold text-base transition-all duration-200 flex items-center gap-2',
                   'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
                 )}
               >
+                <link.icon className="h-5 w-5" />
                 {link.label}
               </button>
             );
           }
-          
+
           return (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={cn(
-                'px-6 py-3 rounded-xl font-bold text-base transition-all duration-200',
-                isActive
-                  ? 'text-[#58cc02] bg-[rgba(88,204,2,0.1)]'
-                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
-              )}
-            >
-              {link.label}
+            <Link key={link.href} href={link.href}>
+              <motion.div className="relative px-6 py-3 flex items-center gap-2" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                {/* Active indicator pill */}
+                {isActive && (
+                  <motion.div
+                    layoutId="topnav-active-pill"
+                    className="absolute inset-0 rounded-xl"
+                    style={{ backgroundColor: 'rgba(88, 204, 2, 0.15)' }}
+                    transition={{
+                      type: 'spring',
+                      stiffness: 400,
+                      damping: 30,
+                    }}
+                  />
+                )}
+
+                <link.icon 
+                  className={cn(
+                    'relative z-10 h-5 w-5 transition-colors duration-200',
+                    isActive ? 'text-[#58cc02]' : 'text-[var(--text-secondary)]'
+                  )}
+                />
+                <span
+                  className={cn(
+                    'relative z-10 font-bold text-base transition-colors duration-200',
+                    isActive ? 'text-[#58cc02]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                  )}
+                >
+                  {link.label}
+                </span>
+              </motion.div>
             </Link>
           );
         })}
-      </div>
+      </nav>
 
-      {/* User Section - Only show when logged in */}
+      {/* Right section */}
       {isLoggedIn ? (
         <div className="flex items-center gap-4">
           {/* Theme Toggle */}
-          <ThemeToggle />
+          <ThemeToggle size="sm" />
 
-          {/* Streak Badge - Shows skeleton until data loaded, then snowflake when frozen or fire when active */}
+          {/* Streak Badge */}
           {!dataLoaded ? (
-            <div className="streak-badge flex items-center gap-2 px-4 py-2 rounded-[20px] font-bold text-white relative overflow-hidden bg-slate-300 dark:bg-slate-600 animate-pulse" style={{ minWidth: '70px', height: '36px' }} />
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-white relative overflow-hidden bg-[var(--bg-secondary)] animate-pulse"
+              style={{ minWidth: '70px', height: '36px' }}
+            />
           ) : (
-            <div 
-              className="streak-badge flex items-center gap-2 px-4 py-2 rounded-[20px] font-bold text-white relative overflow-hidden"
-              style={{ 
-                background: streakFrozen 
-                  ? 'linear-gradient(135deg, #1cb0f6, #00d4ff)' 
-                  : 'linear-gradient(135deg, #ff9600, #ffaa00)' 
-              }}
-              title={streakFrozen ? `${streak} day streak (frozen)` : `${streak} day streak`}
-            >
-              {streakFrozen ? (
-                <Snowflake className="h-5 w-5 text-white" strokeWidth={2.5} />
-              ) : (
-                <span className="streak-icon text-xl animate-[flameFlicker_1.5s_ease-in-out_infinite]">🔥</span>
-              )}
-              <span>{streak}</span>
-            </div>
+            <StreakBadge count={streak} isFrozen={streakFrozen} />
           )}
 
           {/* Notifications Bell */}
           {userId && <NotificationBell userId={userId} />}
-          
-          {/* Avatar */}
-          <Link 
-            href="/dashboard?tab=profile"
-            className="flex items-center gap-3 cursor-pointer transition-all duration-200 hover:scale-105"
-          >
-            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1cb0f6] to-[#1a9ad6] flex items-center justify-center font-bold text-lg text-white shadow-[var(--shadow-sm)] overflow-hidden">
-              {avatarUrl ? (
-                <img 
-                  src={avatarUrl} 
-                  alt={displayName} 
-                  className="w-full h-full object-cover scale-110"
-                />
-              ) : (
-                getInitials(displayName)
-              )}
-            </div>
-          </Link>
 
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-3 rounded-xl font-semibold text-[var(--text-secondary)] hover:text-[#ff4b4b] hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200"
-            title="Logout"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
+          {/* User Avatar with Dropdown */}
+          <UserAvatar displayName={displayName} avatarUrl={avatarUrl} onLogout={handleLogout} />
         </div>
       ) : (
         <div className="flex items-center gap-3">
           {/* Theme Toggle */}
-          <ThemeToggle />
-          
+          <ThemeToggle size="sm" />
+
           <button
             onClick={() => {
               setAuthModalMode('login');
@@ -180,25 +342,23 @@ export default function TopNav({ streak = 0, streakFrozen = false, displayName =
           >
             Sign In
           </button>
-          <button
+          <motion.button
             onClick={() => {
               setAuthModalMode('signup');
               setShowAuthModal(true);
             }}
-            className="px-6 py-3 rounded-xl font-bold text-base bg-[#58cc02] text-white shadow-[0_4px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"
+            className="px-6 py-3 rounded-xl font-bold text-base bg-[#58cc02] text-white"
+            style={{ boxShadow: '0 4px 0 #46a302' }}
+            whileHover={{ y: -2 }}
+            whileTap={{ y: 2, boxShadow: '0 0px 0 #46a302' }}
           >
             Get Started
-          </button>
+          </motion.button>
         </div>
       )}
 
       {/* Auth Modal for guests */}
-      <AuthModal 
-        isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)}
-        initialMode={authModalMode}
-      />
-    </nav>
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} initialMode={authModalMode} />
+    </motion.nav>
   );
 }
-

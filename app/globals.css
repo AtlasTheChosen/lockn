@@ -6,84 +6,105 @@
 
 @layer base {
   :root {
-    /* LOCKN Theme Colors - Light Mode */
-    --bg-primary: #f7f7f7;
-    --bg-secondary: #ffffff;
+    /* LOCKN Theme Colors - Light Mode (Updated with cool-tinted palette) */
+    --bg-primary: #f8f9fc;
+    --bg-secondary: #f1f3f9;
     --bg-card: #ffffff;
     --accent-purple: #a78bfa;
     --accent-pink: #fb7185;
-    --accent-orange: #fb923c;
-    --accent-yellow: #fbbf24;
+    --accent-orange: #ff9600;
+    --accent-yellow: #ffc800;
     --accent-green: #58cc02;
     --accent-green-dark: #46a302;
     --accent-blue: #1cb0f6;
     --accent-cyan: #22d3ee;
     --accent-red: #ff4b4b;
-    --text-primary: #3c3c3c;
-    --text-secondary: #777777;
-    --text-muted: #94a3b8;
-    --border-color: #e5e5e5;
+    --text-primary: #1a1a2e;
+    --text-secondary: #5c5c7a;
+    --text-muted: #9090a8;
+    --border-color: #e2e4eb;
+    
+    /* Glow effects for accent colors */
+    --accent-green-glow: rgba(88, 204, 2, 0.3);
+    --accent-blue-glow: rgba(28, 176, 246, 0.3);
+    --accent-orange-glow: rgba(255, 150, 0, 0.3);
+    --accent-red-glow: rgba(255, 75, 75, 0.3);
+    
+    /* Skeleton shimmer colors for light mode */
+    --skeleton-base: rgba(26, 26, 46, 0.06);
+    --skeleton-shimmer: rgba(255, 255, 255, 0.7);
     
     /* Shadows */
-    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.08);
-    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.12);
-    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.15);
+    --shadow-sm: 0 2px 8px rgba(26, 26, 46, 0.04);
+    --shadow-md: 0 4px 24px rgba(26, 26, 46, 0.06);
+    --shadow-lg: 0 8px 40px rgba(26, 26, 46, 0.08);
     
     /* Shadcn Variables */
-    --background: 247 247 247;
-    --foreground: 60 60 60;
+    --background: 248 249 252;
+    --foreground: 26 26 46;
     --card: 255 255 255;
-    --card-foreground: 60 60 60;
+    --card-foreground: 26 26 46;
     --popover: 255 255 255;
-    --popover-foreground: 60 60 60;
+    --popover-foreground: 26 26 46;
     --primary: 88 204 2;
     --primary-foreground: 255 255 255;
-    --secondary: 241 245 249;
-    --secondary-foreground: 60 60 60;
-    --muted: 241 245 249;
-    --muted-foreground: 119 119 119;
+    --secondary: 241 243 249;
+    --secondary-foreground: 26 26 46;
+    --muted: 241 243 249;
+    --muted-foreground: 92 92 122;
     --accent: 88 204 2;
     --accent-foreground: 255 255 255;
     --destructive: 255 75 75;
     --destructive-foreground: 255 255 255;
-    --border: 229 229 229;
-    --input: 229 229 229;
+    --border: 226 228 235;
+    --input: 226 228 235;
     --ring: 88 204 2;
     --radius: 1rem;
   }
 
-  /* Dark Mode */
+  /* Dark Mode - Premium deep navy with purple undertones */
   .dark {
-    --bg-primary: #131f24;
-    --bg-secondary: #1c2e35;
-    --bg-card: #1f2937;
+    --bg-primary: #0f0f23;
+    --bg-secondary: #252540;
+    --bg-card: #1a1a2e;
     --text-primary: #ffffff;
-    --text-secondary: #afafaf;
-    --text-muted: #6b7280;
-    --border-color: #37464f;
-    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
-    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
-    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+    --text-secondary: #a0a0b8;
+    --text-muted: #6b6b80;
+    --border-color: #3d3d5c;
+    
+    /* Enhanced glow effects for dark mode */
+    --accent-green-glow: rgba(88, 204, 2, 0.4);
+    --accent-blue-glow: rgba(28, 176, 246, 0.4);
+    --accent-orange-glow: rgba(255, 150, 0, 0.4);
+    --accent-red-glow: rgba(255, 75, 75, 0.4);
+    
+    /* Skeleton shimmer colors for dark mode */
+    --skeleton-base: rgba(255, 255, 255, 0.05);
+    --skeleton-shimmer: rgba(255, 255, 255, 0.1);
+    
+    --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 24px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 40px rgba(0, 0, 0, 0.5);
     
     /* Shadcn Variables - Dark */
-    --background: 19 31 36;
+    --background: 15 15 35;
     --foreground: 255 255 255;
-    --card: 31 41 55;
+    --card: 26 26 46;
     --card-foreground: 255 255 255;
-    --popover: 31 41 55;
+    --popover: 26 26 46;
     --popover-foreground: 255 255 255;
     --primary: 88 204 2;
     --primary-foreground: 255 255 255;
-    --secondary: 28 46 53;
+    --secondary: 37 37 64;
     --secondary-foreground: 255 255 255;
-    --muted: 28 46 53;
-    --muted-foreground: 175 175 175;
+    --muted: 37 37 64;
+    --muted-foreground: 160 160 184;
     --accent: 88 204 2;
     --accent-foreground: 255 255 255;
     --destructive: 255 75 75;
     --destructive-foreground: 255 255 255;
-    --border: 55 70 79;
-    --input: 55 70 79;
+    --border: 61 61 92;
+    --input: 61 61 92;
     --ring: 88 204 2;
   }
 }
@@ -160,6 +181,30 @@
   .progress-gradient {
     background: linear-gradient(90deg, var(--accent-purple), var(--accent-pink));
   }
+}
+
+/* Skeleton shimmer animation */
+@keyframes skeleton-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--skeleton-base);
+}
+
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--skeleton-shimmer) 50%, transparent 100%);
+  animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
 /* Animations */

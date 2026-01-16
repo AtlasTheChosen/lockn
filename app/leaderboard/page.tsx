@@ -2,9 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from '@/hooks/use-session';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, RefreshCw, Calendar, Target, ArrowLeft, Flame, Snowflake } from 'lucide-react';
+import { AlertCircle, RefreshCw, Calendar, Target, ArrowLeft, Flame, Snowflake, Crown, BookOpen, Trophy, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout';
@@ -21,7 +22,7 @@ interface LeaderboardUser {
   streak_frozen: boolean;
 }
 
-type FilterType = 'longest_streak' | 'this_week' | 'total';
+type FilterType = 'longest_streak' | 'current_streak' | 'this_week' | 'total';
 
 export default function LeaderboardPage() {
   const router = useRouter();
@@ -108,6 +109,12 @@ export default function LeaderboardPage() {
             return b.longest_streak - a.longest_streak;
           }
           return b.current_streak - a.current_streak;
+        case 'current_streak':
+          // Sort by current_streak (primary), longest_streak (secondary)
+          if (b.current_streak !== a.current_streak) {
+            return b.current_streak - a.current_streak;
+          }
+          return b.longest_streak - a.longest_streak;
         case 'this_week':
           return b.current_week_cards - a.current_week_cards;
         case 'total':
@@ -129,6 +136,8 @@ export default function LeaderboardPage() {
     switch (metric) {
       case 'longest_streak':
         return user.longest_streak;
+      case 'current_streak':
+        return user.current_streak;
       case 'this_week':
         return user.current_week_cards;
       case 'total':
@@ -140,6 +149,8 @@ export default function LeaderboardPage() {
     switch (metric) {
       case 'longest_streak':
         return 'day best streak';
+      case 'current_streak':
+        return 'day current streak';
       case 'this_week':
         return 'cards this week';
       case 'total':
@@ -205,7 +216,12 @@ export default function LeaderboardPage() {
     <AppLayout>
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="mb-8 animate-fade-in">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
+        >
           <Link 
             href="/dashboard"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl font-semibold hover:-translate-x-1 transition-all mb-6"
@@ -214,89 +230,112 @@ export default function LeaderboardPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to Dashboard
           </Link>
-          <h1 className="font-display text-4xl font-semibold flex items-center gap-3" style={{ color: 'var(--accent-orange)' }}>
-            🏆 Leaderboard
-          </h1>
+          <motion.h1
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, type: 'spring', stiffness: 200 }}
+            className="font-display text-4xl font-semibold flex items-center gap-3"
+            style={{ color: 'var(--accent-orange)' }}
+          >
+            <Trophy className="inline h-8 w-8 mr-2" /> Leaderboard
+          </motion.h1>
           <p className="font-medium mt-2" style={{ color: 'var(--text-secondary)' }}>
             See how you rank against other learners
           </p>
-        </div>
+        </motion.div>
 
         {/* Filters */}
-        <div className="flex flex-wrap gap-3 mb-8 animate-fade-in stagger-1">
-          <button
-            onClick={() => setActiveFilter('longest_streak')}
-            className="px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2"
-            style={activeFilter === 'longest_streak' 
-              ? { backgroundColor: 'var(--accent-orange)', color: 'white', boxShadow: '0 4px 0 #c2410c' }
-              : { backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
-            }
-          >
-            <Flame className="h-4 w-4" />
-            🔥 Best Streak
-          </button>
-          <button
-            onClick={() => setActiveFilter('this_week')}
-            className="px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2"
-            style={activeFilter === 'this_week' 
-              ? { backgroundColor: 'var(--accent-blue)', color: 'white', boxShadow: '0 4px 0 #0369a1' }
-              : { backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
-            }
-          >
-            <Calendar className="h-4 w-4" />
-            📅 This Week
-          </button>
-          <button
-            onClick={() => setActiveFilter('total')}
-            className="px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2"
-            style={activeFilter === 'total' 
-              ? { backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 4px 0 var(--accent-green-dark)' }
-              : { backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
-            }
-          >
-            <Target className="h-4 w-4" />
-            📚 Total
-          </button>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="flex flex-wrap gap-3 mb-8"
+        >
+          {[
+            { key: 'longest_streak', icon: Flame, label: 'Best Streak', activeColor: 'var(--accent-orange)', shadow: '0 4px 0 #c2410c' },
+            { key: 'current_streak', icon: Flame, label: 'Current Streak', activeColor: '#ff4b4b', shadow: '0 4px 0 #b91c1c' },
+            { key: 'this_week', icon: Zap, label: 'This Week', activeColor: 'var(--accent-blue)', shadow: '0 4px 0 #0369a1' },
+            { key: 'total', icon: BookOpen, label: 'Total', activeColor: 'var(--accent-green)', shadow: '0 4px 0 var(--accent-green-dark)' },
+          ].map((filter, index) => (
+            <motion.button
+              key={filter.key}
+              onClick={() => setActiveFilter(filter.key as FilterType)}
+              className="px-6 py-3 rounded-2xl font-semibold transition-all flex items-center gap-2"
+              style={activeFilter === filter.key 
+                ? { backgroundColor: filter.activeColor, color: 'white', boxShadow: filter.shadow }
+                : { backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
+              }
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 + index * 0.1 }}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <filter.icon className="h-4 w-4" />
+              {filter.label}
+            </motion.button>
+          ))}
+        </motion.div>
 
         {/* Leaderboard List */}
         <div className="space-y-4">
-          {sortedUsers.length === 0 ? (
-            <div className="rounded-3xl p-12 text-center" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
-              <div className="text-6xl mb-4 opacity-50">🏆</div>
-              <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>No users on the leaderboard yet</h3>
-            </div>
-          ) : (
-            sortedUsers.map((user, index) => {
-              const isCurrentUser = user.id === currentUserId;
-              const rank = index + 1;
-              
-              return (
-                <div
-                  key={user.id}
-                  className="rounded-[20px] p-5 flex items-center gap-5 transition-all hover:translate-x-2 animate-fade-in"
-                  style={{ 
-                    backgroundColor: 'var(--bg-card)', 
-                    boxShadow: 'var(--shadow-sm)',
-                    border: isCurrentUser ? '2px solid var(--accent-green)' : '1px solid var(--border-color)',
-                    animationDelay: `${index * 0.1}s`
-                  }}
-                >
-                  {/* Rank Badge */}
-                  <div 
-                    className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0"
-                    style={
-                      rank === 1 
-                        ? { backgroundColor: 'var(--accent-orange)', color: 'white', boxShadow: '0 3px 0 #c2410c' }
-                        : rank === 2 
-                          ? { backgroundColor: '#94a3b8', color: 'white' }
-                          : rank === 3
-                            ? { backgroundColor: '#cd7f32', color: 'white' }
-                            : { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '2px solid var(--border-color)' }
-                    }
+          <AnimatePresence mode="wait">
+            {sortedUsers.length === 0 ? (
+              <motion.div
+                key="empty"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                className="rounded-3xl p-12 text-center"
+                style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}
+              >
+                <Trophy className="h-16 w-16 mx-auto mb-4 opacity-50" style={{ color: 'var(--text-muted)' }} />
+                <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>No users on the leaderboard yet</h3>
+              </motion.div>
+            ) : (
+              sortedUsers.map((user, index) => {
+                const isCurrentUser = user.id === currentUserId;
+                const rank = index + 1;
+                
+                return (
+                  <motion.div
+                    key={user.id}
+                    className="rounded-[20px] p-5 flex items-center gap-5 cursor-default"
+                    style={{ 
+                      backgroundColor: 'var(--bg-card)', 
+                      boxShadow: 'var(--shadow-sm)',
+                      border: isCurrentUser ? '2px solid var(--accent-green)' : '1px solid var(--border-color)',
+                    }}
+                    initial={{ opacity: 0, x: -30 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ 
+                      delay: index * 0.08,
+                      duration: 0.4,
+                      type: 'spring',
+                      stiffness: 200,
+                      damping: 20
+                    }}
+                    whileHover={{ x: 8, boxShadow: 'var(--shadow-md)' }}
                   >
-                    {rank === 1 ? '👑' : rank}
-                  </div>
+                  {/* Rank Badge */}
+                    <motion.div 
+                      className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0"
+                      style={
+                        rank === 1 
+                          ? { backgroundColor: 'var(--accent-orange)', color: 'white', boxShadow: '0 3px 0 #c2410c' }
+                          : rank === 2 
+                            ? { backgroundColor: '#94a3b8', color: 'white' }
+                            : rank === 3
+                              ? { backgroundColor: '#cd7f32', color: 'white' }
+                              : { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '2px solid var(--border-color)' }
+                      }
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: index * 0.08 + 0.1, type: 'spring', stiffness: 300, damping: 20 }}
+                      whileHover={rank <= 3 ? { rotate: [0, -10, 10, 0], transition: { duration: 0.5 } } : {}}
+                    >
+                      {rank === 1 ? <Crown className="h-5 w-5" /> : rank}
+                    </motion.div>
 
                   {/* Avatar */}
                   <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl text-white flex-shrink-0 overflow-hidden" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))' }}>
@@ -320,8 +359,8 @@ export default function LeaderboardPage() {
                           You
                         </span>
                       )}
-                      {/* Frozen indicator for streak view */}
-                      {user.streak_frozen && activeFilter === 'longest_streak' && (
+                      {/* Frozen indicator for streak views */}
+                      {user.streak_frozen && (activeFilter === 'longest_streak' || activeFilter === 'current_streak') && (
                         <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-bold rounded-lg" style={{ backgroundColor: 'rgba(28, 176, 246, 0.2)', color: 'var(--accent-blue)' }} title="Streak frozen - pending test">
                           <Snowflake className="h-3 w-3" />
                           Frozen
@@ -331,24 +370,35 @@ export default function LeaderboardPage() {
                     <p className="text-sm font-medium flex items-center gap-2" style={{ color: 'var(--text-secondary)' }}>
                       {activeFilter === 'longest_streak' ? (
                         <>
-                          🔥 {getValue(user, activeFilter)} {getLabel(activeFilter)}
+                          <Flame className="inline h-4 w-4 text-[#ff9600] mr-1" /> {getValue(user, activeFilter)} {getLabel(activeFilter)}
                           {user.current_streak > 0 && (
-                            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                              (current: {user.current_streak}{user.streak_frozen ? ' ❄️' : ''})
+                            <span className="text-xs flex items-center gap-1 ml-2" style={{ color: 'var(--text-muted)' }}>
+                              (current: {user.current_streak}{user.streak_frozen && <Snowflake className="h-3 w-3 text-[#1cb0f6]" />})
+                            </span>
+                          )}
+                        </>
+                      ) : activeFilter === 'current_streak' ? (
+                        <>
+                          <Flame className="inline h-4 w-4 text-[#ff4b4b] mr-1" /> {getValue(user, activeFilter)} {getLabel(activeFilter)}
+                          {user.streak_frozen && <Snowflake className="h-3 w-3 text-[#1cb0f6] ml-1" />}
+                          {user.longest_streak > user.current_streak && (
+                            <span className="text-xs flex items-center gap-1 ml-2" style={{ color: 'var(--text-muted)' }}>
+                              (best: {user.longest_streak})
                             </span>
                           )}
                         </>
                       ) : activeFilter === 'this_week' ? (
-                        <>📅 {getValue(user, activeFilter)} {getLabel(activeFilter)}</>
+                        <><Zap className="inline h-4 w-4 text-[#1cb0f6] mr-1" /> {getValue(user, activeFilter)} {getLabel(activeFilter)}</>
                       ) : (
-                        <>📚 {getValue(user, activeFilter)} {getLabel(activeFilter)}</>
+                        <><BookOpen className="inline h-4 w-4 text-[#58cc02] mr-1" /> {getValue(user, activeFilter)} {getLabel(activeFilter)}</>
                       )}
                     </p>
-                  </div>
-                </div>
-              );
-            })
-          )}
+                    </div>
+                  </motion.div>
+                );
+              })
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </AppLayout>

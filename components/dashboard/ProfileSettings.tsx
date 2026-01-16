@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AchievementBadges from '@/components/social/AchievementBadges';
@@ -50,8 +50,6 @@ const AVAILABLE_LANGUAGES = [
   { code: 'cs', name: 'Czech', emoji: '🇨🇿' },
 ];
 
-const MAX_BIO_LENGTH = 500;
-
 interface Props {
   profile: UserProfile;
   accessToken: string;
@@ -61,7 +59,6 @@ interface Props {
 export default function ProfileSettings({ profile, accessToken, onUpdate }: Props) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [originalDisplayName] = useState(profile.display_name || '');
-  const [bio, setBio] = useState(profile.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(1));
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [profilePublic, setProfilePublic] = useState(profile.profile_public ?? true);
@@ -140,7 +137,6 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
 
       // Build update object
       const updateData: any = {
-        bio: bio || null,
         avatar_url: avatarUrl,
         profile_public: profilePublic,
         languages_learning: languagesLearning,
@@ -228,17 +224,30 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
         </div>
 
         {/* Avatar Picker Grid */}
-        {showAvatarPicker && (
-          <div className="pt-6" style={{ borderTop: '1px solid var(--border-color)' }}>
-            <p className="text-sm font-medium mb-4" style={{ color: 'var(--text-secondary)' }}>Select your avatar:</p>
-            <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3">
-              {Array.from({ length: AVATAR_COUNT }, (_, i) => i + 1).map((id) => {
-                const url = getAvatarUrl(id);
-                const isSelected = avatarUrl === url;
-                return (
-                  <button
-                    key={id}
-                    onClick={async () => {
+        <AnimatePresence>
+          {showAvatarPicker && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-6" style={{ borderTop: '1px solid var(--border-color)' }}>
+                <p className="text-sm font-medium mb-4" style={{ color: 'var(--text-secondary)' }}>Select your avatar:</p>
+                <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3">
+                  {Array.from({ length: AVATAR_COUNT }, (_, i) => i + 1).map((id, index) => {
+                    const url = getAvatarUrl(id);
+                    const isSelected = avatarUrl === url;
+                    return (
+                      <motion.button
+                        key={id}
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.02, duration: 0.2 }}
+                        whileHover={{ scale: 1.1, y: -4 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={async () => {
                       // Update local state immediately for responsive UI
                       const previousUrl = avatarUrl;
                       setAvatarUrl(url);
@@ -281,23 +290,25 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
                         setMessage({ type: 'error', text: error.message || 'Failed to save avatar. Please try again.' });
                       }
                     }}
-                    className={`w-12 h-12 rounded-full overflow-hidden transition-all hover:scale-110 ${
-                      isSelected 
-                        ? 'ring-4 ring-talka-purple scale-110' 
-                        : 'ring-2 ring-slate-200 hover:ring-talka-purple/50'
-                    }`}
-                  >
-                    <img 
-                      src={url} 
-                      alt={`Avatar ${id}`} 
-                      className="w-full h-full object-cover scale-110"
-                    />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
+                          isSelected
+                            ? 'ring-4 ring-[var(--accent-green)] scale-110'
+                            : 'ring-2 ring-[var(--border-color)] hover:ring-[var(--accent-green)]/50'
+                        }`}
+                      >
+                        <img
+                          src={url}
+                          alt={`Avatar ${id}`}
+                          className="w-full h-full object-cover scale-110"
+                        />
+                      </motion.button>
+                    );
+                  })}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Profile Information */}
@@ -335,24 +346,6 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
                 )}
               </div>
             )}
-          </div>
-
-          <div>
-            <Label htmlFor="bio" className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-              Bio
-            </Label>
-            <Textarea
-              id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value.slice(0, MAX_BIO_LENGTH))}
-              placeholder="Tell others about yourself..."
-              className="rounded-2xl mt-2 min-h-[100px] resize-none font-medium focus:ring-0"
-              style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
-              maxLength={MAX_BIO_LENGTH}
-            />
-            <p className="text-xs mt-1 text-right font-medium" style={{ color: 'var(--text-muted)' }}>
-              {bio.length}/{MAX_BIO_LENGTH}
-            </p>
           </div>
 
           <div>

@@ -2,10 +2,11 @@
 
 import { useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import useEmblaCarousel from 'embla-carousel-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress-simple';
-import { ChevronLeft, ChevronRight, Plus, ArrowRight, Clock, Lock, Snowflake, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, ArrowRight, Clock, Lock, Snowflake, Trash2, BookOpen } from 'lucide-react';
 import BirdMascot from './BirdMascot';
 
 interface Stack {
@@ -135,14 +136,14 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId }
     }
     if (isPendingTest) {
       return (
-        <span className="px-3 py-1 rounded-xl text-sm font-bold bg-gradient-orange-yellow text-white animate-pulse-soft">
-          Ready to Test! 🎯
+        <span className="px-3 py-1 rounded-xl text-sm font-bold bg-gradient-orange-yellow text-white animate-pulse-soft flex items-center gap-1">
+          Ready to Test! <Clock className="h-3 w-3" />
         </span>
       );
     }
     return (
-      <span className="px-3 py-1 rounded-xl text-sm font-bold bg-gradient-green-cyan text-white">
-        Learning 📖
+      <span className="px-3 py-1 rounded-xl text-sm font-bold bg-gradient-green-cyan text-white flex items-center gap-1">
+        Learning <BookOpen className="h-3 w-3" />
       </span>
     );
   };
@@ -150,11 +151,22 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId }
   // Empty state with bird mascot
   if (carouselStacks.length === 0) {
     return (
-      <div className="mb-8 animate-fade-in">
-        <h2 className="font-display text-xl sm:text-2xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-          Continue Learning 📖
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-8"
+      >
+        <h2 className="font-display text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          Continue Learning <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: 'var(--accent-green)' }} />
         </h2>
-        <div className="rounded-3xl p-8 sm:p-12 text-center" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+        <motion.div
+          className="rounded-3xl p-8 sm:p-12 text-center"
+          style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}
+          initial={{ scale: 0.95 }}
+          animate={{ scale: 1 }}
+          transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 20 }}
+        >
           <div className="flex flex-col items-center">
             <BirdMascot 
               state="idle" 
@@ -166,70 +178,86 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId }
               No active stacks!
             </h3>
             <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>Generate one to start your learning journey!</p>
-            <Button
-              onClick={() => router.push('/')}
-              className="text-white font-bold rounded-2xl px-6 py-3 min-h-[48px] hover:-translate-y-0.5 transition-all active:translate-y-1"
-              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Generate Stack
-            </Button>
+            <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                onClick={() => router.push('/')}
+                className="text-white font-bold rounded-2xl px-6 py-3 min-h-[48px] transition-all"
+                style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Generate Stack
+              </Button>
+            </motion.div>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="mb-8 animate-fade-in">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="mb-8"
+    >
       <div className="flex items-center justify-between mb-4">
-        <h2 className="font-display text-xl sm:text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-          Continue Learning 📖
+        <h2 className="font-display text-xl sm:text-2xl font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          Continue Learning <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: 'var(--accent-green)' }} />
         </h2>
         {carouselStacks.length > 1 && (
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={scrollPrev}
-              className="rounded-xl"
-              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={scrollNext}
-              className="rounded-xl"
-              style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={scrollPrev}
+                className="rounded-xl"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </motion.div>
+            <motion.div whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={scrollNext}
+                className="rounded-xl"
+                style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </motion.div>
           </div>
         )}
       </div>
 
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex gap-4">
-          {carouselStacks.map((stack) => {
+          {carouselStacks.map((stack, index) => {
             const progress = getProgress(stack);
             const isFrozen = stack.test_deadline && isDeadlinePassed(stack.test_deadline);
             const isPendingTest = progress === 100 && (stack.test_progress ?? 0) < 100;
             
             return (
-              <div
+              <motion.div
                 key={stack.id}
                 className="flex-[0_0_100%] sm:flex-[0_0_calc(50%-0.5rem)] lg:flex-[0_0_calc(33.333%-0.667rem)] min-w-0"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1, duration: 0.4 }}
               >
-                <div 
-                  className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 hover:-translate-y-1 transition-all cursor-pointer h-full"
+                <motion.div 
+                  className="rounded-2xl sm:rounded-3xl p-4 sm:p-6 cursor-pointer h-full transition-shadow"
                   style={{ 
                     backgroundColor: 'var(--bg-card)', 
                     boxShadow: 'var(--shadow-sm)',
                     border: isFrozen ? '2px solid var(--accent-blue)' : isPendingTest ? '2px solid var(--accent-orange)' : '1px solid var(--border-color)'
                   }}
                   onClick={() => router.push(`/stack/${stack.id}`)}
+                  whileHover={{ y: -4, boxShadow: 'var(--shadow-md)' }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   {/* Header */}
                   <div className="flex justify-between items-start mb-3">
@@ -308,8 +336,8 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId }
                       <ArrowRight className="h-3 w-3 ml-1" />
                     </Button>
                   </div>
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
             );
           })}
         </div>
@@ -317,11 +345,17 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId }
       
       {/* Swipe hint on mobile */}
       {carouselStacks.length > 1 && (
-        <p className="text-center text-sm mt-3 sm:hidden" style={{ color: 'var(--text-muted)' }}>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5 }}
+          className="text-center text-sm mt-3 sm:hidden"
+          style={{ color: 'var(--text-muted)' }}
+        >
           ← Swipe for more stacks →
-        </p>
+        </motion.p>
       )}
-    </div>
+    </motion.div>
   );
 }
 

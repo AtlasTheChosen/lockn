@@ -8,6 +8,15 @@ import { Trophy, Flame, BookOpen, Target, Users, Star, Zap, Loader2, Lock, Check
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { 
+  StreakBadgeIcon, 
+  CardsBadgeIcon, 
+  StacksBadgeIcon, 
+  SocialBadgeIcon, 
+  SpecialBadgeIcon, 
+  RecoveryBadgeIcon, 
+  ProgressBadgeIcon 
+} from '@/components/ui/GradientIcons';
 
 interface BadgeStats {
   current_streak: number;
@@ -106,6 +115,7 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
 const categoryConfig: Record<Badge['category'], { 
   label: string; 
   emoji: string;
+  Icon: React.ComponentType<{ size?: number; isActive?: boolean; glowEffect?: boolean; className?: string }>;
   gradient: string;
   bgLight: string;
   textColor: string;
@@ -115,6 +125,7 @@ const categoryConfig: Record<Badge['category'], {
   streak: { 
     label: 'Streak', 
     emoji: '🔥',
+    Icon: StreakBadgeIcon,
     gradient: 'from-orange-500 to-amber-500',
     bgLight: 'bg-orange-50 dark:bg-orange-900/20',
     textColor: 'text-orange-600 dark:text-orange-400',
@@ -124,6 +135,7 @@ const categoryConfig: Record<Badge['category'], {
   cards: { 
     label: 'Cards', 
     emoji: '🎴',
+    Icon: CardsBadgeIcon,
     gradient: 'from-blue-500 to-indigo-500',
     bgLight: 'bg-blue-50 dark:bg-blue-900/20',
     textColor: 'text-blue-600 dark:text-blue-400',
@@ -133,6 +145,7 @@ const categoryConfig: Record<Badge['category'], {
   stacks: { 
     label: 'Stacks', 
     emoji: '📚',
+    Icon: StacksBadgeIcon,
     gradient: 'from-emerald-500 to-teal-500',
     bgLight: 'bg-emerald-50 dark:bg-emerald-900/20',
     textColor: 'text-emerald-600 dark:text-emerald-400',
@@ -142,6 +155,7 @@ const categoryConfig: Record<Badge['category'], {
   social: { 
     label: 'Social', 
     emoji: '👥',
+    Icon: SocialBadgeIcon,
     gradient: 'from-purple-500 to-violet-500',
     bgLight: 'bg-purple-50 dark:bg-purple-900/20',
     textColor: 'text-purple-600 dark:text-purple-400',
@@ -151,6 +165,7 @@ const categoryConfig: Record<Badge['category'], {
   special: { 
     label: 'Special', 
     emoji: '⭐',
+    Icon: SpecialBadgeIcon,
     gradient: 'from-yellow-500 to-orange-500',
     bgLight: 'bg-yellow-50 dark:bg-yellow-900/20',
     textColor: 'text-yellow-600 dark:text-yellow-400',
@@ -160,6 +175,7 @@ const categoryConfig: Record<Badge['category'], {
   recovery: { 
     label: 'Recovery', 
     emoji: '❄️',
+    Icon: RecoveryBadgeIcon,
     gradient: 'from-cyan-500 to-sky-500',
     bgLight: 'bg-cyan-50 dark:bg-cyan-900/20',
     textColor: 'text-cyan-600 dark:text-cyan-400',
@@ -169,6 +185,7 @@ const categoryConfig: Record<Badge['category'], {
   performance: { 
     label: 'Performance', 
     emoji: '🚀',
+    Icon: ProgressBadgeIcon,
     gradient: 'from-pink-500 to-rose-500',
     bgLight: 'bg-pink-50 dark:bg-pink-900/20',
     textColor: 'text-pink-600 dark:text-pink-400',
@@ -381,21 +398,27 @@ export default function AchievementsSection({ userId, profile }: AchievementsSec
 
           {/* Category stats - scrollable on mobile */}
           <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2">
-            {Object.entries(categoryConfig).map(([cat, config]) => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat as Badge['category'])}
-                className={cn(
-                  'bg-[var(--bg-card)] rounded-xl p-2 sm:p-3 text-center transition-all hover:bg-[var(--bg-secondary)] flex-shrink-0 min-w-[60px] border border-[var(--border-color)]',
-                  selectedCategory === cat && 'ring-2 ring-[#58cc02] bg-[var(--bg-secondary)]'
-                )}
-              >
-                <div className="text-xl mb-0.5">{config.emoji}</div>
-                <p className="text-[var(--text-primary)] font-bold text-sm">
-                  {earnedCounts[cat as Badge['category']]}/{totalCounts[cat as Badge['category']]}
-                </p>
-              </button>
-            ))}
+            {Object.entries(categoryConfig).map(([cat, config]) => {
+              const IconComponent = config.Icon;
+              const isSelected = selectedCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setSelectedCategory(cat as Badge['category'])}
+                  className={cn(
+                    'bg-[var(--bg-card)] rounded-xl p-2 sm:p-3 text-center transition-all hover:bg-[var(--bg-secondary)] flex-shrink-0 min-w-[60px] border border-[var(--border-color)]',
+                    isSelected && 'ring-2 ring-[#58cc02] bg-[var(--bg-secondary)]'
+                  )}
+                >
+                  <div className="flex justify-center mb-0.5">
+                    <IconComponent size={24} isActive={isSelected} glowEffect={isSelected} />
+                  </div>
+                  <p className="text-[var(--text-primary)] font-bold text-sm">
+                    {earnedCounts[cat as Badge['category']]}/{totalCounts[cat as Badge['category']]}
+                  </p>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>
@@ -412,25 +435,29 @@ export default function AchievementsSection({ userId, profile }: AchievementsSec
         >
           All Badges
         </button>
-        {Object.entries(categoryConfig).map(([cat, config]) => (
-          <button
-            key={cat}
-            onClick={() => setSelectedCategory(cat as Badge['category'])}
-            className={cn(
-              'px-4 py-2 rounded-full font-semibold text-sm transition-all flex items-center gap-2',
-              selectedCategory === cat
-                ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
-                : ''
-            )}
-            style={selectedCategory !== cat
-              ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }
-              : undefined
-            }
-          >
-            <span>{config.emoji}</span>
-            <span className="hidden sm:inline">{config.label}</span>
-          </button>
-        ))}
+        {Object.entries(categoryConfig).map(([cat, config]) => {
+          const IconComponent = config.Icon;
+          const isSelected = selectedCategory === cat;
+          return (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat as Badge['category'])}
+              className={cn(
+                'px-4 py-2 rounded-full font-semibold text-sm transition-all flex items-center gap-2',
+                isSelected
+                  ? `bg-gradient-to-r ${config.gradient} text-white shadow-lg`
+                  : ''
+              )}
+              style={!isSelected
+                ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)' }
+                : undefined
+              }
+            >
+              <IconComponent size={18} isActive={isSelected} />
+              <span className="hidden sm:inline">{config.label}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Badge Grid */}

@@ -11,13 +11,13 @@ import {
   Loader2,
   Search,
   Ban,
-  Users,
   AlertCircle,
   Flame,
   Calendar,
   Target,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { FriendsListIcon, RequestsIcon, BlockedIcon } from '@/components/ui/GradientIcons';
 import type { Friendship, FriendProfile } from '@/lib/types';
 // Weekly stats import removed - showing longest_streak, this_week, total now
 import { notifyFriendRequest, notifyFriendAccepted } from '@/lib/notifications';
@@ -139,7 +139,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
       }
 
       const profilesData = await supaFetch<any[]>(
-        `user_profiles?id=in.(${Array.from(userIds).join(',')})&select=id,display_name,avatar_url`,
+        `user_profiles?id=in.(${Array.from(userIds).join(',')})&select=id,display_name,avatar_url,languages_learning`,
         accessToken
       );
 
@@ -461,7 +461,12 @@ export default function FriendsSection({ userId, accessToken }: Props) {
             : { color: 'var(--text-secondary)' }
           }
         >
-          <Users className="h-4 w-4" />
+          <FriendsListIcon 
+            size={18} 
+            isActive={activeTab === 'friends'}
+            gradientStart={activeTab === 'friends' ? '#ffffff' : '#58cc02'}
+            gradientEnd={activeTab === 'friends' ? '#ffffff' : '#1cb0f6'}
+          />
           <span className="hidden sm:inline">Friends</span> ({friends.length})
         </button>
         <button
@@ -472,7 +477,13 @@ export default function FriendsSection({ userId, accessToken }: Props) {
             : { color: 'var(--text-secondary)' }
           }
         >
-          📬 <span className="hidden sm:inline">Requests</span> ({pendingRequests.length + sentRequests.length})
+          <RequestsIcon 
+            size={18} 
+            isActive={activeTab === 'requests'}
+            gradientStart={activeTab === 'requests' ? '#ffffff' : '#1cb0f6'}
+            gradientEnd={activeTab === 'requests' ? '#ffffff' : '#58cc02'}
+          />
+          <span className="hidden sm:inline">Requests</span> ({pendingRequests.length + sentRequests.length})
         </button>
         <button
           onClick={() => setActiveTab('blocked')}
@@ -482,7 +493,13 @@ export default function FriendsSection({ userId, accessToken }: Props) {
             : { color: 'var(--text-secondary)' }
           }
         >
-          🚫 <span className="hidden sm:inline">Blocked</span> ({blockedUsers.length})
+          <BlockedIcon 
+            size={18} 
+            isActive={activeTab === 'blocked'}
+            gradientStart={activeTab === 'blocked' ? '#ffffff' : '#ff4b4b'}
+            gradientEnd={activeTab === 'blocked' ? '#ffffff' : '#ff9600'}
+          />
+          <span className="hidden sm:inline">Blocked</span> ({blockedUsers.length})
         </button>
       </div>
 
@@ -516,6 +533,20 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                       <p className="font-display text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
                         {friendship.profile?.display_name || 'User'}
                       </p>
+                      {/* Languages Learning */}
+                      {friendship.profile?.languages_learning && friendship.profile.languages_learning.length > 0 && (
+                        <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                          📚 {friendship.profile.languages_learning.map(code => {
+                            const langMap: Record<string, string> = {
+                              es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪', it: '🇮🇹', pt: '🇧🇷',
+                              ja: '🇯🇵', ko: '🇰🇷', zh: '🇨🇳', ru: '🇷🇺', ar: '🇸🇦',
+                              hi: '🇮🇳', nl: '🇳🇱', sv: '🇸🇪', pl: '🇵🇱', tr: '🇹🇷',
+                              vi: '🇻🇳', th: '🇹🇭', he: '🇮🇱', el: '🇬🇷', cs: '🇨🇿',
+                            };
+                            return langMap[code] || '🌍';
+                          }).join(' ')}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-2">

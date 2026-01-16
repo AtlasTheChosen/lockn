@@ -83,7 +83,7 @@ export default function PublicProfilePage() {
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id, display_name, avatar_url, bio, badges, languages_learning, profile_public, created_at')
+        .select('id, display_name, avatar_url, badges, languages_learning, profile_public, created_at')
         .eq('id', userId)
         .maybeSingle();
 
@@ -116,7 +116,6 @@ export default function PublicProfilePage() {
         id: profileData.id,
         display_name: profileData.display_name,
         avatar_url: profileData.avatar_url,
-        bio: profileData.bio,
         badges: profileData.badges || [],
         languages_learning: profileData.languages_learning || [],
         profile_public: profileData.profile_public ?? true,
@@ -334,11 +333,6 @@ export default function PublicProfilePage() {
                 <h1 className="text-3xl font-bold text-white mb-2">
                   {profile.display_name || 'Anonymous User'}
                 </h1>
-
-                {/* Bio */}
-                {profile.bio && (
-                  <p className="text-slate-300 mb-4 max-w-lg">{profile.bio}</p>
-                )}
 
                 {/* Meta info */}
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-slate-400 mb-4">

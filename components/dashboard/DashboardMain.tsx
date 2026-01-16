@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { AlertTriangle, HelpCircle, Calendar, Loader2 } from 'lucide-react';
+import { AlertTriangle, HelpCircle, Calendar, Loader2, Flame, BookOpen, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 // Weekly stats import removed - only tracking longest streak and total cards now
@@ -315,19 +315,28 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
               <p className="font-display text-xl sm:text-3xl font-extrabold text-[#ff9600] mb-1">
                 {stats?.longest_streak ?? 0}
               </p>
-              <p className="text-[10px] sm:text-sm text-[var(--text-secondary)] font-semibold">🔥 Longest Streak</p>
+              <p className="text-[10px] sm:text-sm text-[var(--text-secondary)] font-semibold flex items-center justify-center gap-1">
+                <Flame className="h-3 w-3 sm:h-4 sm:w-4 text-[#ff9600]" />
+                Longest Streak
+              </p>
             </div>
             <div className="text-center p-3 sm:p-4 rounded-2xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <p className="font-display text-xl sm:text-3xl font-extrabold text-[#1cb0f6] mb-1">
                 {stats?.current_week_cards ?? 0}
               </p>
-              <p className="text-[10px] sm:text-sm text-[var(--text-secondary)] font-semibold">📅 This Week</p>
+              <p className="text-[10px] sm:text-sm text-[var(--text-secondary)] font-semibold flex items-center justify-center gap-1">
+                <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-[#1cb0f6]" />
+                This Week
+              </p>
             </div>
             <div className="text-center p-3 sm:p-4 rounded-2xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
               <p className="font-display text-xl sm:text-3xl font-extrabold text-[#58cc02] mb-1">
                 {stats?.total_mastered ?? 0}
               </p>
-              <p className="text-[10px] sm:text-sm text-[var(--text-secondary)] font-semibold">📚 Total Learned</p>
+              <p className="text-[10px] sm:text-sm text-[var(--text-secondary)] font-semibold flex items-center justify-center gap-1">
+                <BookOpen className="h-3 w-3 sm:h-4 sm:w-4 text-[#58cc02]" />
+                Total Learned
+              </p>
             </div>
           </div>
         </div>

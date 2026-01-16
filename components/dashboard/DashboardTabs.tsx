@@ -6,7 +6,7 @@ import DashboardMain from './DashboardMain';
 import ProfileSettings from './ProfileSettings';
 import FriendsSection from './FriendsSection';
 import AchievementsSection from './AchievementsSection';
-import GradientIcon from '@/components/ui/GradientIcons';
+import { OverviewIcon, ProfileIcon, FriendsIcon, TrophyIcon } from '@/components/ui/GradientIcons';
 import type { CardStack, UserStats, UserProfile } from '@/lib/types';
 
 interface Props {
@@ -85,10 +85,10 @@ export default function DashboardTabs({
     : null;
 
   const tabs = [
-    { id: 'overview', label: 'Overview', mobileLabel: 'Overview', icon: 'chartUp' as const },
-    { id: 'profile', label: 'Profile', mobileLabel: 'Profile', icon: 'user' as const },
-    { id: 'friends', label: 'Friends', mobileLabel: 'Friends', icon: 'users' as const },
-    { id: 'achievements', label: 'Achievements', mobileLabel: 'Awards', icon: 'trophy' as const },
+    { id: 'overview', label: 'Overview', mobileLabel: 'Overview', Icon: OverviewIcon },
+    { id: 'profile', label: 'Profile', mobileLabel: 'Profile', Icon: ProfileIcon },
+    { id: 'friends', label: 'Friends', mobileLabel: 'Friends', Icon: FriendsIcon },
+    { id: 'achievements', label: 'Achievements', mobileLabel: 'Awards', Icon: TrophyIcon },
   ];
 
   return (
@@ -102,6 +102,7 @@ export default function DashboardTabs({
           <div className="flex gap-2 sm:gap-2 py-2 sm:py-3">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
+              const IconComponent = tab.Icon;
               return (
                 <button
                   key={tab.id}
@@ -112,10 +113,11 @@ export default function DashboardTabs({
                     : { color: 'var(--text-secondary)' }
                   }
                 >
-                  <GradientIcon 
-                    name={tab.icon} 
+                  <IconComponent 
                     size={20} 
-                    colors={isActive ? ['#ffffff', '#ffffff'] : ['#58cc02', '#1cb0f6']}
+                    isActive={isActive}
+                    gradientStart={isActive ? '#ffffff' : '#58cc02'}
+                    gradientEnd={isActive ? '#ffffff' : '#1cb0f6'}
                     className="flex-shrink-0"
                   />
                   <span className="text-[10px] sm:text-sm">{tab.mobileLabel}</span>

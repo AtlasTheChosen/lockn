@@ -425,19 +425,19 @@ export default function DashboardPage() {
       <AppLayout>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
-            <Skeleton className="h-10 w-64 mb-2 bg-slate-200" />
-            <Skeleton className="h-5 w-96 bg-slate-200" />
+            <Skeleton className="h-10 w-64 mb-2" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+            <Skeleton className="h-5 w-96" style={{ backgroundColor: 'var(--bg-secondary)' }} />
           </div>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-white rounded-3xl p-6 shadow-talka-sm">
-                <Skeleton className="h-4 w-20 mb-4 bg-slate-200" />
-                <Skeleton className="h-10 w-16 bg-slate-200" />
+              <div key={i} className="rounded-3xl p-6" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+                <Skeleton className="h-4 w-20 mb-4" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+                <Skeleton className="h-10 w-16" style={{ backgroundColor: 'var(--bg-secondary)' }} />
               </div>
             ))}
           </div>
-          <div className="bg-white rounded-3xl p-8 shadow-talka-sm">
-            <Skeleton className="h-96 w-full bg-slate-100" />
+          <div className="rounded-3xl p-8" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}>
+            <Skeleton className="h-96 w-full" style={{ backgroundColor: 'var(--bg-secondary)' }} />
           </div>
         </div>
       </AppLayout>

@@ -1,14 +1,41 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { X, Loader2, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { X, Loader2, Mail, Lock, Eye, EyeOff, ArrowLeft, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import Logo from '@/components/ui/Logo';
 import { getRandomAvatarId, getAvatarUrl } from '@/lib/avatars';
+
+// Password strength calculation
+function calculatePasswordStrength(password: string): {
+  score: number;
+  label: string;
+  color: string;
+} {
+  let score = 0;
+  if (password.length >= 6) score++;
+  if (password.length >= 10) score++;
+  if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^a-zA-Z0-9]/.test(password)) score++;
+
+  if (score <= 1) return { score: 1, label: 'Weak', color: 'var(--accent-red)' };
+  if (score <= 2) return { score: 2, label: 'Fair', color: 'var(--accent-orange)' };
+  if (score <= 3) return { score: 3, label: 'Good', color: 'var(--accent-blue)' };
+  return { score: 4, label: 'Strong', color: 'var(--accent-green)' };
+}
+
+// Shake animation for form errors
+const shakeAnimation = {
+  shake: {
+    x: [0, -10, 10, -8, 8, -5, 5, -2, 2, 0],
+    transition: { duration: 0.5, ease: 'easeInOut' },
+  },
+};
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -18,6 +45,18 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [showResetForm, setShowResetForm] = useState(false);
+  const [shouldShake, setShouldShake] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const router = useRouter();
+  const supabase = createClient();
   
   // Sync mode with initialMode when it changes or modal opens
   useEffect(() => {
@@ -32,16 +71,9 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
       setResetSent(false);
     }
   }, [isOpen, initialMode]);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [resetSent, setResetSent] = useState(false);
-  const [showResetForm, setShowResetForm] = useState(false);
-  const router = useRouter();
-  const supabase = createClient();
+
+  // Password strength for signup
+  const passwordStrength = mode === 'signup' && password.length > 0 ? calculatePasswordStrength(password) : null;
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,11 +83,15 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
     if (mode === 'signup') {
       if (password.length < 6) {
         setError('Password must be at least 6 characters');
+        setShouldShake(true);
+        setTimeout(() => setShouldShake(false), 500);
         setLoading(false);
         return;
       }
       if (password !== confirmPassword) {
         setError('Passwords do not match');
+        setShouldShake(true);
+        setTimeout(() => setShouldShake(false), 500);
         setLoading(false);
         return;
       }
@@ -330,7 +366,13 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
           ) : (
             <>
               {/* Email Form */}
-              <form onSubmit={handleEmailAuth} className="space-y-3 sm:space-y-4">
+              <motion.form
+                ref={formRef}
+                onSubmit={handleEmailAuth}
+                className="space-y-3 sm:space-y-4"
+                variants={shakeAnimation}
+                animate={shouldShake ? 'shake' : undefined}
+              >
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                   <Input
@@ -366,6 +408,39 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+
+                {/* Password Strength Indicator (signup only) */}
+                <AnimatePresence>
+                  {passwordStrength && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="mt-1 px-1"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1.5 bg-[var(--bg-secondary)] rounded-full overflow-hidden flex gap-1">
+                          {[1, 2, 3, 4].map((i) => (
+                            <motion.div
+                              key={i}
+                              className="flex-1 h-full rounded-full"
+                              initial={{ scaleX: 0 }}
+                              animate={{
+                                scaleX: i <= passwordStrength.score ? 1 : 0,
+                                backgroundColor: i <= passwordStrength.score ? passwordStrength.color : 'transparent',
+                              }}
+                              transition={{ duration: 0.2, delay: i * 0.05 }}
+                              style={{ originX: 0 }}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-xs font-medium" style={{ color: passwordStrength.color }}>
+                          {passwordStrength.label}
+                        </span>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {mode === 'signup' && (
                   <div className="relative">
@@ -420,7 +495,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                     Forgot password?
                   </button>
                 )}
-              </form>
+              </motion.form>
 
               {/* Switch Mode */}
               <p className="text-center text-sm font-medium mt-6" style={{ color: 'var(--text-secondary)' }}>
