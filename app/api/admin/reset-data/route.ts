@@ -52,13 +52,17 @@ export async function POST(request: NextRequest) {
     
     const results: Record<string, any> = {};
     
+    // Get counts before deleting
+    const { count: flashcardsCountBefore } = await supabase
+      .from('flashcards')
+      .select('*', { count: 'exact', head: true });
+    
     // Delete all flashcards
-    const { error: flashcardsError, count: flashcardsCount } = await supabase
+    const { error: flashcardsError } = await supabase
       .from('flashcards')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all (workaround)
-      .select('id', { count: 'exact', head: true } as any);
-    results.flashcards = { deleted: !flashcardsError, count: flashcardsCount };
+      .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all (workaround)
+    results.flashcards = { deleted: !flashcardsError, count: flashcardsCountBefore || 0 };
     
     // Delete all stack_tests
     const { error: testsError } = await supabase
@@ -67,13 +71,17 @@ export async function POST(request: NextRequest) {
       .neq('id', '00000000-0000-0000-0000-000000000000');
     results.stack_tests = { deleted: !testsError };
     
+    // Get count before deleting
+    const { count: stacksCountBefore } = await supabase
+      .from('card_stacks')
+      .select('*', { count: 'exact', head: true });
+    
     // Delete all card_stacks
-    const { error: stacksError, count: stacksCount } = await supabase
+    const { error: stacksError } = await supabase
       .from('card_stacks')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000')
-      .select('id', { count: 'exact', head: true } as any);
-    results.card_stacks = { deleted: !stacksError, count: stacksCount };
+      .neq('id', '00000000-0000-0000-0000-000000000000');
+    results.card_stacks = { deleted: !stacksError, count: stacksCountBefore || 0 };
     
     // Delete all generation_logs
     const { error: logsError } = await supabase
