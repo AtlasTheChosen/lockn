@@ -185,9 +185,24 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
             <p className="text-base sm:text-lg mb-3 sm:mb-4 font-medium animate-fade-in" style={{ color: 'var(--text-secondary)' }}>
               Hey there, language champion!
             </p>
-            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight mb-4 sm:mb-6 gradient-text-warm animate-fade-in stagger-1">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight gradient-text-warm animate-fade-in stagger-1 mb-4 sm:mb-3">
               What do you want to talk about today?
             </h1>
+            <div className="flex justify-center mb-4 sm:mb-6">
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('show-streak-tutorial'));
+                }}
+                className="px-4 py-2 rounded-full font-medium text-sm sm:text-base transition-all hover:shadow-md hover:-translate-y-0.5 active:scale-95"
+                style={{ 
+                  background: 'linear-gradient(135deg, #ff9600 0%, #ffaa00 100%)',
+                  color: 'white',
+                  boxShadow: '0 2px 8px rgba(255, 150, 0, 0.3)'
+                }}
+              >
+                Learn how this works
+              </button>
+            </div>
           </motion.div>
 
         {/* Create Stack Card */}

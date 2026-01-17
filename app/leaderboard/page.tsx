@@ -32,7 +32,7 @@ export default function LeaderboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('longest_streak');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('current_streak');
 
   const loadLeaderboardData = useCallback(async () => {
     try {
@@ -104,11 +104,8 @@ export default function LeaderboardPage() {
     return [...users].sort((a, b) => {
       switch (metric) {
         case 'longest_streak':
-          // Sort by longest_streak (primary), current_streak (secondary)
-          if (b.longest_streak !== a.longest_streak) {
-            return b.longest_streak - a.longest_streak;
-          }
-          return b.current_streak - a.current_streak;
+          // Sort by longest_streak only (no current streak tie-breaker)
+          return b.longest_streak - a.longest_streak;
         case 'current_streak':
           // Sort by current_streak (primary), longest_streak (secondary)
           if (b.current_streak !== a.current_streak) {
@@ -252,10 +249,10 @@ export default function LeaderboardPage() {
           className="flex flex-wrap gap-3 mb-8"
         >
           {[
-            { key: 'longest_streak', icon: Flame, label: 'Best Streak', activeColor: 'var(--accent-orange)', shadow: '0 4px 0 #c2410c' },
             { key: 'current_streak', icon: Flame, label: 'Current Streak', activeColor: '#ff4b4b', shadow: '0 4px 0 #b91c1c' },
             { key: 'this_week', icon: Zap, label: 'This Week', activeColor: 'var(--accent-blue)', shadow: '0 4px 0 #0369a1' },
             { key: 'total', icon: BookOpen, label: 'Total', activeColor: 'var(--accent-green)', shadow: '0 4px 0 var(--accent-green-dark)' },
+            { key: 'longest_streak', icon: Flame, label: 'Best Streak', activeColor: 'var(--accent-orange)', shadow: '0 4px 0 #c2410c' },
           ].map((filter, index) => (
             <motion.button
               key={filter.key}
@@ -381,11 +378,6 @@ export default function LeaderboardPage() {
                         <>
                           <Flame className="inline h-4 w-4 text-[#ff4b4b] mr-1" /> {getValue(user, activeFilter)} {getLabel(activeFilter)}
                           {user.streak_frozen && <Snowflake className="h-3 w-3 text-[#1cb0f6] ml-1" />}
-                          {user.longest_streak > user.current_streak && (
-                            <span className="text-xs flex items-center gap-1 ml-2" style={{ color: 'var(--text-muted)' }}>
-                              (best: {user.longest_streak})
-                            </span>
-                          )}
                         </>
                       ) : activeFilter === 'this_week' ? (
                         <><Zap className="inline h-4 w-4 text-[#1cb0f6] mr-1" /> {getValue(user, activeFilter)} {getLabel(activeFilter)}</>

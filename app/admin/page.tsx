@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, Users, BookOpen, Zap, Crown, ArrowLeft } from 'lucide-react';
+import { Sparkles, Users, BookOpen, Zap, Crown, ArrowLeft, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 
 export default function AdminPage() {
   const [loading, setLoading] = useState(true);
@@ -17,6 +17,9 @@ export default function AdminPage() {
     totalCards: 0,
   });
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetResult, setResetResult] = useState<{ success: boolean; message: string } | null>(null);
 
   useEffect(() => {
     async function loadAdminData() {
@@ -63,6 +66,38 @@ export default function AdminPage() {
 
     loadAdminData();
   }, []);
+
+  const handleResetData = async () => {
+    setResetLoading(true);
+    setResetResult(null);
+    
+    try {
+      const response = await fetch('/api/admin/reset-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: 'RESET_ALL_DATA' }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setResetResult({ success: true, message: 'All user data has been reset!' });
+        // Refresh stats
+        setStats({
+          ...stats,
+          totalStacks: data.remaining?.stacks || 0,
+          totalCards: data.remaining?.flashcards || 0,
+        });
+      } else {
+        setResetResult({ success: false, message: data.error || 'Reset failed' });
+      }
+    } catch (error: any) {
+      setResetResult({ success: false, message: error.message || 'Network error' });
+    } finally {
+      setResetLoading(false);
+      setShowResetConfirm(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -135,6 +170,100 @@ export default function AdminPage() {
             </CardHeader>
           </Card>
         </div>
+
+        {/* Data Management Section */}
+        <Card className="mb-8 border-red-200 bg-red-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-700">
+              <AlertTriangle className="h-5 w-5" />
+              Danger Zone
+            </CardTitle>
+            <CardDescription className="text-red-600">
+              Destructive actions - use with caution
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-red-200">
+                <div>
+                  <p className="font-semibold text-slate-800">Reset All User Data</p>
+                  <p className="text-sm text-slate-600">
+                    Delete all stacks, flashcards, stats, and progress. Keeps user accounts.
+                  </p>
+                </div>
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setShowResetConfirm(true)}
+                  disabled={resetLoading}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Reset Data
+                </Button>
+              </div>
+              
+              {resetResult && (
+                <div className={`p-4 rounded-lg ${resetResult.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {resetResult.message}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Reset Confirmation Modal */}
+        {showResetConfirm && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-6 max-w-md mx-4 shadow-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-red-100 rounded-full">
+                  <AlertTriangle className="h-6 w-6 text-red-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800">Confirm Reset</h3>
+              </div>
+              <p className="text-slate-600 mb-6">
+                This will permanently delete <strong>ALL</strong> user data:
+              </p>
+              <ul className="list-disc list-inside text-slate-600 mb-6 space-y-1">
+                <li>All flashcard stacks ({stats.totalStacks})</li>
+                <li>All flashcards ({stats.totalCards})</li>
+                <li>All user stats and streaks</li>
+                <li>All friendships and challenges</li>
+                <li>All badges and achievements</li>
+              </ul>
+              <p className="text-sm text-slate-500 mb-6">
+                User accounts and login credentials will be preserved.
+              </p>
+              <div className="flex gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowResetConfirm(false)}
+                  disabled={resetLoading}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={handleResetData}
+                  disabled={resetLoading}
+                  className="flex-1"
+                >
+                  {resetLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Resetting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Yes, Reset All
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <Card>
           <CardHeader>

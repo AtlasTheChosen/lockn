@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 function getOpenAI() {
   const apiKey = process.env.OPENAI_API_KEY;
@@ -13,7 +17,7 @@ export async function POST(request: Request) {
   const openai = getOpenAI();
 
   try {
-    const { phrase, translation, targetLanguage = 'Spanish', nativeLanguage = 'English' } = await request.json();
+    const { phrase, translation, targetLanguage = 'Spanish', nativeLanguage = 'English', cardId } = await request.json();
 
     if (!phrase || !translation) {
       return NextResponse.json({ error: 'Missing phrase or translation' }, { status: 400 });
@@ -97,6 +101,20 @@ Translation: "${translation}"`,
           commonMistake: '',
           memoryTrick: ''
         });
+      }
+    }
+
+    // Cache the breakdown in the database if cardId is provided
+    if (cardId && parsed && supabaseServiceKey) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        await supabase
+          .from('flashcards')
+          .update({ grammar_breakdown: parsed })
+          .eq('id', cardId);
+        console.log(`[Breakdown API] Cached for card ${cardId}`);
+      } catch (cacheError) {
+        console.warn('[Breakdown API] Failed to cache:', cacheError);
       }
     }
 

@@ -90,17 +90,19 @@ export default function StreakTutorial({ onComplete, onSkip }: StreakTutorialPro
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4"
+      className="fixed inset-0 z-[9999] bg-slate-900/95 backdrop-blur-sm flex items-center justify-center p-4 cursor-pointer"
+      onClick={handleSkip}
     >
-      {/* Skip button */}
+      {/* Close button */}
       <button
         onClick={handleSkip}
-        className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors flex items-center gap-1 text-sm"
+        className="absolute top-4 right-4 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all z-10 flex items-center justify-center"
+        aria-label="Close tutorial"
       >
-        Skip <X className="w-4 h-4" />
+        <X className="w-6 h-6" />
       </button>
 
-      <div className="w-full max-w-lg">
+      <div className="w-full max-w-lg cursor-default" onClick={(e) => e.stopPropagation()}>
         <AnimatePresence mode="wait">
           <motion.div
             key={step.id}

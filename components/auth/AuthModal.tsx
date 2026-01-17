@@ -254,7 +254,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-4"
+        style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
       >
         {/* Backdrop */}
         <motion.div
@@ -271,8 +272,14 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 100 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-talka-lg overflow-hidden max-h-[90vh] overflow-y-auto"
-          style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}
+          className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 shadow-talka-lg overflow-hidden overflow-y-auto"
+          style={{ 
+            backgroundColor: 'var(--bg-card)', 
+            border: '1px solid var(--border-color)',
+            maxHeight: 'calc(90vh - 2rem)',
+            marginTop: 'auto',
+            marginBottom: 'auto'
+          }}
         >
           {/* Close Button */}
           <button

@@ -29,6 +29,7 @@ interface Props {
 
 interface FriendStats {
   longest_streak: number;
+  current_streak: number;
   current_week_cards: number;
   total_cards_mastered: number;
 }
@@ -173,6 +174,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
           profile: profileMap.get(friendId),
           stats: {
             longest_streak: friendStats?.longest_streak || 0,
+            current_streak: friendStats?.current_streak || 0,
             current_week_cards: friendStats?.current_week_cards || 0,
             total_cards_mastered: friendStats?.total_cards_mastered || 0,
           },
@@ -587,14 +589,14 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                     <div className="text-center">
                       <div className="flex items-center justify-center gap-1 mb-1" style={{ color: 'var(--accent-orange)' }}>
                         <Flame className="h-4 w-4" />
-                        <span className="text-xs font-semibold">Best</span>
+                        <span className="text-xs font-semibold">Streak</span>
                       </div>
-                      <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{friendship.stats?.longest_streak || 0}</p>
+                      <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{friendship.stats?.current_streak || 0}</p>
                     </div>
                     <div className="text-center">
                       <div className="flex items-center justify-center gap-1 mb-1" style={{ color: 'var(--accent-blue)' }}>
                         <Calendar className="h-4 w-4" />
-                        <span className="text-xs font-semibold">Week</span>
+                        <span className="text-xs font-semibold">This Week</span>
                       </div>
                       <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{friendship.stats?.current_week_cards || 0}</p>
                     </div>

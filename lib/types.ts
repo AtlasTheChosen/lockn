@@ -69,6 +69,19 @@ export interface TestNote {
   timestamp: string;
 }
 
+export interface GrammarBreakdown {
+  wordBreakdown: Array<{
+    word: string;
+    meaning: string;
+    grammar: string;
+  }>;
+  grammarPattern: string;
+  patternExamples: string[];
+  cognateHint: string;
+  commonMistake: string;
+  memoryTrick: string;
+}
+
 export interface Flashcard {
   id: string;
   stack_id: string;
@@ -88,6 +101,7 @@ export interface Flashcard {
   user_rating?: number;
   audio_url?: string; // Cached TTS audio URL from Supabase Storage
   audio_hash?: string; // Hash for audio cache lookup
+  grammar_breakdown?: GrammarBreakdown; // Cached AI grammar analysis
 }
 
 export interface UserStats {

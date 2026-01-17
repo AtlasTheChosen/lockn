@@ -66,7 +66,7 @@ function StreakBadge({ count, isFrozen }: { count: number; isFrozen: boolean }) 
         }}
       />
 
-      {/* Icon */}
+      {/* Always show flame icon with count */}
       <motion.span
         className="relative z-10"
         animate={isFrozen ? { opacity: [0.8, 1, 0.8] } : { scale: [1, 1.1, 1] }}
@@ -78,7 +78,6 @@ function StreakBadge({ count, isFrozen }: { count: number; isFrozen: boolean }) 
       >
         {isFrozen ? <Snowflake className="h-5 w-5" strokeWidth={2.5} /> : <Flame className="h-5 w-5" />}
       </motion.span>
-
       {/* Count */}
       <span className="relative z-10">{count}</span>
     </motion.div>

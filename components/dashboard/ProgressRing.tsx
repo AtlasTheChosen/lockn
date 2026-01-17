@@ -13,7 +13,7 @@ interface ProgressRingProps {
   strokeWidth?: number;
   className?: string;
   showLabel?: boolean;
-  countdownText?: string;  // Optional countdown text to show below
+  countdownText?: string | null;  // Optional countdown text to show below (null hides it)
   isFrozen?: boolean;      // Whether streak is frozen
   isGracePeriod?: boolean; // Whether in grace period (show LAST CHANCE in red)
 }
@@ -205,45 +205,77 @@ export default function ProgressRing({
         {/* Center content */}
         {showLabel && (
           <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-            {isFrozen ? (
+            {streakCount === 0 && !isFrozen ? (
+              /* Show "Ignite the flame" text when streak is 0 */
               <motion.div
-                animate={{
-                  filter: [
-                    'drop-shadow(0 0 6px rgba(28,176,246,0.8))',
-                    'drop-shadow(0 0 12px rgba(28,176,246,1))',
-                    'drop-shadow(0 0 6px rgba(28,176,246,0.8))',
-                  ],
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
+                className="flex flex-col items-center justify-center text-center px-2"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
               >
-                <Snowflake className="h-7 w-7 text-[#1cb0f6]" strokeWidth={2.5} />
+                <span 
+                  className="font-bold text-sm leading-tight"
+                  style={{ 
+                    color: '#ff9600',
+                    textShadow: '0 2px 8px rgba(255, 150, 0, 0.3)',
+                  }}
+                >
+                  Ignite
+                </span>
+                <span 
+                  className="font-bold text-sm leading-tight"
+                  style={{ 
+                    color: '#ff9600',
+                    textShadow: '0 2px 8px rgba(255, 150, 0, 0.3)',
+                  }}
+                >
+                  the flame
+                </span>
               </motion.div>
             ) : (
-              <motion.div
-                animate={{
-                  scale: [1, 1.15, 1],
-                }}
-                transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-              >
-                <Flame className="h-7 w-7 text-[#ff9600]" fill="#ff9600" />
-              </motion.div>
+              /* Show flame/snowflake icon and count when streak > 0 or frozen */
+              <>
+                {isFrozen ? (
+                  <motion.div
+                    animate={{
+                      filter: [
+                        'drop-shadow(0 0 6px rgba(28,176,246,0.8))',
+                        'drop-shadow(0 0 12px rgba(28,176,246,1))',
+                        'drop-shadow(0 0 6px rgba(28,176,246,0.8))',
+                      ],
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    <Snowflake className="h-7 w-7 text-[#1cb0f6]" strokeWidth={2.5} />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    animate={{
+                      scale: [1, 1.15, 1],
+                    }}
+                    transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <Flame className="h-7 w-7 text-[#ff9600]" fill="#ff9600" />
+                  </motion.div>
+                )}
+                <motion.span
+                  className="font-bold text-2xl mt-0.5"
+                  style={{
+                    backgroundImage: `linear-gradient(to bottom, ${colors.primary}, ${colors.secondary})`,
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    backgroundClip: 'text',
+                    textShadow: `0 2px 10px ${colors.glow}`,
+                  }}
+                  key={streakCount}
+                  initial={{ scale: 1.3, opacity: 0.5 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 15 }}
+                >
+                  {streakCount}
+                </motion.span>
+              </>
             )}
-            <motion.span
-              className="font-bold text-2xl mt-0.5"
-              style={{
-                backgroundImage: `linear-gradient(to bottom, ${colors.primary}, ${colors.secondary})`,
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-                textShadow: `0 2px 10px ${colors.glow}`,
-              }}
-              key={streakCount}
-              initial={{ scale: 1.3, opacity: 0.5 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 15 }}
-            >
-              {streakCount}
-            </motion.span>
           </div>
         )}
 

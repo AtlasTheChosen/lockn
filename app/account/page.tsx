@@ -14,7 +14,6 @@ import {
   Crown, 
   Mail, 
   Calendar, 
-  Shield, 
   CreditCard,
   AlertCircle,
   RefreshCw,
@@ -240,34 +239,7 @@ export default function AccountSettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Quick Links */}
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Quick Actions
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Link href="/dashboard?tab=profile">
-                <Button variant="outline" className="w-full justify-start border-slate-700 text-white hover:bg-slate-700">
-                  Edit Profile Settings
-                </Button>
-              </Link>
-              <Link href="/dashboard?tab=friends">
-                <Button variant="outline" className="w-full justify-start border-slate-700 text-white hover:bg-slate-700">
-                  Manage Friends
-                </Button>
-              </Link>
-              <Link href="/leaderboard">
-                <Button variant="outline" className="w-full justify-start border-slate-700 text-white hover:bg-slate-700">
-                  View Leaderboard
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          {/* Danger Zone */}
+          {/* Account Actions */}
           <Card className="bg-slate-800 border-red-500/30">
             <CardHeader>
               <CardTitle className="text-red-400 flex items-center gap-2">

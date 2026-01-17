@@ -377,6 +377,25 @@ Generate ONLY ${difficulty}-level phrases. If in doubt, err on the side of simpl
     console.log('[API:generate-stack] ✅ Flashcards created successfully:', insertedCards?.length);
     DEBUG_SERVER.api('Flashcards created successfully', { count: flashcards.length });
 
+    // Trigger background pre-caching for audio and grammar breakdowns
+    // This runs async and doesn't block the response
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000';
+    
+    fetch(`${baseUrl}/api/precache-cards`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        stackId: stack.id,
+        targetLanguage,
+        nativeLanguage,
+      }),
+    }).catch(err => {
+      console.warn('[API:generate-stack] Pre-caching trigger failed (non-critical):', err.message);
+    });
+    console.log('[API:generate-stack] 🔄 Triggered background pre-caching for stack:', stack.id);
+
     DEBUG_SERVER.api('Updating generation logs and profile');
     const { error: logError } = await supabase.from('generation_logs').insert({
       user_id: user.id,

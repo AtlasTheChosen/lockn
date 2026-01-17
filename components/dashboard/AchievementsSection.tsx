@@ -397,7 +397,7 @@ export default function AchievementsSection({ userId, profile }: AchievementsSec
           </div>
 
           {/* Category stats - scrollable on mobile */}
-          <div className="flex gap-2 mt-6 overflow-x-auto pb-2 -mx-2 px-2">
+          <div className="flex flex-wrap justify-center gap-2 mt-6 pb-2 max-w-full">
             {Object.entries(categoryConfig).map(([cat, config]) => {
               const IconComponent = config.Icon;
               const isSelected = selectedCategory === cat;
@@ -406,7 +406,7 @@ export default function AchievementsSection({ userId, profile }: AchievementsSec
                   key={cat}
                   onClick={() => setSelectedCategory(cat as Badge['category'])}
                   className={cn(
-                    'bg-[var(--bg-card)] rounded-xl p-2 sm:p-3 text-center transition-all hover:bg-[var(--bg-secondary)] flex-shrink-0 min-w-[60px] border border-[var(--border-color)]',
+                    'bg-[var(--bg-card)] rounded-xl p-2 sm:p-3 text-center transition-all hover:bg-[var(--bg-secondary)] flex-shrink-0 min-w-[60px] max-w-[80px] sm:max-w-none border border-[var(--border-color)]',
                     isSelected && 'ring-2 ring-[#58cc02] bg-[var(--bg-secondary)]'
                   )}
                 >

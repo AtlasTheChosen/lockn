@@ -44,6 +44,11 @@ export default function LandingPage() {
       setIsLoggedIn(!!session);
     };
     checkAuth();
+
+    // Listen for streak tutorial request from CommandLanding
+    const handleShowTutorial = () => setShowStreakTutorial(true);
+    window.addEventListener('show-streak-tutorial', handleShowTutorial);
+    return () => window.removeEventListener('show-streak-tutorial', handleShowTutorial);
   }, []);
 
   const handleStartTrial = async (scenario: string, language: string, level: string, cardCount?: number) => {
@@ -181,18 +186,6 @@ export default function LandingPage() {
         />
       )}
 
-      {/* Floating Help Button for Streak Rules - positioned to avoid mobile preview toggle */}
-      <motion.button
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 1 }}
-        onClick={() => setShowStreakTutorial(true)}
-        className="fixed bottom-6 right-20 z-40 flex items-center gap-2 bg-gradient-to-r from-orange-400 to-red-500 text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all font-semibold"
-      >
-        <HelpCircle className="h-5 w-5" />
-        <span className="hidden sm:inline">Streak Rules</span>
-        <span className="sm:hidden">🔥</span>
-      </motion.button>
 
       <AnimatePresence mode="wait">
         {appState === 'command' && (

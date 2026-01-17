@@ -46,23 +46,47 @@ function CompactStreakBadge({ count, isFrozen, isActive }: { count: number; isFr
         }}
       />
 
-      {/* Icon circle */}
-      <motion.div
-        className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full"
-        style={{
-          background: isFrozen
-            ? 'linear-gradient(135deg, #1cb0f6 0%, #00d4ff 100%)'
-            : 'linear-gradient(135deg, #ff9600 0%, #ffaa00 100%)',
-        }}
-        animate={isFrozen ? { opacity: [0.9, 1, 0.9] } : { scale: [1, 1.05, 1] }}
-        transition={{
-          duration: 1.5,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-      >
-        {isFrozen ? <Snowflake className="h-4 w-4 text-white" strokeWidth={2.5} /> : <Flame className="h-4 w-4 text-white" />}
-      </motion.div>
+      {/* Icon circle or flame for frozen/zero */}
+      {isFrozen ? (
+        <motion.div
+          className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full"
+          style={{
+            background: 'linear-gradient(135deg, #1cb0f6 0%, #00d4ff 100%)',
+          }}
+          animate={{ opacity: [0.9, 1, 0.9] }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        >
+          <Snowflake className="h-4 w-4 text-white" strokeWidth={2.5} />
+        </motion.div>
+      ) : count === 0 ? (
+        <motion.div
+          className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full"
+          style={{
+            background: 'linear-gradient(135deg, #ff9600 0%, #ffaa00 100%)',
+          }}
+        >
+          <Flame className="h-4 w-4 text-white" />
+        </motion.div>
+      ) : (
+        <motion.div
+          className="relative z-10 flex h-7 w-7 items-center justify-center rounded-full"
+          style={{
+            background: 'linear-gradient(135deg, #ff9600 0%, #ffaa00 100%)',
+          }}
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        >
+          <Flame className="h-4 w-4 text-white" />
+        </motion.div>
+      )}
 
       {/* Count */}
       <span

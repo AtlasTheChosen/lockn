@@ -251,14 +251,56 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       }
   }, [currentCard, stack.target_language]);
 
-  // Fetch breakdown data for a card
+  // Pre-load cached breakdowns from cards on mount
+  useEffect(() => {
+    const cachedBreakdowns: Record<string, any> = {};
+    initialCards.forEach(card => {
+      if (card.grammar_breakdown) {
+        cachedBreakdowns[card.id] = card.grammar_breakdown;
+      }
+    });
+    if (Object.keys(cachedBreakdowns).length > 0) {
+      setBreakdownData(prev => ({ ...prev, ...cachedBreakdowns }));
+      console.log(`[Breakdown] Pre-loaded ${Object.keys(cachedBreakdowns).length} cached breakdowns`);
+    }
+  }, [initialCards]);
+
+  // Trigger background pre-caching for uncached cards
+  useEffect(() => {
+    const uncachedCards = initialCards.filter(card => !card.grammar_breakdown || !card.audio_url);
+    if (uncachedCards.length > 0) {
+      console.log(`[Precache] Triggering background caching for ${uncachedCards.length} cards`);
+      fetch('/api/precache-cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stackId: stack.id,
+          targetLanguage: stack.target_language,
+          nativeLanguage: stack.native_language || 'English',
+        }),
+      }).catch(err => console.error('[Precache] Background caching failed:', err));
+    }
+  }, [stack.id, stack.target_language, stack.native_language, initialCards]);
+
+  // Fetch breakdown data for a card (uses cached data if available)
   const fetchBreakdown = async (card: Flashcard) => {
     const breakdownKey = card.id;
+    
+    // Check if already in component state
     if (breakdownData[breakdownKey]) {
       setShowBreakdown(true);
       return;
     }
     
+    // Check if cached in the card data
+    if (card.grammar_breakdown) {
+      setBreakdownData(prev => ({ ...prev, [breakdownKey]: card.grammar_breakdown }));
+      setShowBreakdown(true);
+      console.log(`[Breakdown] Using cached data for card ${card.id}`);
+      return;
+    }
+    
+    // Fetch from API if not cached
     setIsLoadingBreakdown(true);
     try {
       const response = await fetch('/api/phrase-breakdown', {
@@ -276,6 +318,16 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         const data = await response.json();
         setBreakdownData(prev => ({ ...prev, [breakdownKey]: data }));
         setShowBreakdown(true);
+        
+        // Cache the breakdown in the database for future use
+        supabase
+          .from('flashcards')
+          .update({ grammar_breakdown: data })
+          .eq('id', card.id)
+          .then(({ error }) => {
+            if (error) console.warn('[Breakdown] Failed to cache:', error);
+            else console.log(`[Breakdown] Cached for card ${card.id}`);
+          });
       }
     } catch (error) {
       console.error('Error fetching breakdown:', error);

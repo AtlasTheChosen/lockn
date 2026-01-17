@@ -421,30 +421,30 @@ export default function AchievementsPage() {
               </div>
             </div>
 
-            {/* Category stats */}
-            <div className="grid grid-cols-4 lg:grid-cols-7 gap-3 mt-8">
+            {/* Category stats - stacked layout to avoid scrolling, optimized for mobile */}
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-6 sm:mt-8 px-2">
               {Object.entries(categoryConfig).map(([cat, config]) => (
                 <button
                   key={cat}
                   onClick={() => setSelectedCategory(cat as Badge['category'])}
                   className={cn(
-                    'bg-white/10 backdrop-blur-sm rounded-xl p-3 text-center transition-all hover:bg-white/20',
+                    'bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl p-2 sm:p-3 text-center transition-all hover:bg-white/20 min-w-[70px] sm:min-w-[100px] flex-shrink-0 max-w-[100px] sm:max-w-none',
                     selectedCategory === cat && 'ring-2 ring-white bg-white/20'
                   )}
                 >
-                  <div className="text-2xl mb-1">{config.emoji}</div>
-                  <p className="text-white font-bold text-lg">
+                  <div className="text-xl sm:text-2xl mb-0.5 sm:mb-1">{config.emoji}</div>
+                  <p className="text-white font-bold text-sm sm:text-lg">
                     {earnedCounts[cat as Badge['category']]}/{totalCounts[cat as Badge['category']]}
                   </p>
-                  <p className="text-white/70 text-xs font-medium">{config.label}</p>
+                  <p className="text-white/70 text-[10px] sm:text-xs font-medium">{config.label}</p>
                 </button>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Filter Pills */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        {/* Filter Pills - optimized for mobile */}
+        <div className="flex flex-wrap gap-2 mb-4 sm:mb-6 px-1">
           <button
             onClick={() => setSelectedCategory('all')}
             className="px-4 py-2 rounded-full font-semibold text-sm transition-all"
@@ -476,8 +476,8 @@ export default function AchievementsPage() {
           ))}
         </div>
 
-        {/* Badge Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Badge Grid - optimized for mobile */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filteredBadges.map((badge) => {
             const IconComponent = iconMap[badge.icon] || Trophy;
             const config = categoryConfig[badge.category];

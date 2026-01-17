@@ -152,10 +152,15 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
   // Check if we're in the grace period (between display deadline 11:59pm and actual deadline +2hrs)
   const inGracePeriod = isInGracePeriod(stats?.display_deadline ?? null, stats?.streak_deadline ?? null);
   
-  // Format countdown text - ALWAYS show countdown, even when frozen
-  const getCountdownText = () => {
+  // Format countdown text
+  const getCountdownText = (): string | null => {
     const hasMetGoal = cardsMasteredToday >= STREAK_DAILY_REQUIREMENT;
     const cardsNeeded = STREAK_DAILY_REQUIREMENT - cardsMasteredToday;
+    
+    // No streak - show motivational message to start streak
+    if (currentStreak === 0 && !hasMetGoal) {
+      return `Master ${cardsNeeded} cards to start your streak`;
+    }
     
     // Goal met - show success message (same whether frozen or not)
     if (hasMetGoal) {
@@ -167,7 +172,7 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
       return `LAST CHANCE! Master ${cardsNeeded} more cards NOW`;
     }
     
-    // Normal countdown - always show time remaining to master cards
+    // Normal countdown - show time remaining to master cards (only when streak > 0)
     return `${formatTime()} to master ${cardsNeeded} more`;
   };
 

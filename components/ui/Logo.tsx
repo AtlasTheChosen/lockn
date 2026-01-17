@@ -21,11 +21,11 @@ export default function Logo({ size = '2xl', className = '' }: LogoProps) {
   
   return (
     <Image
-      src="/images/bird logo.png"
+      src="/images/new bird logo.png"
       alt="FlashDash Bird Logo"
       width={pixelSize}
       height={pixelSize}
-      className={`object-contain ${className}`}
+      className={`object-contain rounded-lg ${className}`}
       priority
     />
   );

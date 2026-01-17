@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { TopNav, BottomNav } from '@/components/navigation';
 
@@ -17,6 +18,7 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ children, hideNav = false }: AppLayoutProps) {
+  const pathname = usePathname();
   const [streak, setStreak] = useState(0);
   const [streakFrozen, setStreakFrozen] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -24,6 +26,9 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const [navDataLoaded, setNavDataLoaded] = useState(false);
+  
+  // Hide bottom nav on home page for non-logged-in users
+  const showBottomNav = isLoggedIn || pathname !== '/';
 
   const loadUserData = useCallback(async () => {
     // Reset loading state at start of each fetch to prevent flash during navigation
@@ -119,10 +124,10 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
         userId={userId}
         dataLoaded={navDataLoaded}
       />
-      <main className="pb-40 md:pb-0 safe-area-bottom relative z-0">
+      <main className="pb-40 md:pb-0 safe-area-bottom relative z-0" style={{ paddingBottom: showBottomNav ? '100px' : '0' }}>
         {children}
       </main>
-      <BottomNav streak={streak} streakFrozen={streakFrozen} isLoggedIn={isLoggedIn} dataLoaded={navDataLoaded} />
+      {showBottomNav && <BottomNav streak={streak} streakFrozen={streakFrozen} isLoggedIn={isLoggedIn} dataLoaded={navDataLoaded} />}
     </div>
   );
 }

@@ -177,17 +177,7 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId }
             <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
               No active stacks!
             </h3>
-            <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>Generate one to start your learning journey!</p>
-            <motion.div whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}>
-              <Button
-                onClick={() => router.push('/')}
-                className="text-white font-bold rounded-2xl px-6 py-3 min-h-[48px] transition-all"
-                style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Generate Stack
-              </Button>
-            </motion.div>
+            <p className="mb-4" style={{ color: 'var(--text-secondary)' }}>Generate one to start your learning journey!</p>
           </div>
         </motion.div>
       </motion.div>
