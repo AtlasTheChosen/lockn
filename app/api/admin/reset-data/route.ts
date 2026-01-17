@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
       .from('flashcards')
       .delete()
       .neq('id', '00000000-0000-0000-0000-000000000000') // Delete all (workaround)
-      .select('id', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true } as any);
     results.flashcards = { deleted: !flashcardsError, count: flashcardsCount };
     
     // Delete all stack_tests
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       .from('card_stacks')
       .delete()
       .neq('id', '00000000-0000-0000-0000-000000000000')
-      .select('id', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true } as any);
     results.card_stacks = { deleted: !stacksError, count: stacksCount };
     
     // Delete all generation_logs
@@ -161,15 +161,15 @@ export async function POST(request: NextRequest) {
     // Get final counts
     const { count: remainingStacks } = await supabase
       .from('card_stacks')
-      .select('id', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true } as any);
     
     const { count: remainingCards } = await supabase
       .from('flashcards')
-      .select('id', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true } as any);
     
     const { count: remainingStats } = await supabase
       .from('user_stats')
-      .select('id', { count: 'exact', head: true });
+      .select('id', { count: 'exact', head: true } as any);
     
     return NextResponse.json({
       success: true,
