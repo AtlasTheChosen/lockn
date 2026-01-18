@@ -2,16 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
-import { Search, Globe, GraduationCap, CreditCard, AlertTriangle, LogIn } from 'lucide-react';
+import { Search, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
-import { DEBUG } from '@/lib/debug';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from '@/components/auth/AuthModal';
-import Logo from '@/components/ui/Logo';
 
 interface CommandLandingProps {
   onStartTrial: (scenario: string, language: string, level: string, cardCount?: number, scriptPreference?: string) => void;
@@ -153,47 +150,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
 
   return (
     <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      {/* Guest Header - Only on mobile (TopNav handles desktop) */}
-      {!isLoggedIn && (
-        <motion.nav
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="md:hidden px-4 sm:px-6 py-4 sticky top-0 z-40 flex justify-between items-center"
-          style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}
-        >
-          <Link href="/" className="flex items-center gap-2">
-            <Logo size="lg" />
-            <span className="font-display text-2xl sm:text-3xl font-semibold" style={{ color: 'var(--accent-green)' }}>
-              LockN
-            </span>
-          </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <Button 
-              variant="ghost" 
-              onClick={() => {
-                setAuthModalMode('login');
-                setShowAuthModal(true);
-              }}
-              className="font-semibold rounded-2xl px-3 sm:px-6 text-sm sm:text-base"
-              style={{ color: 'var(--text-secondary)' }}
-            >
-              Sign In
-            </Button>
-            <Button 
-              onClick={() => {
-                setAuthModalMode('signup');
-                setShowAuthModal(true);
-              }}
-              className="text-white font-bold rounded-2xl px-4 sm:px-6 text-sm sm:text-base hover:-translate-y-0.5 transition-all"
-              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
-            >
-              <span className="hidden sm:inline">Get Started ✨</span>
-              <span className="sm:hidden">Start ✨</span>
-            </Button>
-          </div>
-        </motion.nav>
-      )}
-
+      {/* TopNav in AppLayout handles all navigation - no duplicate header needed */}
       <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-16">
         <div className="max-w-4xl mx-auto">
           {/* Header */}

@@ -189,7 +189,7 @@ export default function LandingPage() {
   };
 
   return (
-    <AppLayout hideNav={appState === 'conversion'}>
+    <AppLayout hideNav={appState === 'conversion' || appState === 'trial'}>
       {/* Streak Tutorial */}
       {showStreakTutorial && (
         <StreakTutorial 
