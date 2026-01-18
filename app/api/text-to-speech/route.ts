@@ -31,7 +31,7 @@ function getCacheKey(text: string, language: string, voiceGender: string): strin
  * - Clean up whitespace and formatting
  * - Remove or replace problematic characters
  */
-export function preprocessTextForTTS(text: string, language?: string): string {
+function preprocessTextForTTS(text: string, language?: string): string {
   if (!text) return '';
   
   let processed = text;
