@@ -11,9 +11,15 @@ function getOpenAI() {
 
 export async function POST(request: Request) {
   const openai = getOpenAI();
+  let text: string | undefined;
+  let sourceLanguage = 'Spanish';
+  let targetLanguage = 'English';
 
   try {
-    const { text, sourceLanguage = 'Spanish', targetLanguage = 'English' } = await request.json();
+    const body = await request.json();
+    text = body.text;
+    sourceLanguage = body.sourceLanguage || 'Spanish';
+    targetLanguage = body.targetLanguage || 'English';
 
     if (!text) {
       return NextResponse.json({ error: 'Missing text' }, { status: 400 });
