@@ -14,17 +14,9 @@ export default function StackPage({ params }: { params: { id: string } }) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stack/[id]/page.tsx:useEffect',message:'Stack page useEffect triggered',data:{sessionLoading,hasSessionUser:!!sessionUser,hasAccessToken:!!accessToken,stackId:params.id},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-    // #endregion
-
     if (sessionLoading) return;
     
     if (!sessionUser || !accessToken) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'stack/[id]/page.tsx:auth-redirect',message:'Redirecting to home - no session',data:{sessionLoading,hasSessionUser:!!sessionUser,hasAccessToken:!!accessToken},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3-H5'})}).catch(()=>{});
-      // #endregion
-
       router.push('/');
       return;
     }

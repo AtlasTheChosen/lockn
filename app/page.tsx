@@ -63,16 +63,8 @@ export default function LandingPage() {
     setSelectedScenario(scenario);
     setAppState('loading');
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:handleStartTrial',message:'Stack creation started',data:{isLoggedIn,scenario,language,level,cardCount},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H2'})}).catch(()=>{});
-    // #endregion
-
     try {
       if (isLoggedIn) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:isLoggedIn-branch',message:'User is logged in, calling generate-stack API',data:{isLoggedIn},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1'})}).catch(()=>{});
-        // #endregion
-
         const response = await fetch('/api/generate-stack', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -88,15 +80,7 @@ export default function LandingPage() {
 
         const data = await response.json();
 
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:api-response',message:'API response received',data:{responseOk:response.ok,status:response.status,hasStackId:!!data.stackId,stackId:data.stackId,error:data.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H1-H4'})}).catch(()=>{});
-        // #endregion
-
         if (!response.ok) {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:api-error',message:'API returned error',data:{status:response.status,error:data.error},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2'})}).catch(()=>{});
-          // #endregion
-
           if (response.status === 400 && data.error?.includes('inappropriate')) {
             setErrorInfo({
               title: 'Inappropriate Content',
@@ -119,10 +103,6 @@ export default function LandingPage() {
           throw new Error(data.error || 'Failed to generate cards');
         }
         
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:router-push',message:'About to call router.push',data:{stackId:data.stackId,path:`/stack/${data.stackId}`},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H3'})}).catch(()=>{});
-        // #endregion
-
         router.push(`/stack/${data.stackId}`);
         return;
       }
@@ -189,10 +169,6 @@ export default function LandingPage() {
       setGeneratedCards(formattedCards);
       setAppState('trial');
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'page.tsx:catch-block',message:'Error caught in handleStartTrial',data:{errorMessage:error?.message,errorName:error?.name,currentAppState:appState},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'H2-H5'})}).catch(()=>{});
-      // #endregion
-
       if (appState !== 'error') {
         setAppState('command');
       }
