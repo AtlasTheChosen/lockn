@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import OpenAI from 'openai';
-import { preprocessTextForTTS } from '../text-to-speech/route';
+import { preprocessTextForTTS } from '@/lib/tts-utils';
 
 // Initialize clients
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

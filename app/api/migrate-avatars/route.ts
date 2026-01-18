@@ -46,7 +46,7 @@ export async function POST() {
       try {
         // Use deterministic assignment: hash user ID to get avatar index 0-19
         // This ensures same user always gets same avatar, but distributes across all 20
-        const hash = userProfile.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const hash = userProfile.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
         const avatarId = hash % AVATAR_COUNT; // 0-19
         const avatarUrl = getAvatarUrl(avatarId);
 
