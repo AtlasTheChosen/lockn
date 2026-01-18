@@ -274,9 +274,8 @@ export default function PublicProfileModal({ userId, isOpen, onClose }: PublicPr
                 <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
                   {/* Avatar */}
                   <div 
-                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-full ring-4 overflow-hidden flex-shrink-0"
+                    className="w-24 h-24 sm:w-28 sm:h-28 rounded-full ring-4 overflow-hidden flex-shrink-0 bg-white"
                     style={{ 
-                      background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))',
                       '--tw-ring-color': 'var(--bg-secondary)'
                     } as React.CSSProperties}
                   >
@@ -287,7 +286,7 @@ export default function PublicProfileModal({ userId, isOpen, onClose }: PublicPr
                         className="w-full h-full object-cover bg-white scale-[0.75]"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-white">
+                      <div className="w-full h-full flex items-center justify-center text-3xl font-bold" style={{ color: 'var(--accent-green)' }}>
                         {profile.display_name?.charAt(0)?.toUpperCase() || '?'}
                       </div>
                     )}

@@ -298,13 +298,13 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
           <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Your Profile</h3>
         </div>
         <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>
-          Choose your avatar from 25 cute options! <span style={{ color: 'var(--accent-green)' }}>Changes save instantly.</span>
+          Choose your avatar from 20 robot options! <span style={{ color: 'var(--accent-green)' }}>Changes save instantly.</span>
         </p>
         <div className="flex items-center gap-6 mb-6">
           <button
             onClick={() => setShowAvatarPicker(!showAvatarPicker)}
-            className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-white ring-4 overflow-hidden transition-all cursor-pointer group relative"
-            style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))', '--tw-ring-color': 'var(--bg-card)' } as React.CSSProperties}
+            className="w-24 h-24 rounded-full flex items-center justify-center text-3xl font-bold text-white ring-4 overflow-hidden transition-all cursor-pointer group relative bg-white"
+            style={{ '--tw-ring-color': 'var(--bg-card)' } as React.CSSProperties}
           >
             <img 
               src={avatarUrl} 

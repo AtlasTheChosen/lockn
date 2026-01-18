@@ -534,7 +534,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                         style={{ boxShadow: '0 4px 12px rgba(28, 176, 246, 0.3)' }}
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg text-white transition-transform group-hover:scale-105" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))' }}>
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg transition-transform group-hover:scale-105 bg-white" style={{ color: 'var(--accent-green)' }}>
                         {getInitials(friendship.profile)}
                       </div>
                     )}

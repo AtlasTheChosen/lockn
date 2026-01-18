@@ -241,7 +241,7 @@ export default function TopNav({
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2 flex-shrink-0">
         <motion.div className="flex items-center gap-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-          <Logo size="xl" />
+          <Logo size="md" />
           <span className="font-display text-xl lg:text-2xl font-semibold text-[#58cc02]">Lockn</span>
         </motion.div>
       </Link>
