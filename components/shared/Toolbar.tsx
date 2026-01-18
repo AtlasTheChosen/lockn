@@ -25,6 +25,7 @@ import {
   Settings,
   Menu,
   X,
+  Shield,
 } from 'lucide-react';
 import ThemeSelector from '@/components/dashboard/ThemeSelector';
 import Logo from '@/components/ui/Logo';
@@ -36,6 +37,7 @@ interface ToolbarProps {
     display_name?: string;
     avatar_url?: string;
     email?: string;
+    is_admin?: boolean;
   } | null;
 }
 
@@ -103,7 +105,7 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <Logo size="xl" />
-            <span className="text-2xl font-bold" style={{ color: 'var(--accent-green)' }}>LOCKN</span>
+            <span className="text-2xl font-bold" style={{ color: 'var(--accent-green)' }}>LockN</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -141,6 +143,20 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                 </Link>
               );
             })}
+            {/* Admin link - only shown for admins */}
+            {user && profile?.is_admin && (
+              <Link href="/admin">
+                <Button
+                  variant={isActive('/admin') ? 'default' : 'ghost'}
+                  size="sm"
+                  className="gap-2"
+                  style={{ color: isActive('/admin') ? undefined : 'var(--accent-red)' }}
+                >
+                  <Shield className="h-4 w-4" />
+                  Admin
+                </Button>
+              </Link>
+            )}
           </div>
 
           {/* Right side actions */}
@@ -157,13 +173,13 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="relative h-auto px-2 py-1 rounded-full flex items-center gap-2">
-                      <div className="h-9 w-9 rounded-full overflow-hidden bg-gradient-to-br from-blue-400 to-purple-500">
+                      <div className="h-9 w-9 rounded-full overflow-hidden bg-white">
                         <img 
-                          src={profile?.avatar_url || '/images/avatars/avatar_fixed_01.png'} 
+                          src={profile?.avatar_url || '/images/robot avatars/2360d47f-4a48-4276-b333-15e7c42238b5_1.jpg'} 
                           alt={profile?.display_name || 'User'} 
-                          className="h-full w-full object-cover scale-110"
+                          className="h-full w-full object-cover bg-white scale-[0.75]"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = '/images/avatars/avatar_fixed_01.png';
+                            (e.target as HTMLImageElement).src = '/images/robot avatars/2360d47f-4a48-4276-b333-15e7c42238b5_1.jpg';
                           }}
                         />
                       </div>
@@ -305,6 +321,15 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
               
               {user ? (
                 <>
+                  {/* Admin link - mobile */}
+                  {profile?.is_admin && (
+                    <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="ghost" className="w-full justify-start gap-2" style={{ color: 'var(--accent-red)' }}>
+                        <Shield className="h-4 w-4" />
+                        Admin Dashboard
+                      </Button>
+                    </Link>
+                  )}
                   <Link href="/account" onClick={() => setMobileMenuOpen(false)}>
                     <Button variant="ghost" className="w-full justify-start gap-2">
                       <Settings className="h-4 w-4" />

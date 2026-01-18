@@ -41,12 +41,21 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Require confirmation
+    // Require confirmation and PIN
     const body = await request.json();
+    const ADMIN_PIN = '286868';
+    
     if (body.confirm !== 'RESET_ALL_DATA') {
       return NextResponse.json(
         { error: 'Confirmation required. Send { confirm: "RESET_ALL_DATA" }' },
         { status: 400 }
+      );
+    }
+    
+    if (body.pin !== ADMIN_PIN) {
+      return NextResponse.json(
+        { error: 'Incorrect PIN. Admin PIN required to reset all data.' },
+        { status: 403 }
       );
     }
     

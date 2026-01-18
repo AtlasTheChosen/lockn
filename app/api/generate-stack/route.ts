@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
-import { FREE_TIER_LIMITS } from '@/lib/constants';
+import { FREE_TIER_LIMITS, NON_LATIN_LANGUAGES, LANGUAGE_SCRIPTS, ROMANIZATION_NAMES } from '@/lib/constants';
 import { DEBUG_SERVER } from '@/lib/debug';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 
@@ -101,11 +101,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { scenario, targetLanguage, nativeLanguage = 'English', stackSize = 15, difficulty = 'B1', conversationalMode = false, excludePhrases = [] } = await request.json();
+    const { scenario, targetLanguage, nativeLanguage = 'English', stackSize = 15, difficulty = 'B1', conversationalMode = false, excludePhrases = [], scriptPreference } = await request.json();
     
     // Validate excludePhrases is an array
     const phrasesToExclude = Array.isArray(excludePhrases) ? excludePhrases : [];
     DEBUG_SERVER.api('Exclude phrases count', { count: phrasesToExclude.length });
+    
+    // Check if target language needs romanization
+    const needsRomanization = NON_LATIN_LANGUAGES.includes(targetLanguage);
+    const romanizationName = ROMANIZATION_NAMES[targetLanguage] || 'romanization';
+    DEBUG_SERVER.api('Language settings', { targetLanguage, needsRomanization, scriptPreference });
 
     if (!scenario || !targetLanguage) {
       DEBUG_SERVER.apiError('Missing required fields', null, { scenario: !!scenario, targetLanguage: !!targetLanguage });
@@ -216,6 +221,99 @@ export async function POST(request: Request) {
 
     const difficultyGuide = getDifficultyInstructions(difficulty);
     
+    // Build script preference instruction for non-Latin languages
+    let scriptInstruction = '';
+    if (needsRomanization) {
+      if (scriptPreference && LANGUAGE_SCRIPTS[targetLanguage]) {
+        const scriptOption = LANGUAGE_SCRIPTS[targetLanguage].find(s => s.id === scriptPreference);
+        if (scriptOption) {
+          scriptInstruction = `\n\n📝 WRITING SYSTEM REQUIREMENT:
+Use ${scriptOption.name} (${scriptOption.description}) for all ${targetLanguage} phrases.`;
+          
+          // Add specific instructions for Japanese script preferences
+          if (targetLanguage === 'Japanese') {
+            if (scriptPreference === 'hiragana') {
+              scriptInstruction += '\n- Use ONLY hiragana (ひらがな). Do NOT use katakana or kanji.';
+            } else if (scriptPreference === 'katakana') {
+              scriptInstruction += '\n- Use ONLY katakana (カタカナ). Do NOT use hiragana or kanji.';
+            } else if (scriptPreference === 'mixed') {
+              scriptInstruction += '\n- Use hiragana and katakana appropriately. Do NOT use kanji.';
+            } else if (scriptPreference === 'kanji') {
+              scriptInstruction += '\n- Use full Japanese writing including kanji where appropriate.';
+            }
+          } else if (targetLanguage === 'Chinese (Mandarin)') {
+            if (scriptPreference === 'simplified') {
+              scriptInstruction += '\n- Use ONLY simplified Chinese characters (简体字).';
+            } else if (scriptPreference === 'traditional') {
+              scriptInstruction += '\n- Use ONLY traditional Chinese characters (繁體字).';
+            }
+          } else if (targetLanguage === 'Korean') {
+            if (scriptPreference === 'hangul') {
+              scriptInstruction += '\n- Use ONLY Hangul (한글). Do NOT use Hanja.';
+            } else if (scriptPreference === 'mixed') {
+              scriptInstruction += '\n- Use Hangul with Hanja where appropriate for advanced vocabulary.';
+            }
+          } else if (targetLanguage === 'Arabic') {
+            if (scriptPreference === 'vocalized') {
+              scriptInstruction += '\n- Include full vowel diacritics (harakat) on all words.';
+            }
+          }
+        }
+      } else {
+        // For non-Latin languages without script options, explicitly require native script
+        const nativeScriptInstructions: Record<string, string> = {
+          Russian: 'Use Cyrillic alphabet (кириллица) for all Russian phrases. Example: "Привет" not "Privet".',
+          Greek: 'Use Greek alphabet (ελληνικό αλφάβητο) for all Greek phrases. Example: "Γεια σου" not "Geia sou".',
+          Hindi: 'Use Devanagari script (देवनागरी) for all Hindi phrases. Example: "नमस्ते" not "Namaste".',
+          Thai: 'Use Thai script (อักษรไทย) for all Thai phrases. Example: "สวัสดี" not "Sawatdee".',
+          Hebrew: 'Use Hebrew alphabet (אלפבית עברי) for all Hebrew phrases. Example: "שלום" not "Shalom".',
+        };
+        
+        if (nativeScriptInstructions[targetLanguage]) {
+          scriptInstruction = `\n\n📝 NATIVE SCRIPT REQUIREMENT:
+${nativeScriptInstructions[targetLanguage]}
+The target_phrase field MUST be in the native script, NOT transliterated to Latin letters.`;
+        }
+      }
+      
+      scriptInstruction += `\n\n🔤 ROMANIZATION REQUIREMENT (MANDATORY for ${targetLanguage}):
+You MUST include a "romanization" field for every card with the phonetic pronunciation in Latin letters.
+- For Japanese: Use standard Romaji (e.g., "Ohayou gozaimasu")
+- For Chinese: Use Pinyin with tone marks or numbers (e.g., "Nǐ hǎo" or "Ni3 hao3")
+- For Korean: Use Revised Romanization (e.g., "Annyeonghaseyo")
+- For Arabic: Use standard transliteration (e.g., "Marhaba")
+- For Russian: Use standard transliteration (e.g., "Privet" for Привет)
+- For Greek: Use standard romanization (e.g., "Geia sou" for Γεια σου)
+- For Hindi: Use standard transliteration (e.g., "Namaste" for नमस्ते)
+- For Thai: Use RTGS romanization (e.g., "Sawatdi" for สวัสดี)
+- For Hebrew: Use standard transliteration (e.g., "Shalom" for שלום)
+
+📚 CHARACTER BREAKDOWN REQUIREMENT (MANDATORY for ${targetLanguage}):
+You MUST include a "character_breakdown" array showing each character with its individual pronunciation.
+This helps learners understand how each letter/character sounds.
+
+Example for Russian "Привет":
+"character_breakdown": [
+  {"character": "П", "romanization": "P"},
+  {"character": "р", "romanization": "r"},
+  {"character": "и", "romanization": "i"},
+  {"character": "в", "romanization": "v"},
+  {"character": "е", "romanization": "ye"},
+  {"character": "т", "romanization": "t"}
+]
+
+Example for Japanese "こんにちは":
+"character_breakdown": [
+  {"character": "こ", "romanization": "ko"},
+  {"character": "ん", "romanization": "n"},
+  {"character": "に", "romanization": "ni"},
+  {"character": "ち", "romanization": "chi"},
+  {"character": "は", "romanization": "wa"}
+]
+
+Skip spaces in the breakdown. Each character should map to its phonetic sound.`;
+    }
+    
     // Build exclusion instruction if there are phrases to exclude
     const exclusionInstruction = phrasesToExclude.length > 0
       ? `
@@ -265,6 +363,7 @@ If you generate phrases that are too advanced or too simple for ${difficulty}, t
 
 SCENARIO REQUIREMENT:
 Generate a chronological narrative stack for '${scenario}'. Use ONLY vocabulary, idioms, slang, and contexts from this specific scenario AT THE ${difficulty} LEVEL. Every phrase must be directly applicable to this exact scenario.
+${scriptInstruction}
 ${exclusionInstruction}
 
 Return ONLY valid JSON in this exact format:
@@ -272,7 +371,9 @@ Return ONLY valid JSON in this exact format:
   "cards": [
     {
       "target_phrase": "phrase in ${targetLanguage} at ${difficulty} level",
-      "native_translation": "translation in ${nativeLanguage}",
+      "native_translation": "translation in ${nativeLanguage}",${needsRomanization ? `
+      "romanization": "phonetic pronunciation in Latin letters (${romanizationName})",
+      "character_breakdown": [{"character": "X", "romanization": "x"}, ...],` : ''}
       "example_sentence": "when/how to use this phrase in the scenario (${difficulty} appropriate)",
       "tone_advice": "tone description (e.g., 'Casual', 'Playful', 'Formal', 'Sarcastic Gen-Z')"
     }
@@ -357,6 +458,7 @@ Generate ONLY ${difficulty}-level phrases. If in doubt, err on the side of simpl
         card_count: parsed.cards.length,
         conversational_mode: conversationalMode,
         cefr_level: difficulty,
+        script_preference: scriptPreference || null,
       })
       .select()
       .single();
@@ -391,6 +493,8 @@ Generate ONLY ${difficulty}-level phrases. If in doubt, err on the side of simpl
       native_translation: card.native_translation,
       example_sentence: card.example_sentence,
       tone_advice: card.tone_advice,
+      romanization: card.romanization || null, // Include romanization for non-Latin languages
+      character_breakdown: card.character_breakdown || null, // Character-by-character pronunciation
     }));
 
     console.log('[API:generate-stack] Flashcards to insert:', flashcards.length);

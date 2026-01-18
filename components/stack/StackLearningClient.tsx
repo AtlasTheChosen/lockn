@@ -22,7 +22,7 @@ import { useSpeech, TTSProvider, VoiceGender } from '@/hooks/use-speech';
 import { Input } from '@/components/ui/input';
 import type { CardStack, Flashcard, TestNote } from '@/lib/types';
 import Confetti from 'react-confetti';
-import { CARD_RATINGS } from '@/lib/constants';
+import { CARD_RATINGS, NON_LATIN_LANGUAGES, ROMANIZATION_NAMES } from '@/lib/constants';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
 import { shouldResetWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
 import { isNewDay, getTodayDate, calculateTestDeadline, STREAK_DAILY_REQUIREMENT, isNewDayInTimezone } from '@/lib/streak';
@@ -87,8 +87,13 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [cardsMasteredToday, setCardsMasteredToday] = useState(0);
   const [showDowngradeWarning, setShowDowngradeWarning] = useState(false);
   const [pendingRating, setPendingRating] = useState<{ rating: number; oldRating: number } | null>(null);
+  const [showRomanization, setShowRomanization] = useState(true); // Toggle for romanization display
   
   const supabase = createClient();
+  
+  // Check if this language needs romanization
+  const needsRomanization = NON_LATIN_LANGUAGES.includes(stack.target_language);
+  const romanizationLabel = ROMANIZATION_NAMES[stack.target_language] || 'Romanization';
   
   // Dark mode initialization
   useEffect(() => {
@@ -100,6 +105,21 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       document.documentElement.classList.add('dark');
     }
   }, []);
+  
+  // Romanization preference initialization
+  useEffect(() => {
+    const savedRomanizationPref = localStorage.getItem('lockn-show-romanization');
+    if (savedRomanizationPref !== null) {
+      setShowRomanization(savedRomanizationPref === 'true');
+    }
+  }, []);
+  
+  // Toggle romanization visibility
+  const toggleRomanization = () => {
+    const newValue = !showRomanization;
+    setShowRomanization(newValue);
+    localStorage.setItem('lockn-show-romanization', String(newValue));
+  };
   
   // Fetch current cards mastered today on mount
   useEffect(() => {
@@ -858,6 +878,23 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           >
             <span className="text-lg">{voiceGender === 'female' ? '♀' : '♂'}</span>
           </Button>
+          {/* Romanization Toggle - only for non-Latin languages */}
+          {needsRomanization && (
+            <Button
+              onClick={toggleRomanization}
+              variant="ghost"
+              size="sm"
+              className="font-semibold rounded-xl p-2 sm:px-3 flex items-center gap-1"
+              style={{ 
+                backgroundColor: showRomanization ? 'rgba(156, 39, 176, 0.15)' : 'transparent',
+                color: showRomanization ? '#9c27b0' : 'var(--text-secondary)'
+              }}
+              title={`${showRomanization ? 'Hide' : 'Show'} ${romanizationLabel}`}
+            >
+              <span className="font-bold text-sm">Aa</span>
+              <span className="hidden sm:inline text-xs">{romanizationLabel}</span>
+            </Button>
+          )}
           <span className="font-semibold px-2 sm:px-3 py-1 rounded-xl text-sm" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
             {currentIndex + 1}/{cards.length}
           </span>
@@ -976,6 +1013,23 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                         {voiceGender === 'female' ? '♀' : '♂'}
                       </button>
                     </div>
+                    {/* Romanization - shown on front when not in reverse mode */}
+                    {!reverseMode && showRomanization && needsRomanization && currentCard.romanization && (
+                      <p className="text-lg font-medium italic" style={{ color: 'var(--text-muted)' }}>
+                        {currentCard.romanization}
+                      </p>
+                    )}
+                    {/* Character Breakdown - shown on front when not in reverse mode */}
+                    {!reverseMode && showRomanization && needsRomanization && currentCard.character_breakdown && currentCard.character_breakdown.length > 0 && (
+                      <div className="flex flex-wrap justify-center gap-1 sm:gap-2 mt-2 px-2">
+                        {currentCard.character_breakdown.map((char, i) => (
+                          <div key={i} className="text-center px-1.5 py-1 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                            <span className="text-xl sm:text-2xl block font-medium" style={{ color: 'var(--text-primary)' }}>{char.character}</span>
+                            <span className="text-xs block font-medium" style={{ color: 'var(--text-muted)' }}>{char.romanization}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     {!reverseMode && (
                       <span className="inline-block px-4 py-2 font-semibold rounded-xl" style={{ backgroundColor: 'rgba(88, 204, 2, 0.15)', color: '#58cc02' }}>
                         {currentCard.tone_advice}
@@ -1029,6 +1083,23 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                         <Volume2 className="w-5 h-5" />
                       </button>
                     </div>
+                    {/* Romanization - shown on back when target phrase is the heading (reverse mode) */}
+                    {reverseMode && showRomanization && needsRomanization && currentCard.romanization && (
+                      <p className="text-base font-medium italic" style={{ color: 'var(--text-muted)' }}>
+                        {currentCard.romanization}
+                      </p>
+                    )}
+                    {/* Character Breakdown - shown on back when target phrase is the heading (reverse mode) */}
+                    {reverseMode && showRomanization && needsRomanization && currentCard.character_breakdown && currentCard.character_breakdown.length > 0 && (
+                      <div className="flex flex-wrap justify-center gap-1 sm:gap-2 mt-2 px-2">
+                        {currentCard.character_breakdown.map((char, i) => (
+                          <div key={i} className="text-center px-1.5 py-1 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                            <span className="text-lg sm:text-xl block font-medium" style={{ color: 'var(--text-primary)' }}>{char.character}</span>
+                            <span className="text-xs block font-medium" style={{ color: 'var(--text-muted)' }}>{char.romanization}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex items-center justify-center gap-2">
                       <p className="text-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
                         {reverseMode ? (
@@ -1062,6 +1133,23 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                         <Volume2 className="w-4 h-4" />
                       </button>
                     </div>
+                    {/* Romanization - shown on back below target phrase (normal mode) */}
+                    {!reverseMode && showRomanization && needsRomanization && currentCard.romanization && (
+                      <p className="text-sm font-medium italic" style={{ color: 'var(--text-muted)' }}>
+                        {currentCard.romanization}
+                      </p>
+                    )}
+                    {/* Character Breakdown - shown on back below target phrase (normal mode) */}
+                    {!reverseMode && showRomanization && needsRomanization && currentCard.character_breakdown && currentCard.character_breakdown.length > 0 && (
+                      <div className="flex flex-wrap justify-center gap-1 mt-2 px-2">
+                        {currentCard.character_breakdown.map((char, i) => (
+                          <div key={i} className="text-center px-1 py-0.5 rounded" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                            <span className="text-sm block font-medium" style={{ color: 'var(--text-primary)' }}>{char.character}</span>
+                            <span className="text-[10px] block font-medium" style={{ color: 'var(--text-muted)' }}>{char.romanization}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Breakdown Button */}

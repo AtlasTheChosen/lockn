@@ -21,8 +21,8 @@ export default function Logo({ size = '2xl', className = '' }: LogoProps) {
   
   return (
     <Image
-      src="/images/new bird logo.png"
-      alt="FlashDash Bird Logo"
+      src="/images/Friendly robot with glowing eyes.png"
+      alt="Lockn Robot Logo"
       width={pixelSize}
       height={pixelSize}
       className={`object-contain rounded-lg ${className}`}

@@ -284,7 +284,7 @@ export default function PublicProfileModal({ userId, isOpen, onClose }: PublicPr
                       <img 
                         src={profile.avatar_url} 
                         alt={profile.display_name || 'User'} 
-                        className="w-full h-full object-cover scale-110"
+                        className="w-full h-full object-cover bg-white scale-[0.75]"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-white">

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { LogOut, Snowflake, Flame, ChevronDown, User, Settings, Home, LayoutDashboard, Trophy } from 'lucide-react';
+import { LogOut, Snowflake, Flame, ChevronDown, User, Settings, Home, LayoutDashboard, Trophy, Shield } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import AuthModal from '@/components/auth/AuthModal';
 import { NotificationBell } from '@/components/notifications';
@@ -18,6 +18,7 @@ interface TopNavProps {
   displayName?: string;
   avatarUrl?: string;
   isLoggedIn?: boolean;
+  isAdmin?: boolean;
   userId?: string;
   dataLoaded?: boolean;
 }
@@ -107,9 +108,9 @@ function UserAvatar({
         whileTap={{ scale: 0.95 }}
       >
         {/* Avatar */}
-        <div className="relative h-9 w-9 sm:h-11 sm:w-11 overflow-hidden rounded-full bg-gradient-to-br from-[#1cb0f6] to-[#1a9ad6] shadow-[var(--shadow-sm)]">
+        <div className="relative h-9 w-9 sm:h-11 sm:w-11 overflow-hidden rounded-full bg-white shadow-[var(--shadow-sm)]">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover scale-110" />
+            <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover bg-white scale-[0.75]" />
           ) : (
             <div className="flex h-full w-full items-center justify-center font-bold text-sm sm:text-lg text-white">
               {getInitials(displayName)}
@@ -199,6 +200,7 @@ export default function TopNav({
   displayName = 'U',
   avatarUrl,
   isLoggedIn = false,
+  isAdmin = false,
   userId,
   dataLoaded = false,
 }: TopNavProps) {
@@ -239,7 +241,7 @@ export default function TopNav({
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2 flex-shrink-0">
         <motion.div className="flex items-center gap-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-          <Logo size="md" />
+          <Logo size="xl" />
           <span className="font-display text-xl lg:text-2xl font-semibold text-[#58cc02]">Lockn</span>
         </motion.div>
       </Link>
@@ -308,6 +310,44 @@ export default function TopNav({
             </Link>
           );
         })}
+
+        {/* Admin Link - only shown for admins */}
+        {isLoggedIn && isAdmin && (
+          <Link href="/admin" title="Admin">
+            <motion.div 
+              className="relative p-2.5 lg:px-5 lg:py-3 flex items-center justify-center gap-2" 
+              whileHover={{ scale: 1.02 }} 
+              whileTap={{ scale: 0.98 }}
+            >
+              {pathname === '/admin' && (
+                <motion.div
+                  layoutId="topnav-active-pill"
+                  className="absolute inset-0 rounded-xl"
+                  style={{ backgroundColor: 'rgba(239, 68, 68, 0.15)' }}
+                  transition={{
+                    type: 'spring',
+                    stiffness: 400,
+                    damping: 30,
+                  }}
+                />
+              )}
+              <Shield 
+                className={cn(
+                  'relative z-10 h-5 w-5 transition-colors duration-200',
+                  pathname === '/admin' ? 'text-red-500' : 'text-red-400'
+                )}
+              />
+              <span
+                className={cn(
+                  'relative z-10 font-bold text-base transition-colors duration-200 hidden lg:inline',
+                  pathname === '/admin' ? 'text-red-500' : 'text-red-400 hover:text-red-500'
+                )}
+              >
+                Admin
+              </span>
+            </motion.div>
+          </Link>
+        )}
       </nav>
 
       {/* Right section */}

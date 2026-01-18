@@ -316,7 +316,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
             ) : (
               <>
                 <h2 className="font-display text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                  {mode === 'signup' ? 'Join LOCKN! ✨' : 'Welcome Back! 👋'}
+                  {mode === 'signup' ? 'Join LockN! ✨' : 'Welcome Back! 👋'}
                 </h2>
                 <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                   {mode === 'signup' ? 'Create your free account to start learning' : 'Sign in to continue your journey'}

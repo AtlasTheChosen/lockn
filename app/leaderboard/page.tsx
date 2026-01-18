@@ -39,9 +39,16 @@ export default function LeaderboardPage() {
       setError(null);
       
       // Use server-side API route that bypasses RLS (with cache-busting)
-      const response = await fetch(`/api/leaderboard?t=${Date.now()}`, {
+      // Add timestamp to force fresh data on each request
+      const cacheBuster = Date.now();
+      const response = await fetch(`/api/leaderboard?t=${cacheBuster}&_=${cacheBuster}`, {
+        method: 'GET',
         cache: 'no-store',
-        headers: { 'Cache-Control': 'no-cache' }
+        headers: { 
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
       
       if (!response.ok) {
@@ -335,12 +342,12 @@ export default function LeaderboardPage() {
                     </motion.div>
 
                   {/* Avatar */}
-                  <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl text-white flex-shrink-0 overflow-hidden" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))' }}>
+                  <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-xl text-white flex-shrink-0 overflow-hidden bg-white">
                     {user.avatar_url ? (
                       <img 
                         src={user.avatar_url}
                         alt={user.display_name || 'User'} 
-                        className="w-full h-full object-cover scale-110"
+                        className="w-full h-full object-cover bg-white scale-[0.75]"
                       />
                     ) : (
                       getInitials(user)

@@ -20,8 +20,12 @@ export async function POST(request: Request) {
     }
 
     if (!openai) {
+      console.error('[Translate Words] OpenAI API key not configured');
       return NextResponse.json({ translations: [] });
     }
+
+    // Log translation request for debugging
+    console.log(`[Translate Words] Request: ${sourceLanguage} -> ${targetLanguage}, text: "${text.substring(0, 50)}${text.length > 50 ? '...' : ''}"`);
 
     const isEnglishToEnglish = sourceLanguage === 'English' && targetLanguage === 'English';
 
@@ -112,9 +116,23 @@ Include ALL words - do not skip any.`;
       }
     }
 
-    return NextResponse.json({ translations: parsed.translations || [] });
+    const translations = parsed.translations || [];
+    
+    // Log result for debugging
+    if (translations.length === 0) {
+      console.warn(`[Translate Words] No translations returned for ${sourceLanguage} -> ${targetLanguage}, text: "${text.substring(0, 50)}"`);
+    } else {
+      console.log(`[Translate Words] Success: ${translations.length} words translated`);
+    }
+    
+    return NextResponse.json({ translations });
   } catch (error: any) {
-    console.error('Translation error:', error);
+    console.error(`[Translate Words] Error translating ${sourceLanguage} -> ${targetLanguage}:`, error);
+    console.error('[Translate Words] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      text: text?.substring(0, 50),
+    });
     return NextResponse.json({ translations: [] });
   }
 }

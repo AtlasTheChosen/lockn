@@ -135,8 +135,8 @@ export default function BirdMascot({
         style={{ width: pixelSize, height: pixelSize }}
       >
         <Image
-          src="/images/bird logo.png"
-          alt="FlashDash Bird Mascot"
+          src="/images/Friendly robot with glowing eyes.png"
+          alt="Lockn Robot Mascot"
           width={pixelSize}
           height={pixelSize}
           className="object-contain drop-shadow-lg"

@@ -23,6 +23,7 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   const [streakFrozen, setStreakFrozen] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [avatarUrl, setAvatarUrl] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const [navDataLoaded, setNavDataLoaded] = useState(false);
@@ -45,7 +46,7 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
       // Get user profile using native fetch
       try {
         const profileRes = await fetch(
-          `${supabaseUrl}/rest/v1/user_profiles?id=eq.${session.user.id}&select=display_name,avatar_url`,
+          `${supabaseUrl}/rest/v1/user_profiles?id=eq.${session.user.id}&select=display_name,avatar_url,is_admin`,
           {
             headers: {
               'apikey': supabaseKey,
@@ -58,6 +59,7 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
           const profile = profiles?.[0];
           if (profile?.display_name) setDisplayName(profile.display_name);
           if (profile?.avatar_url) setAvatarUrl(profile.avatar_url);
+          setIsAdmin(profile?.is_admin === true);
         }
       } catch (e) {
         console.warn('[AppLayout] Profile fetch error:', e);
@@ -121,6 +123,7 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
         displayName={displayName} 
         avatarUrl={avatarUrl}
         isLoggedIn={isLoggedIn}
+        isAdmin={isAdmin}
         userId={userId}
         dataLoaded={navDataLoaded}
       />

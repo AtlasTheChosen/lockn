@@ -178,3 +178,71 @@ export const PREMIUM_PRICING = {
     interval: 'year',
   },
 };
+
+// Script/alphabet options for non-Latin languages
+export const LANGUAGE_SCRIPTS: Record<string, { id: string; name: string; description: string }[]> = {
+  Japanese: [
+    { id: 'hiragana', name: 'Hiragana only', description: 'Basic phonetic script' },
+    { id: 'katakana', name: 'Katakana only', description: 'Foreign words script' },
+    { id: 'mixed', name: 'Hiragana + Katakana', description: 'Both phonetic scripts' },
+    { id: 'kanji', name: 'Include Kanji', description: 'Full Japanese writing' },
+  ],
+  'Chinese (Mandarin)': [
+    { id: 'simplified', name: 'Simplified', description: 'Mainland China standard' },
+    { id: 'traditional', name: 'Traditional', description: 'Taiwan/Hong Kong style' },
+  ],
+  Korean: [
+    { id: 'hangul', name: 'Hangul only', description: 'Korean alphabet' },
+    { id: 'mixed', name: 'Hangul + Hanja', description: 'Include Chinese characters' },
+  ],
+  Arabic: [
+    { id: 'standard', name: 'Modern Standard', description: 'MSA' },
+    { id: 'vocalized', name: 'With vowel marks', description: 'Includes diacritics' },
+  ],
+  // Hindi, Thai, Hebrew, Greek, Russian, Vietnamese - single script with romanization
+};
+
+// Names for romanization systems by language
+export const ROMANIZATION_NAMES: Record<string, string> = {
+  Japanese: 'Romaji',
+  'Chinese (Mandarin)': 'Pinyin',
+  Korean: 'Romanization',
+  Arabic: 'Transliteration',
+  Hindi: 'Transliteration',
+  Thai: 'RTGS',
+  Russian: 'Transliteration',
+  Greek: 'Romanization',
+  Hebrew: 'Transliteration',
+  Vietnamese: 'Quốc ngữ', // Already uses Latin script but with diacritics
+};
+
+// Languages that use non-Latin scripts (need romanization support)
+export const NON_LATIN_LANGUAGES = [
+  'Japanese',
+  'Chinese (Mandarin)',
+  'Korean',
+  'Arabic',
+  'Hindi',
+  'Thai',
+  'Russian',
+  'Greek',
+  'Hebrew',
+];
+
+// Helper to check if a language needs romanization
+export const needsRomanization = (language: string): boolean => {
+  return NON_LATIN_LANGUAGES.includes(language);
+};
+
+// Helper to check if a language has script options
+export const hasScriptOptions = (language: string): boolean => {
+  return language in LANGUAGE_SCRIPTS;
+};
+
+// Get default script for a language
+export const getDefaultScript = (language: string): string | null => {
+  const scripts = LANGUAGE_SCRIPTS[language];
+  if (!scripts || scripts.length === 0) return null;
+  // Return first option as default
+  return scripts[0].id;
+};

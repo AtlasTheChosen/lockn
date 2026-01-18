@@ -266,7 +266,7 @@ export default function LoginPage() {
             className="inline-flex items-center justify-center gap-3 mb-6"
           >
             <Sparkles className="h-10 w-10 text-blue-500" />
-            <h1 className="text-3xl font-light tracking-tight">LOCKN</h1>
+            <h1 className="text-3xl font-light tracking-tight">LockN</h1>
           </motion.div>
           <motion.h2
             initial={{ opacity: 0 }}

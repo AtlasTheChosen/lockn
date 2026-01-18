@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -10,9 +10,10 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { X, Loader2, Sparkles, MessageSquare, AlertTriangle, CreditCard, RefreshCw } from 'lucide-react';
-import { SUPPORTED_LANGUAGES, CEFR_LEVELS } from '@/lib/constants';
+import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 import { DEBUG } from '@/lib/debug';
+import { toast } from 'sonner';
 
 const CARD_COUNT_OPTIONS = [10, 25, 50] as const;
 type CardCount = typeof CARD_COUNT_OPTIONS[number];
@@ -38,11 +39,81 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
   const [selectedDifficulty, setSelectedDifficulty] = useState('B1');
   const [selectedSize, setSelectedSize] = useState<CardCount>(10);
   const [conversationalMode, setConversationalMode] = useState(false);
+  const [scriptPreference, setScriptPreference] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [contentWarning, setContentWarning] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+  
+  // Get current language name for script options check
+  const currentLanguageName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || '';
+  const showScriptSelector = hasScriptOptions(currentLanguageName);
+  const scriptOptions = LANGUAGE_SCRIPTS[currentLanguageName] || [];
+  
+  // AbortController ref for cancelling generation
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const pendingStackIdRef = useRef<string | null>(null);
+  
+  // Cleanup function to delete orphaned stacks
+  const cleanupOrphanedStack = useCallback(async (stackId: string) => {
+    if (!stackId) return;
+    console.log('[StackGenModal] Cleaning up orphaned stack:', stackId);
+    try {
+      // Delete flashcards first
+      await supabase.from('flashcards').delete().eq('stack_id', stackId);
+      // Delete the stack
+      await supabase.from('card_stacks').delete().eq('id', stackId);
+      console.log('[StackGenModal] Orphaned stack cleaned up successfully');
+    } catch (err) {
+      console.error('[StackGenModal] Failed to cleanup orphaned stack:', err);
+    }
+  }, [supabase]);
+  
+  // Cancel generation when modal closes or component unmounts
+  const cancelGeneration = useCallback(() => {
+    if (abortControllerRef.current) {
+      console.log('[StackGenModal] Cancelling generation...');
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    // Clean up any orphaned stack
+    if (pendingStackIdRef.current) {
+      cleanupOrphanedStack(pendingStackIdRef.current);
+      pendingStackIdRef.current = null;
+    }
+    setGenerating(false);
+  }, [cleanupOrphanedStack]);
+  
+  // Handle modal close - cancel any pending generation
+  const handleClose = useCallback(() => {
+    if (generating) {
+      cancelGeneration();
+      toast.info('Stack generation cancelled');
+    }
+    onClose();
+  }, [generating, cancelGeneration, onClose]);
+  
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cancelGeneration();
+    };
+  }, [cancelGeneration]);
+  
+  // Cancel generation when navigating away (beforeunload)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (generating) {
+        cancelGeneration();
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [generating, cancelGeneration]);
   
   // Pre-fill form fields when sourceStack is provided (Generate More feature)
   useEffect(() => {
@@ -75,10 +146,23 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
       setSelectedDifficulty('B1');
       setSelectedSize(10);
       setConversationalMode(false);
+      setScriptPreference(null);
       setError('');
       setContentWarning(null);
     }
   }, [isOpen, sourceStack]);
+  
+  // Update script preference when language changes
+  useEffect(() => {
+    const langName = SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.name || '';
+    if (hasScriptOptions(langName)) {
+      // Set default script for this language
+      const defaultScript = getDefaultScript(langName);
+      setScriptPreference(defaultScript);
+    } else {
+      setScriptPreference(null);
+    }
+  }, [selectedLanguage]);
   
   // Check if we're generating from an existing stack
   const isGeneratingMore = !!sourceStack;
@@ -126,6 +210,10 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
       return;
     }
 
+    // Create new AbortController for this request
+    abortControllerRef.current = new AbortController();
+    pendingStackIdRef.current = null;
+    
     setGenerating(true);
     setError('');
 
@@ -150,9 +238,12 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
           stackSize: selectedSize,
           difficulty: selectedDifficulty,
           conversationalMode,
+          // Pass script preference for non-Latin languages
+          scriptPreference: scriptPreference || undefined,
           // Pass exclude phrases when generating more from existing stack
           excludePhrases: sourceStack?.excludePhrases || [],
         }),
+        signal: abortControllerRef.current.signal,
       });
 
       DEBUG.timing('API request duration', apiStartTime);
@@ -171,23 +262,41 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
         console.error('[StackGenModal] ❌ Generation error:', data.error);
         setError(data.error);
         setGenerating(false);
+        abortControllerRef.current = null;
         return;
       }
 
       if (data.stackId) {
+        // Store stack ID in case user navigates away before redirect completes
+        pendingStackIdRef.current = data.stackId;
+        
         DEBUG.generation('Generation successful', { stackId: data.stackId, cardCount: data.cards?.length });
         DEBUG.timing('Total generation time', generationStartTime);
         console.log('[StackGenModal] ✅ Stack created:', data.stackId, 'with', data.cards?.length, 'cards');
+        
+        // Clear the pending ref since we're navigating to the stack
+        pendingStackIdRef.current = null;
+        abortControllerRef.current = null;
+        
         router.push(`/stack/${data.stackId}`);
         router.refresh();
       } else {
         DEBUG.generationError('Generation succeeded but no stackId returned', data);
         console.error('[StackGenModal] ⚠️ No stackId in response:', data);
+        setGenerating(false);
+        abortControllerRef.current = null;
       }
     } catch (err: any) {
+      // Check if this was an intentional abort
+      if (err.name === 'AbortError') {
+        console.log('[StackGenModal] Generation was cancelled');
+        return;
+      }
+      
       DEBUG.generationError('Generation exception', err);
       setError('Failed to generate stack. Please try again.');
       setGenerating(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -200,7 +309,7 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-start justify-center pt-20 pb-4 px-4 sm:px-6 bg-black/80 backdrop-blur-xl overflow-y-auto"
-        onClick={onClose}
+        onClick={handleClose}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -213,7 +322,7 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
           {/* Fixed Header */}
           <div className="flex-shrink-0 p-6 pb-0 relative">
             <Button
-              onClick={onClose}
+              onClick={handleClose}
               variant="ghost"
               size="icon"
               className="absolute top-4 right-4 z-10"
@@ -290,6 +399,42 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
                 ))}
               </div>
             </div>
+            
+            {/* Script/Alphabet Selector - shown only for languages with multiple writing systems */}
+            {showScriptSelector && scriptOptions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+              >
+                <label className="text-sm font-semibold mb-3 block" style={{ color: 'var(--text-primary)' }}>
+                  Writing System for {currentLanguageName}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {scriptOptions.map((script) => (
+                    <Button
+                      key={script.id}
+                      onClick={() => setScriptPreference(script.id)}
+                      variant="outline"
+                      className="rounded-xl font-medium text-left h-auto py-3"
+                      style={scriptPreference === script.id
+                        ? { backgroundColor: 'var(--accent-blue)', borderColor: 'var(--accent-blue)', color: 'white' }
+                        : { backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }
+                      }
+                    >
+                      <div className="flex flex-col items-start">
+                        <span className="font-bold">{script.name}</span>
+                        <span className="text-xs opacity-80">{script.description}</span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
+                  Choose which alphabet/characters you want to learn with. Romanization (phonetic spelling) will always be included.
+                </p>
+              </motion.div>
+            )}
 
             <div>
               <label className="text-sm font-semibold mb-3 block" style={{ color: 'var(--text-primary)' }}>Difficulty Level (CEFR)</label>

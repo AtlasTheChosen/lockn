@@ -14,7 +14,7 @@ const config: Config = {
         display: ['var(--font-fredoka)', 'Fredoka', 'sans-serif'],
       },
       colors: {
-        // LOCKN theme colors
+        // LockN theme colors
         talka: {
           purple: '#a78bfa',
           pink: '#fb7185',

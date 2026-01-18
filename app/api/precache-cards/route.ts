@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { createHash } from 'crypto';
 import OpenAI from 'openai';
+import { preprocessTextForTTS } from '../text-to-speech/route';
 
 // Initialize clients
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -74,22 +75,7 @@ Focus on teaching PATTERNS that unlock many sentences, not just this one phrase.
   }
 }
 
-/**
- * Preprocess text for OpenAI TTS to avoid known issues:
- * - Replace colons with periods (prevents word skipping)
- * - Remove/reduce blank lines (prevents truncation)
- * - Normalize punctuation for better pronunciation
- */
-function preprocessTextForTTS(text: string): string {
-  return text
-    // Replace colons with periods (known issue: TTS skips words after colons)
-    .replace(/:/g, '.')
-    // Replace multiple newlines/blank lines with single space (prevents truncation)
-    .replace(/\n\s*\n/g, ' ')
-    // Trim and clean up extra whitespace
-    .trim()
-    .replace(/\s+/g, ' ');
-}
+// Note: preprocessTextForTTS is now imported from '../text-to-speech/route'
 
 // Generate and cache TTS audio
 async function generateAndCacheAudio(

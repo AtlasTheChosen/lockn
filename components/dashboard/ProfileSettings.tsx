@@ -61,7 +61,7 @@ interface Props {
 export default function ProfileSettings({ profile, accessToken, onUpdate }: Props) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [originalDisplayName] = useState(profile.display_name || '');
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(1));
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(0));
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [profilePublic, setProfilePublic] = useState(profile.profile_public ?? true);
   const [languagesLearning, setLanguagesLearning] = useState<string[]>(profile.languages_learning || []);
@@ -309,7 +309,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
             <img 
               src={avatarUrl} 
               alt="Profile avatar" 
-              className="w-full h-full object-cover scale-110"
+                  className="w-full h-full object-cover bg-white scale-[0.75]"
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <span className="text-white text-xs font-bold">Change</span>
@@ -342,7 +342,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
               <div className="pt-6" style={{ borderTop: '1px solid var(--border-color)' }}>
                 <p className="text-sm font-medium mb-4" style={{ color: 'var(--text-secondary)' }}>Select your avatar:</p>
                 <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-3">
-                  {Array.from({ length: AVATAR_COUNT }, (_, i) => i + 1).map((id, index) => {
+                  {Array.from({ length: AVATAR_COUNT }, (_, i) => i).map((id, index) => {
                     const url = getAvatarUrl(id);
                     const isSelected = avatarUrl === url;
                     return (
@@ -405,7 +405,7 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
                         <img
                           src={url}
                           alt={`Avatar ${id}`}
-                          className="w-full h-full object-cover scale-110"
+                          className="w-full h-full object-cover bg-white scale-[0.75]"
                         />
                       </motion.button>
                     );

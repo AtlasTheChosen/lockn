@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Search, Globe, GraduationCap, CreditCard, AlertTriangle, LogIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SUPPORTED_LANGUAGES, CEFR_LEVELS } from '@/lib/constants';
+import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 import { DEBUG } from '@/lib/debug';
 import { createClient } from '@/lib/supabase/client';
@@ -14,7 +14,7 @@ import AuthModal from '@/components/auth/AuthModal';
 import Logo from '@/components/ui/Logo';
 
 interface CommandLandingProps {
-  onStartTrial: (scenario: string, language: string, level: string, cardCount?: number) => void;
+  onStartTrial: (scenario: string, language: string, level: string, cardCount?: number, scriptPreference?: string) => void;
 }
 
 const CARD_COUNT_OPTIONS = [10, 25, 50] as const;
@@ -36,10 +36,15 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('Spanish');
   const [selectedLevel, setSelectedLevel] = useState<string>('B2');
   const [selectedCardCount, setSelectedCardCount] = useState<CardCount>(10);
+  const [scriptPreference, setScriptPreference] = useState<string | null>(null);
   const [contentWarning, setContentWarning] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
+  
+  // Check if current language has script options
+  const showScriptSelector = hasScriptOptions(selectedLanguage);
+  const scriptOptions = LANGUAGE_SCRIPTS[selectedLanguage] || [];
 
   useEffect(() => {
     const savedLang = localStorage.getItem('lockn-trial-language');
@@ -62,6 +67,16 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
     };
     checkAuth();
   }, []);
+  
+  // Update script preference when language changes
+  useEffect(() => {
+    if (hasScriptOptions(selectedLanguage)) {
+      const defaultScript = getDefaultScript(selectedLanguage);
+      setScriptPreference(defaultScript);
+    } else {
+      setScriptPreference(null);
+    }
+  }, [selectedLanguage]);
 
   const handleSearchChange = (value: string) => {
     setSearchValue(value);
@@ -82,12 +97,15 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
       setContentWarning(null);
       localStorage.setItem('lockn-trial-language', selectedLanguage);
       localStorage.setItem('lockn-trial-level', selectedLevel);
+      if (scriptPreference) {
+        localStorage.setItem('lockn-script-preference', scriptPreference);
+      }
       
       if (isLoggedIn) {
         localStorage.setItem('lockn-card-count', selectedCardCount.toString());
-        onStartTrial(searchValue, selectedLanguage, selectedLevel, selectedCardCount);
+        onStartTrial(searchValue, selectedLanguage, selectedLevel, selectedCardCount, scriptPreference || undefined);
       } else {
-        onStartTrial(searchValue, selectedLanguage, selectedLevel, 3);
+        onStartTrial(searchValue, selectedLanguage, selectedLevel, 3, scriptPreference || undefined);
       }
     }
   };
@@ -96,12 +114,15 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
     if (selectedLanguage) {
       localStorage.setItem('lockn-trial-language', selectedLanguage);
       localStorage.setItem('lockn-trial-level', selectedLevel);
+      if (scriptPreference) {
+        localStorage.setItem('lockn-script-preference', scriptPreference);
+      }
       
       if (isLoggedIn) {
         localStorage.setItem('lockn-card-count', selectedCardCount.toString());
-        onStartTrial(suggestion, selectedLanguage, selectedLevel, selectedCardCount);
+        onStartTrial(suggestion, selectedLanguage, selectedLevel, selectedCardCount, scriptPreference || undefined);
       } else {
-        onStartTrial(suggestion, selectedLanguage, selectedLevel, 3);
+        onStartTrial(suggestion, selectedLanguage, selectedLevel, 3, scriptPreference || undefined);
       }
     }
   };
@@ -143,7 +164,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
           <Link href="/" className="flex items-center gap-2">
             <Logo size="lg" />
             <span className="font-display text-2xl sm:text-3xl font-semibold" style={{ color: 'var(--accent-green)' }}>
-              LOCKN
+              LockN
             </span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
@@ -333,6 +354,42 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 </div>
               )}
             </div>
+            
+            {/* Script/Alphabet Selector - shown only for languages with multiple writing systems */}
+            {showScriptSelector && scriptOptions.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.2 }}
+                className="mt-4"
+              >
+                <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
+                  ✍️ Writing System for {selectedLanguage}
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {scriptOptions.map((script) => (
+                    <Button
+                      key={script.id}
+                      type="button"
+                      onClick={() => setScriptPreference(script.id)}
+                      className="rounded-xl h-auto py-3 font-semibold transition-all active:scale-95"
+                      style={scriptPreference === script.id
+                        ? { backgroundColor: 'var(--accent-blue)', color: 'white', boxShadow: '0 3px 0 var(--accent-blue-dark, #1899d6)' }
+                        : { backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
+                      }
+                    >
+                      <div className="flex flex-col items-center text-center">
+                        <span className="font-bold text-sm">{script.name}</span>
+                        <span className="text-xs opacity-80">{script.description}</span>
+                      </div>
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
+                  Phonetic romanization will always be included to help with pronunciation.
+                </p>
+              </motion.div>
+            )}
           </div>
         </motion.div>
 

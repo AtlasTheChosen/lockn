@@ -55,6 +55,8 @@ export interface CardStack {
   status: StackStatus;
   cards_mastered: number;
   contributed_to_streak: boolean;
+  // Script/alphabet preference for non-Latin languages
+  script_preference?: string; // e.g., 'hiragana', 'simplified', 'hangul'
   created_at: string;
   updated_at: string;
 }
@@ -67,6 +69,13 @@ export interface TestNote {
   correction?: string;
   feedback?: string;
   timestamp: string;
+}
+
+// Character-by-character breakdown for non-Latin scripts
+export interface CharacterBreakdown {
+  character: string;      // Single character (e.g., "П", "こ", "你")
+  romanization: string;   // Pronunciation in Latin letters (e.g., "P", "ko", "nǐ")
+  name?: string;          // Optional character name (e.g., "Pe" for Cyrillic П)
 }
 
 export interface GrammarBreakdown {
@@ -91,6 +100,8 @@ export interface Flashcard {
   native_translation: string;
   example_sentence: string;
   tone_advice: string;
+  romanization?: string; // Phonetic pronunciation in Latin letters (romaji, pinyin, etc.)
+  character_breakdown?: CharacterBreakdown[]; // Character-by-character pronunciation for non-Latin scripts
   mastery_level: number;
   ease_factor: number;
   interval_days: number;
@@ -150,6 +161,8 @@ export interface GeneratedCard {
   native_translation: string;
   example_sentence: string;
   tone_advice: string;
+  romanization?: string; // Phonetic pronunciation for non-Latin languages
+  character_breakdown?: CharacterBreakdown[]; // Character-by-character pronunciation
 }
 
 export interface QuickStartScenario {

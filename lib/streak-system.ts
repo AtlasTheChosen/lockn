@@ -289,11 +289,20 @@ export async function processCardMasteryChange(
   if (droppedBelowThreshold) {
     // Decrement streak (only if we have a streak to decrement)
     if (currentStreak > 0) {
+      const previousStreak = currentStreak;
       currentStreak -= 1;
+      
+      // If user was on their initial streak (streak = 1, longest = 1) and loses it,
+      // also revert longest_streak since they never actually completed a full streak day
+      const wasInitialStreak = previousStreak === 1 && longestStreak === 1;
+      if (wasInitialStreak) {
+        longestStreak = 0;
+      }
       
       updateData = {
         ...updateData,
         current_streak: currentStreak,
+        longest_streak: longestStreak,
         streak_awarded_today: false, // Mark that today's streak needs to be re-earned
       };
       

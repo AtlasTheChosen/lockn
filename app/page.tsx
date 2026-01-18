@@ -15,11 +15,19 @@ import { Button } from '@/components/ui/button';
 
 type AppState = 'command' | 'loading' | 'trial' | 'conversion' | 'error';
 
+interface CharacterBreakdownItem {
+  character: string;
+  romanization: string;
+  name?: string;
+}
+
 interface Card {
   targetPhrase: string;
   nativeTranslation: string;
   exampleSentence: string;
   toneAdvice: string;
+  romanization?: string;
+  characterBreakdown?: CharacterBreakdownItem[];
 }
 
 interface ErrorInfo {
@@ -51,7 +59,7 @@ export default function LandingPage() {
     return () => window.removeEventListener('show-streak-tutorial', handleShowTutorial);
   }, []);
 
-  const handleStartTrial = async (scenario: string, language: string, level: string, cardCount?: number) => {
+  const handleStartTrial = async (scenario: string, language: string, level: string, cardCount?: number, scriptPreference?: string) => {
     setSelectedScenario(scenario);
     setAppState('loading');
 
@@ -66,6 +74,7 @@ export default function LandingPage() {
             nativeLanguage: 'English',
             stackSize: cardCount || 10,
             difficulty: level,
+            scriptPreference,
           }),
         });
 
@@ -108,6 +117,7 @@ export default function LandingPage() {
           nativeLanguage: 'English',
           stackSize: 3,
           difficulty: level,
+          scriptPreference,
         }),
       });
 
@@ -146,6 +156,8 @@ export default function LandingPage() {
         nativeTranslation: card.native_translation,
         exampleSentence: card.example_sentence,
         toneAdvice: card.tone_advice,
+        romanization: card.romanization,
+        characterBreakdown: card.character_breakdown,
       }));
       
       // Save trial data to localStorage for migration to Supabase on signup
@@ -209,10 +221,17 @@ export default function LandingPage() {
             transition={{ duration: 0.3 }}
             className="min-h-screen flex flex-col items-center justify-center"
           >
-            <div className="bg-white rounded-3xl p-12 shadow-talka-lg text-center">
-              <Loader2 className="h-16 w-16 animate-spin text-talka-purple mx-auto mb-6" />
-              <p className="text-slate-600 text-xl font-semibold">Creating your cards...</p>
-              <p className="text-slate-400 text-base font-medium mt-2">{selectedScenario}</p>
+            <div 
+              className="rounded-3xl p-12 text-center"
+              style={{ 
+                backgroundColor: 'var(--bg-card)', 
+                boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
+                border: '1px solid var(--border-color)'
+              }}
+            >
+              <Loader2 className="h-16 w-16 animate-spin mx-auto mb-6" style={{ color: '#58cc02' }} />
+              <p className="text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Creating your cards...</p>
+              <p className="text-base font-medium mt-2" style={{ color: 'var(--text-secondary)' }}>{selectedScenario}</p>
             </div>
           </motion.div>
         )}
@@ -231,48 +250,53 @@ export default function LandingPage() {
               animate={{ scale: 1, y: 0 }}
               className="w-full max-w-md"
             >
-              <div className={`relative rounded-3xl border-2 p-8 ${
-                errorInfo.isInappropriate 
-                  ? 'bg-red-50 border-red-200' 
-                  : 'bg-amber-50 border-amber-200'
-              }`}>
+              <div 
+                className="relative rounded-3xl border-2 p-8"
+                style={{
+                  backgroundColor: 'var(--bg-card)',
+                  borderColor: errorInfo.isInappropriate ? '#ff4b4b' : '#ff9600',
+                }}
+              >
                 <button
                   onClick={handleDismissError}
-                  className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+                  className="absolute top-4 right-4 transition-colors"
+                  style={{ color: 'var(--text-secondary)' }}
                 >
                   <X className="h-5 w-5" />
                 </button>
                 
                 <div className="flex items-start gap-4">
-                  <div className={`p-4 rounded-2xl ${
-                    errorInfo.isInappropriate 
-                      ? 'bg-red-100' 
-                      : 'bg-amber-100'
-                  }`}>
-                    <AlertTriangle className={`h-8 w-8 ${
-                      errorInfo.isInappropriate 
-                        ? 'text-red-500' 
-                        : 'text-amber-500'
-                    }`} />
+                  <div 
+                    className="p-4 rounded-2xl"
+                    style={{
+                      backgroundColor: errorInfo.isInappropriate 
+                        ? 'rgba(255, 75, 75, 0.15)' 
+                        : 'rgba(255, 150, 0, 0.15)'
+                    }}
+                  >
+                    <AlertTriangle 
+                      className="h-8 w-8"
+                      style={{ color: errorInfo.isInappropriate ? '#ff4b4b' : '#ff9600' }}
+                    />
                   </div>
                   <div className="flex-1">
-                    <h3 className={`font-display text-xl font-semibold mb-2 ${
-                      errorInfo.isInappropriate 
-                        ? 'text-red-700' 
-                        : 'text-amber-700'
-                    }`}>
+                    <h3 
+                      className="font-display text-xl font-semibold mb-2"
+                      style={{ color: errorInfo.isInappropriate ? '#ff4b4b' : '#ff9600' }}
+                    >
                       {errorInfo.title}
                     </h3>
-                    <p className="text-slate-600 font-medium mb-6">
+                    <p className="font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>
                       {errorInfo.message}
                     </p>
                     <Button
                       onClick={handleDismissError}
-                      className={`w-full rounded-2xl py-4 font-bold ${
-                        errorInfo.isInappropriate
-                          ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700'
-                          : 'bg-gradient-orange-yellow hover:opacity-90'
-                      } text-white`}
+                      className="w-full rounded-2xl py-4 font-bold text-white shadow-[0_4px_0_0_rgba(0,0,0,0.2)] hover:brightness-105"
+                      style={{
+                        background: errorInfo.isInappropriate
+                          ? 'linear-gradient(135deg, #ff4b4b, #e04444)'
+                          : 'linear-gradient(135deg, #ff9600, #ffaa00)'
+                      }}
                     >
                       Try a Different Topic ✨
                     </Button>

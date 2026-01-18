@@ -13,9 +13,9 @@ interface StreakTutorialProps {
 const STEPS = [
   {
     id: 1,
-    title: "Welcome to LOCKN! ✨",
+    title: "Welcome to LockN! ✨",
     subtitle: "Your language learning journey starts here",
-    description: "Here's what makes LOCKN special:\n\n📚 Create flashcard stacks on any topic you want\n\n🔍 Tap \"Breakdown\" for grammar tips & memory tricks\n\n🔊 Tap any word to hear it and see its definition",
+    description: "Here's what makes LockN special:\n\n📚 Create flashcard stacks on any topic you want\n\n🔍 Tap \"Breakdown\" for grammar tips & memory tricks\n\n🔊 Tap any word to hear it and see its definition",
     icon: BookOpen,
     color: 'from-purple-400 to-pink-500',
     bgColor: 'bg-gradient-to-br from-purple-50 to-pink-50',

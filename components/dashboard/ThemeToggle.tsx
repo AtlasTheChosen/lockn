@@ -45,12 +45,13 @@ export default function ThemeToggle({ className = '', size = 'md' }: ThemeToggle
   const knobScale = useSpring(1, { stiffness: 500, damping: 30 });
 
   // Load theme preference on mount
+  // Default to dark mode for both users and guests if no preference is saved
   useEffect(() => {
     setMounted(true);
     const savedTheme = localStorage.getItem('lockn-theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
-    if (savedTheme === 'dark' || (!savedTheme && prefersDark)) {
+    // Default to dark mode if no saved preference exists
+    if (savedTheme === 'dark' || !savedTheme) {
       setIsDark(true);
       document.documentElement.classList.add('dark');
     } else {

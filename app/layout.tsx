@@ -2,7 +2,6 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Quicksand, Fredoka } from 'next/font/google';
 import AuthProvider from '@/components/auth/AuthProvider';
-import { MobilePreviewProvider } from '@/components/shared/MobilePreview';
 import { Toaster } from '@/components/ui/sonner';
 
 const quicksand = Quicksand({ 
@@ -26,7 +25,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://talka.app'),
-  title: 'LOCKN - Language Learning',
+  title: 'LockN - Language Learning',
   description: 'Unlock authentic conversations through immersive, story-driven language mastery.',
   openGraph: {
     images: [
@@ -55,12 +54,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   // Blocking script to prevent theme flash - runs before first paint
+  // Default to dark mode for both users and guests if no preference is saved
   const themeScript = `
     (function() {
       try {
         var theme = localStorage.getItem('lockn-theme');
-        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        if (theme === 'dark' || (!theme && prefersDark)) {
+        // Default to dark mode if no saved preference exists
+        if (theme === 'dark' || !theme) {
           document.documentElement.classList.add('dark');
         }
       } catch (e) {}
@@ -74,9 +74,7 @@ export default function RootLayout({
       </head>
       <body className={quicksand.className} suppressHydrationWarning>
         <AuthProvider>
-          <MobilePreviewProvider>
-            {children}
-          </MobilePreviewProvider>
+          {children}
           <Toaster position="top-center" richColors />
         </AuthProvider>
       </body>

@@ -269,6 +269,10 @@ export async function getWordTranslations(
   sourceLanguage: string = 'Spanish',
   targetLanguage: string = 'English'
 ): Promise<WordTranslation[]> {
+  if (!text || !text.trim()) {
+    return [];
+  }
+
   try {
     const response = await fetch('/api/translate-words', {
       method: 'POST',
@@ -277,14 +281,24 @@ export async function getWordTranslations(
     });
 
     if (!response.ok) {
-      console.error('Failed to fetch translations');
+      console.error(`[WordHover] Failed to fetch translations: ${response.status} ${response.statusText}`);
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error(`[WordHover] Error details:`, errorText);
       return [];
     }
 
     const data = await response.json();
-    return data.translations || [];
-  } catch (error) {
-    console.error('Error fetching word translations:', error);
+    const translations = data.translations || [];
+    
+    if (translations.length === 0) {
+      console.warn(`[WordHover] No translations returned for ${sourceLanguage} -> ${targetLanguage}, text: "${text.substring(0, 50)}"`);
+    } else {
+      console.log(`[WordHover] Successfully fetched ${translations.length} word translations`);
+    }
+    
+    return translations;
+  } catch (error: any) {
+    console.error(`[WordHover] Error fetching word translations for ${sourceLanguage} -> ${targetLanguage}:`, error);
     return [];
   }
 }
