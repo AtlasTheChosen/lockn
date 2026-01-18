@@ -212,7 +212,7 @@ export default function LeaderboardPage() {
             <h2 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--accent-red)' }}>Error Loading Leaderboard</h2>
             <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>{error}</p>
             <Button 
-              onClick={loadLeaderboardData} 
+              onClick={() => loadLeaderboardData(true)} 
               className="text-white font-bold rounded-2xl px-6 py-3"
               style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
             >
