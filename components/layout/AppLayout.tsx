@@ -27,13 +27,16 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const [navDataLoaded, setNavDataLoaded] = useState(false);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   
   // Hide bottom nav on home page for non-logged-in users
   const showBottomNav = isLoggedIn || pathname !== '/';
 
-  const loadUserData = useCallback(async () => {
-    // Reset loading state at start of each fetch to prevent flash during navigation
-    setNavDataLoaded(false);
+  const loadUserData = useCallback(async (isInitialLoad = false) => {
+    // Only show loading skeleton on initial load, not on refreshes (prevents flash)
+    if (isInitialLoad) {
+      setNavDataLoaded(false);
+    }
     
     const supabase = createClient();
     const { data: { session } } = await supabase.auth.getSession();
@@ -96,11 +99,18 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   }, []);
 
   useEffect(() => {
-    loadUserData();
+    // Only show loading skeleton on very first load
+    if (!initialLoadDone) {
+      loadUserData(true);
+      setInitialLoadDone(true);
+    } else {
+      // Subsequent loads (navigation) - silently refresh without skeleton
+      loadUserData(false);
+    }
     
-    // Listen for profile and stats update events to refresh nav data
+    // Listen for profile and stats update events to refresh nav data (no skeleton)
     const handleUpdate = () => {
-      loadUserData();
+      loadUserData(false);
     };
     
     window.addEventListener(PROFILE_UPDATED_EVENT, handleUpdate);
@@ -109,7 +119,7 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
       window.removeEventListener(PROFILE_UPDATED_EVENT, handleUpdate);
       window.removeEventListener(STATS_UPDATED_EVENT, handleUpdate);
     };
-  }, [loadUserData]);
+  }, [loadUserData, initialLoadDone]);
 
   if (hideNav) {
     return <>{children}</>;
