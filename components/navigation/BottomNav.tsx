@@ -120,13 +120,14 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
     window.location.href = '/';
   };
 
+  // BottomNav hidden - TopNav now handles all navigation on all devices
   return (
     <>
       <motion.nav
         initial={{ y: 100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.4, ease: 'easeOut', delay: 0.1 }}
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]"
+        className="hidden fixed bottom-0 left-0 right-0 z-50 pb-[env(safe-area-inset-bottom)]"
       >
         <div
           className={cn(

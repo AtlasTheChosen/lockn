@@ -249,7 +249,7 @@ export default function ArchiveVault({ stacks, onUpdate, className = '' }: Archi
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-[#ff4b4b] hover:bg-[#e04444] text-white rounded-2xl font-semibold"
+              className="bg-[#ff4b4b] hover:bg-[#e04444] text-white rounded-2xl font-semibold shadow-[0_4px_0_0_#cc3b3b] hover:brightness-105"
               disabled={deletingStackId !== null}
             >
               {deletingStackId ? 'Deleting...' : 'Delete'}

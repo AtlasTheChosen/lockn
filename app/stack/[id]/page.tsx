@@ -82,22 +82,23 @@ export default function StackPage({ params }: { params: { id: string } }) {
   }, [params.id, router, sessionUser, accessToken, sessionLoading]);
 
   if (sessionLoading || loading) return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
-      <div className="w-12 h-12 border-4 border-talka-purple/30 border-t-talka-purple rounded-full animate-spin mb-4"></div>
-      <p className="font-display text-xl font-semibold text-slate-700">Loading stack...</p>
+    <div className="min-h-screen flex flex-col items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="w-12 h-12 border-4 border-[var(--accent-green)]/30 border-t-[var(--accent-green)] rounded-full animate-spin mb-4"></div>
+      <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Loading stack...</p>
     </div>
   );
 
   if (error) return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-purple-50 to-pink-50">
-      <div className="bg-white rounded-3xl p-8 shadow-talka-md border-2 border-slate-200 text-center max-w-md">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <div className="rounded-3xl p-8 border-2 text-center max-w-md" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)', boxShadow: 'var(--shadow-md)' }}>
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ backgroundColor: 'rgba(255, 75, 75, 0.1)' }}>
           <span className="text-3xl">😕</span>
         </div>
-        <p className="text-xl font-display font-semibold text-slate-800 mb-4">{error}</p>
+        <p className="text-xl font-display font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>{error}</p>
         <button 
           onClick={() => router.push('/dashboard')} 
-          className="px-6 py-3 bg-gradient-to-r from-talka-purple to-talka-pink text-white font-semibold rounded-2xl hover:shadow-lg transition-all"
+          className="px-6 py-3 text-white font-semibold rounded-2xl hover:shadow-lg transition-all"
+          style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
         >
           Go to Dashboard
         </button>

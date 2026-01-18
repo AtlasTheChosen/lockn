@@ -25,7 +25,7 @@ import Confetti from 'react-confetti';
 import { CARD_RATINGS } from '@/lib/constants';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
 import { shouldResetWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
-import { isNewDay, getTodayDate, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
+import { isNewDay, getTodayDate, calculateTestDeadline, STREAK_DAILY_REQUIREMENT, isNewDayInTimezone } from '@/lib/streak';
 import { useBadgeChecker, buildBadgeStats } from '@/hooks/useBadgeChecker';
 import type { Badge as BadgeType } from '@/lib/types';
 import {
@@ -33,6 +33,7 @@ import {
   processCardMasteryChange,
   checkAndTriggerTest,
   completeTest,
+  checkCardDowngradeImpact,
 } from '@/lib/streak-system';
 import { STATS_UPDATED_EVENT } from '@/components/layout/AppLayout';
 
@@ -84,6 +85,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [cardsMasteredToday, setCardsMasteredToday] = useState(0);
+  const [showDowngradeWarning, setShowDowngradeWarning] = useState(false);
+  const [pendingRating, setPendingRating] = useState<{ rating: number; oldRating: number } | null>(null);
   
   const supabase = createClient();
   
@@ -355,6 +358,39 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       console.error('Streak expiration check error:', e);
     }
 
+    const oldRating = currentCard.user_rating || 1;
+    const wasMasteredBefore = oldRating >= CARD_RATINGS.KINDA_KNOW;
+    const isNowNotMastered = rating < CARD_RATINGS.KINDA_KNOW;
+
+    // Check if downgrading would break the same-day streak
+    if (wasMasteredBefore && isNowNotMastered) {
+      // Fetch user stats to check current state
+      const { data: userStats } = await supabase
+        .from('user_stats')
+        .select('cards_mastered_today, streak_awarded_today, last_mastery_date, timezone')
+        .eq('user_id', stack.user_id)
+        .single();
+
+      if (userStats) {
+        const timezone = userStats.timezone || 'UTC';
+        const isNewDay = isNewDayInTimezone(userStats.last_mastery_date, timezone);
+        
+        const impact = await checkCardDowngradeImpact(
+          stack.user_id,
+          userStats.cards_mastered_today || 0,
+          userStats.streak_awarded_today || false,
+          isNewDay
+        );
+
+        if (impact.wouldBreakStreak) {
+          // Store pending rating and show warning dialog
+          setPendingRating({ rating, oldRating });
+          setShowDowngradeWarning(true);
+          return; // Don't proceed with rating change yet
+        }
+      }
+    }
+
     // Update flashcard with new rating
     await supabase
       .from('flashcards')
@@ -392,11 +428,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     });
 
     // STEP 2 & 3: Process card mastery change and check for streak increment
-    const oldRating = currentCard.user_rating || 1;
     const wasNotMasteredBefore = oldRating < CARD_RATINGS.KINDA_KNOW;
-    const wasMasteredBefore = oldRating >= CARD_RATINGS.KINDA_KNOW;
     const isNowMastered = rating >= CARD_RATINGS.KINDA_KNOW;
-    const isNowNotMastered = rating < CARD_RATINGS.KINDA_KNOW;
     
     // Only process mastery changes (not neutral rating changes)
     if (wasNotMasteredBefore && isNowMastered) {
@@ -584,6 +617,119 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     setIsFlipped(false);
     const nextCard = getNextCardBySpacedRepetition(updatedCards, currentIndex);
     setCurrentIndex(nextCard);
+  };
+
+  // Handle confirmed downgrade after user confirms in dialog
+  const handleConfirmDowngrade = async () => {
+    if (!pendingRating || !currentCard) return;
+
+    setShowDowngradeWarning(false);
+    const { rating } = pendingRating;
+    const oldRating = currentCard.user_rating || 1;
+    setPendingRating(null);
+
+    // Proceed with the downgrade directly (bypassing the check since user confirmed)
+    // Update flashcard with new rating
+    await supabase
+      .from('flashcards')
+      .update({
+        user_rating: rating,
+        review_count: currentCard.review_count + 1,
+        last_reviewed_at: new Date().toISOString(),
+      })
+      .eq('id', currentCard.id);
+
+    // Calculate updated cards for mastery count calculation
+    const updatedCards = [...cards];
+    updatedCards[currentIndex] = {
+      ...currentCard,
+      user_rating: rating,
+      review_count: currentCard.review_count + 1,
+    };
+
+    // Update local cards state
+    setCards(updatedCards);
+
+    const masteredCount = updatedCards.filter((c) => (c.user_rating || 1) >= 4).length;
+    
+    // Update stack mastered count
+    await supabase
+      .from('card_stacks')
+      .update({ 
+        mastered_count: masteredCount,
+        cards_mastered: masteredCount,
+      })
+      .eq('id', stack.id);
+
+    // Process downgrade via streak system (will decrement streak)
+    const downgradeResult = await processCardMasteryChange(
+      stack.user_id,
+      stack.id,
+      oldRating,
+      rating,
+      stacksContributedThisSession
+    );
+    
+    setCardsMasteredToday(downgradeResult.cardsMasteredToday);
+
+    // Update total stats
+    const { data: userStats } = await supabase
+      .from('user_stats')
+      .select('total_cards_mastered, current_week_cards')
+      .eq('user_id', stack.user_id)
+      .single();
+
+    if (userStats) {
+      const newTotalMastered = Math.max(0, (userStats.total_cards_mastered || 0) - 1);
+      const newWeekCards = Math.max(0, (userStats.current_week_cards || 0) - 1);
+      
+      await supabase
+        .from('user_stats')
+        .update({
+          total_cards_mastered: newTotalMastered,
+          current_week_cards: newWeekCards,
+        })
+        .eq('user_id', stack.user_id);
+    }
+
+    // Reset test deadline if stack had one (mastery dropped)
+    if (stack.test_deadline || stack.mastery_reached_at) {
+      await supabase
+        .from('card_stacks')
+        .update({
+          test_deadline: null,
+          mastery_reached_at: null,
+          status: 'in_progress',
+        })
+        .eq('id', stack.id);
+        
+      // Delete associated test record if exists
+      await supabase
+        .from('stack_tests')
+        .delete()
+        .eq('stack_id', stack.id);
+        
+      // Update local stack state
+      setStack(prev => ({
+        ...prev,
+        test_deadline: null,
+        mastery_reached_at: null,
+        status: 'in_progress' as const,
+      }));
+    }
+
+    // Notify nav to update display
+    window.dispatchEvent(new Event(STATS_UPDATED_EVENT));
+
+    setIsFlipped(false);
+    const nextCard = getNextCardBySpacedRepetition(updatedCards, currentIndex);
+    setCurrentIndex(nextCard);
+  };
+
+  // Handle cancelled downgrade
+  const handleCancelDowngrade = () => {
+    setShowDowngradeWarning(false);
+    setPendingRating(null);
   };
 
   const getNextCardBySpacedRepetition = (cardList: typeof cards, currentIdx: number): number => {
@@ -1376,29 +1522,59 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         </motion.div>
       )}
       
-      {/* Exit Warning Dialog */}
+{/* Exit Warning Dialog */}
       <AlertDialog open={showExitWarning} onOpenChange={setShowExitWarning}>
-        <AlertDialogContent className="bg-slate-900 border-slate-700">
+        <AlertDialogContent style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-white flex items-center gap-2">
+            <AlertDialogTitle className="flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
               ⚠️ Streak at Risk!
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-300">
-              You've only mastered <span className="font-bold text-orange-400">{cardsMasteredToday}</span> of <span className="font-bold text-green-400">{STREAK_DAILY_REQUIREMENT}</span> cards today. 
-              Leaving now means you won't maintain your streak! 
+            <AlertDialogDescription style={{ color: 'var(--text-secondary)' }}>
+              You've only mastered <span className="font-bold" style={{ color: '#ff9600' }}>{cardsMasteredToday}</span> of <span className="font-bold" style={{ color: '#58cc02' }}>{STREAK_DAILY_REQUIREMENT}</span> cards today.
+              Leaving now means you won't maintain your streak!
               <br /><br />
-              Master <span className="font-bold text-blue-400">{STREAK_DAILY_REQUIREMENT - cardsMasteredToday}</span> more card{STREAK_DAILY_REQUIREMENT - cardsMasteredToday !== 1 ? 's' : ''} to keep your streak going.
+              Master <span className="font-bold" style={{ color: '#1cb0f6' }}>{STREAK_DAILY_REQUIREMENT - cardsMasteredToday}</span> more card{STREAK_DAILY_REQUIREMENT - cardsMasteredToday !== 1 ? 's' : ''} to keep your streak going.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-slate-800 text-white border-slate-700 hover:bg-slate-700">
+            <AlertDialogCancel style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}>
               Keep Learning
             </AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={() => router.push('/dashboard')}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-[#ff4b4b] hover:bg-[#e04444] text-white shadow-[0_4px_0_0_#cc3b3b] hover:brightness-105"
             >
               Leave Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+{/* Card Downgrade Warning Dialog */}
+      <AlertDialog open={showDowngradeWarning} onOpenChange={setShowDowngradeWarning}>
+        <AlertDialogContent style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              ⚠️ Streak Protection
+            </AlertDialogTitle>
+            <AlertDialogDescription style={{ color: 'var(--text-secondary)' }}>
+              Lowering this card will drop you below the {STREAK_DAILY_REQUIREMENT}-card requirement and break your streak today. You currently have <span className="font-bold" style={{ color: '#ff9600' }}>{cardsMasteredToday}/{STREAK_DAILY_REQUIREMENT}</span> cards mastered today.
+              <br /><br />
+              Are you sure you want to continue? This will decrement your streak.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={handleCancelDowngrade}
+              style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)', borderColor: 'var(--border-color)' }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDowngrade}
+              className="bg-[#ff4b4b] hover:bg-[#e04444] text-white shadow-[0_4px_0_0_#cc3b3b] hover:brightness-105"
+            >
+              Lower Rating Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

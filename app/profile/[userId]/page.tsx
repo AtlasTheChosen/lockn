@@ -2,21 +2,17 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useSession } from '@/hooks/use-session';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import AchievementBadges from '@/components/social/AchievementBadges';
+import { AppLayout } from '@/components/layout';
 import {
   ArrowLeft,
   UserPlus,
   UserMinus,
   Ban,
-  MessageCircle,
   Flame,
   Trophy,
   BookOpen,
@@ -27,31 +23,16 @@ import {
   AlertCircle,
   Check,
   Clock,
+  Sparkles,
 } from 'lucide-react';
-import type { Badge as BadgeType, PublicProfile } from '@/lib/types';
+import type { PublicProfile } from '@/lib/types';
 
 // Language display names
 const LANGUAGE_NAMES: Record<string, string> = {
-  es: 'Spanish',
-  fr: 'French',
-  de: 'German',
-  it: 'Italian',
-  pt: 'Portuguese',
-  ja: 'Japanese',
-  ko: 'Korean',
-  zh: 'Chinese',
-  ru: 'Russian',
-  ar: 'Arabic',
-  hi: 'Hindi',
-  nl: 'Dutch',
-  sv: 'Swedish',
-  pl: 'Polish',
-  tr: 'Turkish',
-  vi: 'Vietnamese',
-  th: 'Thai',
-  he: 'Hebrew',
-  el: 'Greek',
-  cs: 'Czech',
+  es: 'Spanish', fr: 'French', de: 'German', it: 'Italian', pt: 'Portuguese',
+  ja: 'Japanese', ko: 'Korean', zh: 'Chinese', ru: 'Russian', ar: 'Arabic',
+  hi: 'Hindi', nl: 'Dutch', sv: 'Swedish', pl: 'Polish', tr: 'Turkish',
+  vi: 'Vietnamese', th: 'Thai', he: 'Hebrew', el: 'Greek', cs: 'Czech',
 };
 
 export default function PublicProfilePage() {
@@ -101,15 +82,11 @@ export default function PublicProfilePage() {
       }
 
       // Fetch user stats
-      const { data: statsData, error: statsError } = await supabase
+      const { data: statsData } = await supabase
         .from('user_stats')
         .select('current_streak, total_cards_mastered, total_stacks_completed, current_week_cards')
         .eq('user_id', userId)
         .maybeSingle();
-
-      if (statsError) {
-        console.warn('Stats fetch error:', statsError);
-      }
 
       // Combine profile with stats
       const fullProfile: PublicProfile = {
@@ -205,12 +182,13 @@ export default function PublicProfilePage() {
   };
 
   const handleBlockUser = async () => {
+    if (!sessionUser) return;
+    
     try {
       setActionLoading(true);
       setMessage(null);
 
       if (friendshipId) {
-        // Update existing friendship to blocked
         const { error } = await supabase
           .from('friendships')
           .update({ status: 'blocked' })
@@ -218,9 +196,8 @@ export default function PublicProfilePage() {
 
         if (error) throw error;
       } else {
-        // Create new blocked relationship
         const { error } = await supabase.from('friendships').insert({
-          user_id: sessionUser!.id,
+          user_id: sessionUser.id,
           friend_id: userId,
           status: 'blocked',
         });
@@ -238,275 +215,271 @@ export default function PublicProfilePage() {
     }
   };
 
-  const getInitials = () => {
-    if (profile?.display_name) {
-      return profile.display_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    }
-    return '?';
-  };
+  const isOwnProfile = friendshipStatus === 'self';
 
   // Loading state
   if (loading || sessionLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AppLayout>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center gap-4 mb-8">
-            <Skeleton className="h-10 w-10 bg-slate-700" />
-            <Skeleton className="h-8 w-48 bg-slate-700" />
+            <Skeleton className="h-10 w-10" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+            <Skeleton className="h-8 w-48" style={{ backgroundColor: 'var(--bg-secondary)' }} />
           </div>
-          <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="p-8">
-              <div className="flex flex-col items-center gap-4">
-                <Skeleton className="h-32 w-32 rounded-full bg-slate-700" />
-                <Skeleton className="h-8 w-48 bg-slate-700" />
-                <Skeleton className="h-4 w-64 bg-slate-700" />
-              </div>
-            </CardContent>
-          </Card>
+          <div className="rounded-3xl p-8" style={{ backgroundColor: 'var(--bg-card)' }}>
+            <div className="flex flex-col items-center gap-4">
+              <Skeleton className="h-28 w-28 rounded-full" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+              <Skeleton className="h-8 w-48" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+              <Skeleton className="h-4 w-64" style={{ backgroundColor: 'var(--bg-secondary)' }} />
+            </div>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <AppLayout>
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center gap-4 mb-8">
-            <Link href="/dashboard">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => router.back()}
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
           </div>
-          <Card className="bg-slate-800 border-slate-700">
-            <CardContent className="py-12 text-center">
-              <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-white mb-2">Error</h2>
-              <p className="text-slate-400">{error}</p>
-            </CardContent>
-          </Card>
+          <div className="rounded-3xl p-8 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <AlertCircle className="h-12 w-12 mx-auto mb-4" style={{ color: 'var(--accent-red)' }} />
+            <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Error</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>{error}</p>
+          </div>
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   if (!profile) return null;
 
-  const isOwnProfile = friendshipStatus === 'self';
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <AppLayout>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation */}
         <div className="flex items-center justify-between mb-8">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Button>
-          </Link>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => router.back()}
+            className="gap-2 font-semibold"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back
+          </Button>
           {isOwnProfile && (
-            <Link href="/profile">
-              <Button variant="outline" size="sm" className="border-slate-600">
-                Edit Profile
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => router.push('/dashboard?tab=profile')}
+              className="font-semibold rounded-xl"
+              style={{ borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
+            >
+              Edit Profile
+            </Button>
           )}
         </div>
 
         {/* Main Profile Card */}
-        <Card className="bg-slate-800 border-slate-700 mb-6">
-          <CardContent className="p-8">
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-              {/* Avatar */}
-              <Avatar className="h-32 w-32 ring-4 ring-slate-700">
-                <AvatarImage src={profile.avatar_url} alt={profile.display_name || 'User'} />
-                <AvatarFallback className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white text-3xl">
-                  {getInitials()}
-                </AvatarFallback>
-              </Avatar>
-
-              {/* Profile Info */}
-              <div className="flex-1 text-center md:text-left">
-                <h1 className="text-3xl font-bold text-white mb-2">
-                  {profile.display_name || 'Anonymous User'}
-                </h1>
-
-                {/* Meta info */}
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-slate-400 mb-4">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-4 w-4" />
-                    Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-                  </span>
-                  {!profile.profile_public && (
-                    <span className="flex items-center gap-1">
-                      <Shield className="h-4 w-4" />
-                      Private Profile
-                    </span>
-                  )}
+        <div className="rounded-3xl p-6 sm:p-8 mb-6" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
+            {/* Avatar */}
+            <div 
+              className="w-24 h-24 sm:w-28 sm:h-28 rounded-full ring-4 overflow-hidden flex-shrink-0"
+              style={{ 
+                background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))',
+                '--tw-ring-color': 'var(--bg-secondary)'
+              } as React.CSSProperties}
+            >
+              {profile.avatar_url ? (
+                <img 
+                  src={profile.avatar_url} 
+                  alt={profile.display_name || 'User'} 
+                  className="w-full h-full object-cover scale-110"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-3xl font-bold text-white">
+                  {profile.display_name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
-
-                {/* Languages Learning */}
-                {profile.languages_learning.length > 0 && (
-                  <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-4">
-                    <Globe className="h-4 w-4 text-slate-400" />
-                    {profile.languages_learning.map((lang) => (
-                      <Badge key={lang} className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
-                        {LANGUAGE_NAMES[lang] || lang}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-
-                {/* Achievement Badges */}
-                {profile.badges.length > 0 && (
-                  <div className="mt-4">
-                    <p className="text-sm text-slate-400 mb-2">Achievements</p>
-                    <AchievementBadges badges={profile.badges} size="md" maxDisplay={8} />
-                  </div>
-                )}
-              </div>
+              )}
             </div>
 
-            {/* Action Buttons - Only show if not own profile */}
-            {!isOwnProfile && sessionUser && (
-              <div className="mt-8 pt-6 border-t border-slate-700">
-                <div className="flex flex-wrap gap-3 justify-center md:justify-start">
-                  {friendshipStatus === 'none' && (
-                    <Button
-                      onClick={handleSendFriendRequest}
-                      disabled={actionLoading}
-                      className="bg-indigo-600 hover:bg-indigo-700"
+            {/* Profile Info */}
+            <div className="flex-1 text-center sm:text-left">
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
+                {profile.display_name || 'Anonymous User'}
+              </h1>
+
+              {/* Meta info */}
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+                <span className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  Joined {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                </span>
+                {!profile.profile_public && (
+                  <span className="flex items-center gap-1">
+                    <Shield className="h-4 w-4" />
+                    Private Profile
+                  </span>
+                )}
+              </div>
+
+              {/* Languages Learning */}
+              {profile.languages_learning.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                  <Globe className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+                  {profile.languages_learning.map((lang) => (
+                    <span
+                      key={lang}
+                      className="px-2 py-1 text-xs font-semibold rounded-lg"
+                      style={{ backgroundColor: 'rgba(88, 204, 2, 0.2)', color: 'var(--accent-green)' }}
                     >
-                      {actionLoading ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <UserPlus className="h-4 w-4 mr-2" />
-                      )}
-                      Add Friend
-                    </Button>
-                  )}
-
-                  {friendshipStatus === 'pending' && (
-                    <Button disabled className="bg-slate-600">
-                      <Clock className="h-4 w-4 mr-2" />
-                      Request Pending
-                    </Button>
-                  )}
-
-                  {friendshipStatus === 'accepted' && (
-                    <>
-                      <Button variant="outline" className="border-green-500 text-green-400">
-                        <Check className="h-4 w-4 mr-2" />
-                        Friends
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleRemoveFriend}
-                        disabled={actionLoading}
-                        className="border-red-500 text-red-400 hover:bg-red-500/20"
-                      >
-                        <UserMinus className="h-4 w-4 mr-2" />
-                        Remove
-                      </Button>
-                    </>
-                  )}
-
-                  {friendshipStatus !== 'blocked' && (
-                    <Button
-                      variant="outline"
-                      onClick={handleBlockUser}
-                      disabled={actionLoading}
-                      className="border-slate-600 text-slate-400 hover:bg-slate-700"
-                    >
-                      <Ban className="h-4 w-4 mr-2" />
-                      Block
-                    </Button>
-                  )}
-
-                  {friendshipStatus === 'blocked' && (
-                    <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
-                      <Ban className="h-4 w-4 mr-1" />
-                      Blocked
-                    </Badge>
-                  )}
+                      {LANGUAGE_NAMES[lang] || lang}
+                    </span>
+                  ))}
                 </div>
+              )}
+            </div>
+          </div>
 
-                {message && (
-                  <div
-                    className={`mt-4 flex items-center gap-2 p-3 rounded-lg text-sm ${
-                      message.type === 'success'
-                        ? 'bg-green-500/20 text-green-400'
-                        : 'bg-red-500/20 text-red-400'
-                    }`}
+          {/* Action Buttons - Only show if not own profile */}
+          {!isOwnProfile && sessionUser && (
+            <div className="pt-6 mb-6" style={{ borderTop: '1px solid var(--border-color)' }}>
+              <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+                {friendshipStatus === 'none' && (
+                  <Button
+                    onClick={handleSendFriendRequest}
+                    disabled={actionLoading}
+                    className="text-white font-bold rounded-2xl px-6"
+                    style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
                   >
-                    {message.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
-                    {message.text}
+                    {actionLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <UserPlus className="h-4 w-4 mr-2" />
+                    )}
+                    Add Friend
+                  </Button>
+                )}
+
+                {friendshipStatus === 'pending' && (
+                  <Button disabled className="rounded-2xl px-6 font-bold" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+                    <Clock className="h-4 w-4 mr-2" />
+                    Request Pending
+                  </Button>
+                )}
+
+                {friendshipStatus === 'accepted' && (
+                  <>
+                    <Button className="rounded-2xl px-6 font-bold" style={{ backgroundColor: 'rgba(88, 204, 2, 0.2)', color: 'var(--accent-green)' }}>
+                      <Check className="h-4 w-4 mr-2" />
+                      Friends
+                    </Button>
+                    <Button
+                      onClick={handleRemoveFriend}
+                      disabled={actionLoading}
+                      className="rounded-2xl px-6 font-bold"
+                      style={{ backgroundColor: 'rgba(255, 75, 75, 0.2)', color: 'var(--accent-red)' }}
+                    >
+                      <UserMinus className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  </>
+                )}
+
+                {friendshipStatus !== 'blocked' && friendshipStatus !== 'accepted' && (
+                  <Button
+                    onClick={handleBlockUser}
+                    disabled={actionLoading}
+                    className="rounded-2xl px-6 font-bold"
+                    style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Block
+                  </Button>
+                )}
+
+                {friendshipStatus === 'blocked' && (
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-2xl" style={{ backgroundColor: 'rgba(255, 75, 75, 0.2)', color: 'var(--accent-red)' }}>
+                    <Ban className="h-4 w-4" />
+                    <span className="font-semibold">Blocked</span>
                   </div>
                 )}
               </div>
-            )}
-          </CardContent>
-        </Card>
+
+              {message && (
+                <div
+                  className="mt-4 flex items-center gap-2 p-3 rounded-xl text-sm font-medium"
+                  style={message.type === 'success'
+                    ? { backgroundColor: 'rgba(88, 204, 2, 0.15)', color: 'var(--accent-green)' }
+                    : { backgroundColor: 'rgba(255, 75, 75, 0.15)', color: 'var(--accent-red)' }
+                  }
+                >
+                  {message.type === 'success' ? <Check className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+                  {message.text}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="p-4 text-center">
-              <Flame className="h-6 w-6 text-orange-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">{profile.current_streak}</p>
-              <p className="text-xs text-slate-400">Day Streak</p>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="rounded-2xl p-4 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <Flame className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--accent-orange)' }} />
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{profile.current_streak}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Day Streak</p>
+          </div>
 
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="p-4 text-center">
-              <BookOpen className="h-6 w-6 text-blue-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">{profile.total_cards_mastered}</p>
-              <p className="text-xs text-slate-400">Cards Mastered</p>
-            </CardContent>
-          </Card>
+          <div className="rounded-2xl p-4 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <BookOpen className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--accent-blue)' }} />
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{profile.total_cards_mastered}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Cards Mastered</p>
+          </div>
 
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="p-4 text-center">
-              <Trophy className="h-6 w-6 text-yellow-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">{profile.total_stacks_completed}</p>
-              <p className="text-xs text-slate-400">Stacks Done</p>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-slate-800/50 border-slate-700">
-            <CardContent className="p-4 text-center">
-              <Calendar className="h-6 w-6 text-green-400 mx-auto mb-2" />
-              <p className="text-2xl font-bold text-white">{profile.current_week_cards}</p>
-              <p className="text-xs text-slate-400">This Week</p>
-            </CardContent>
-          </Card>
+          <div className="rounded-2xl p-4 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <Sparkles className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--accent-green)' }} />
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{profile.current_week_cards}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>This Week</p>
+          </div>
         </div>
 
         {/* All Badges Section */}
         {profile.badges.length > 0 && (
-          <Card className="bg-slate-800 border-slate-700">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center gap-2">
-                <Trophy className="h-5 w-5 text-yellow-400" />
-                All Achievements ({profile.badges.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AchievementBadges badges={profile.badges} showAll size="lg" />
-            </CardContent>
-          </Card>
+          <div className="rounded-3xl p-6" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="h-5 w-5" style={{ color: 'var(--accent-yellow)' }} />
+              <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+                Achievements ({profile.badges.length})
+              </h3>
+            </div>
+            <AchievementBadges badges={profile.badges} showAll size="lg" />
+          </div>
+        )}
+
+        {/* Own profile message */}
+        {isOwnProfile && (
+          <div className="text-center mt-6">
+            <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+              This is how others see your public profile
+            </p>
+          </div>
         )}
       </div>
-    </div>
+    </AppLayout>
   );
 }
-
-
-
-
-
-

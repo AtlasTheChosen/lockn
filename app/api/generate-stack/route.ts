@@ -101,7 +101,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { scenario, targetLanguage, nativeLanguage = 'English', stackSize = 15, difficulty = 'B1', conversationalMode = false } = await request.json();
+    const { scenario, targetLanguage, nativeLanguage = 'English', stackSize = 15, difficulty = 'B1', conversationalMode = false, excludePhrases = [] } = await request.json();
+    
+    // Validate excludePhrases is an array
+    const phrasesToExclude = Array.isArray(excludePhrases) ? excludePhrases : [];
+    DEBUG_SERVER.api('Exclude phrases count', { count: phrasesToExclude.length });
 
     if (!scenario || !targetLanguage) {
       DEBUG_SERVER.apiError('Missing required fields', null, { scenario: !!scenario, targetLanguage: !!targetLanguage });
@@ -211,6 +215,32 @@ export async function POST(request: Request) {
     }
 
     const difficultyGuide = getDifficultyInstructions(difficulty);
+    
+    // Build exclusion instruction if there are phrases to exclude
+    const exclusionInstruction = phrasesToExclude.length > 0
+      ? `
+
+🚫 CRITICAL DUPLICATE AVOIDANCE REQUIREMENT (MANDATORY):
+You MUST NOT generate any phrases that are duplicates or similar to the existing cards listed below.
+
+WHAT COUNTS AS A DUPLICATE (ALL FORBIDDEN):
+- Exact same phrase
+- Same phrase with minor word changes (e.g., "I want coffee" → "I'd like coffee")
+- Same meaning expressed differently (e.g., "How much?" → "What's the price?")
+- Same grammatical pattern with different nouns (e.g., "I want water" → "I want juice")
+- Phrases that teach the same vocabulary or concept
+
+EXISTING ${phrasesToExclude.length} PHRASES TO AVOID:
+${phrasesToExclude.map((p: string) => `- "${p}"`).join('\n')}
+
+REQUIRED: Generate ${stackSize} COMPLETELY NEW phrases that:
+- Cover DIFFERENT aspects/moments of the scenario
+- Use DIFFERENT vocabulary words
+- Teach DIFFERENT grammatical structures
+- Are NOT paraphrases of any existing cards above
+
+If you cannot generate ${stackSize} unique phrases without duplicating, generate fewer cards rather than duplicating.`
+      : '';
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
@@ -235,6 +265,7 @@ If you generate phrases that are too advanced or too simple for ${difficulty}, t
 
 SCENARIO REQUIREMENT:
 Generate a chronological narrative stack for '${scenario}'. Use ONLY vocabulary, idioms, slang, and contexts from this specific scenario AT THE ${difficulty} LEVEL. Every phrase must be directly applicable to this exact scenario.
+${exclusionInstruction}
 
 Return ONLY valid JSON in this exact format:
 {
@@ -261,6 +292,13 @@ VERIFICATION CHECKLIST for ${difficulty}:
 - ✓ Tone and complexity appropriate for ${difficulty}
 - ✓ All phrases directly useful for the scenario
 - ✓ Natural progression through the scenario
+${phrasesToExclude.length > 0 ? `
+⚠️ DUPLICATE CHECK (CRITICAL - verify EACH card):
+- ✓ NONE of the ${phrasesToExclude.length} existing phrases are repeated
+- ✓ No paraphrases or synonymous expressions of existing cards
+- ✓ No same-pattern variations (e.g., swapping one noun for another)
+- ✓ Each card teaches something NEW not covered in existing cards
+Before outputting, verify EACH generated phrase is distinct from ALL ${phrasesToExclude.length} existing phrases.` : ''}
 
 Generate ONLY ${difficulty}-level phrases. If in doubt, err on the side of simplicity for this level.`,
         },

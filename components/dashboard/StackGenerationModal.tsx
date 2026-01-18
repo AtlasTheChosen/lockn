@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { X, Loader2, Sparkles, MessageSquare, AlertTriangle, CreditCard } from 'lucide-react';
+import { X, Loader2, Sparkles, MessageSquare, AlertTriangle, CreditCard, RefreshCw } from 'lucide-react';
 import { SUPPORTED_LANGUAGES, CEFR_LEVELS } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 import { DEBUG } from '@/lib/debug';
@@ -17,13 +17,22 @@ import { DEBUG } from '@/lib/debug';
 const CARD_COUNT_OPTIONS = [10, 25, 50] as const;
 type CardCount = typeof CARD_COUNT_OPTIONS[number];
 
+// Source stack data for generating more cards with similar topic
+interface SourceStackData {
+  scenario: string;
+  language: string;
+  difficulty: string;
+  excludePhrases: string[];
+}
+
 interface StackGenerationModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
+  sourceStack?: SourceStackData | null; // Optional: for "Generate More" from existing stack
 }
 
-export default function StackGenerationModal({ isOpen, onClose, userId }: StackGenerationModalProps) {
+export default function StackGenerationModal({ isOpen, onClose, userId, sourceStack }: StackGenerationModalProps) {
   const [scenario, setScenario] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('es');
   const [selectedDifficulty, setSelectedDifficulty] = useState('B1');
@@ -34,6 +43,45 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
   const [contentWarning, setContentWarning] = useState<string | null>(null);
   const router = useRouter();
   const supabase = createClient();
+  
+  // Pre-fill form fields when sourceStack is provided (Generate More feature)
+  useEffect(() => {
+    if (sourceStack && isOpen) {
+      // Pre-fill scenario with existing topic
+      setScenario(sourceStack.scenario);
+      
+      // Find and set language code from name
+      const langCode = SUPPORTED_LANGUAGES.find(l => l.name === sourceStack.language)?.code;
+      if (langCode) {
+        setSelectedLanguage(langCode);
+      }
+      
+      // Set difficulty level
+      if (sourceStack.difficulty) {
+        setSelectedDifficulty(sourceStack.difficulty);
+      }
+      
+      // Clear any previous errors
+      setError('');
+      setContentWarning(null);
+    }
+  }, [sourceStack, isOpen]);
+  
+  // Reset form when closing (if not from sourceStack)
+  useEffect(() => {
+    if (!isOpen && !sourceStack) {
+      setScenario('');
+      setSelectedLanguage('es');
+      setSelectedDifficulty('B1');
+      setSelectedSize(10);
+      setConversationalMode(false);
+      setError('');
+      setContentWarning(null);
+    }
+  }, [isOpen, sourceStack]);
+  
+  // Check if we're generating from an existing stack
+  const isGeneratingMore = !!sourceStack;
 
   const handleScenarioChange = (value: string) => {
     DEBUG.ui('Scenario input changed', { length: value.length });
@@ -102,6 +150,8 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
           stackSize: selectedSize,
           difficulty: selectedDifficulty,
           conversationalMode,
+          // Pass exclude phrases when generating more from existing stack
+          excludePhrases: sourceStack?.excludePhrases || [],
         }),
       });
 
@@ -149,7 +199,7 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl"
+        className="fixed inset-0 z-50 flex items-start justify-center pt-20 pb-4 px-4 sm:px-6 bg-black/80 backdrop-blur-xl overflow-y-auto"
         onClick={onClose}
       >
         <motion.div
@@ -157,30 +207,43 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-2xl backdrop-blur-xl rounded-3xl p-8 shadow-2xl"
+          className="relative w-full max-w-2xl max-h-[calc(100vh-6rem)] flex flex-col backdrop-blur-xl rounded-3xl shadow-2xl"
           style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}
         >
-          <Button
-            onClick={onClose}
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4"
-            style={{ color: 'var(--text-muted)' }}
-          >
-            <X className="h-5 w-5" />
-          </Button>
+          {/* Fixed Header */}
+          <div className="flex-shrink-0 p-6 pb-0 relative">
+            <Button
+              onClick={onClose}
+              variant="ghost"
+              size="icon"
+              className="absolute top-4 right-4 z-10"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              <X className="h-5 w-5" />
+            </Button>
 
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center gap-3 mb-4">
-              <Sparkles className="h-8 w-8" style={{ color: 'var(--accent-green)' }} />
-              <h2 className="text-3xl font-semibold" style={{ color: 'var(--text-primary)' }}>Generate New Stack</h2>
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center gap-3 mb-4">
+                {isGeneratingMore ? (
+                  <RefreshCw className="h-8 w-8" style={{ color: 'var(--accent-blue)' }} />
+                ) : (
+                  <Sparkles className="h-8 w-8" style={{ color: 'var(--accent-green)' }} />
+                )}
+                <h2 className="text-2xl sm:text-3xl font-semibold" style={{ color: 'var(--text-primary)' }}>
+                  {isGeneratingMore ? 'Generate More Cards' : 'Generate New Stack'}
+                </h2>
+              </div>
+              <p className="font-medium text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
+                {isGeneratingMore 
+                  ? `Create more unique cards for "${sourceStack?.scenario}" - ${sourceStack?.excludePhrases?.length || 0} existing cards will be excluded`
+                  : 'Create a custom flashcard stack for any scenario'}
+              </p>
             </div>
-            <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>
-              Create a custom flashcard stack for any scenario
-            </p>
           </div>
 
-          <div className="space-y-6">
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div className="space-y-6">
             <div>
               <label className="text-sm font-semibold mb-2 block" style={{ color: 'var(--text-primary)' }}>
                 What real-world topic or scenario do you want to master?
@@ -312,23 +375,24 @@ export default function StackGenerationModal({ isOpen, onClose, userId }: StackG
             )}
 
             <Button
-              onClick={handleGenerate}
-              disabled={generating || !scenario.trim() || !!contentWarning}
-              className="w-full text-white rounded-xl py-6 text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed active:translate-y-1"
-              style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
-            >
-              {generating ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Generating your stack...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="mr-2 h-5 w-5" />
-                  Generate {selectedSize} Cards
-                </>
-              )}
-            </Button>
+                onClick={handleGenerate}
+                disabled={generating || !scenario.trim() || !!contentWarning}
+                className="w-full text-white rounded-xl py-6 text-base font-bold disabled:opacity-50 disabled:cursor-not-allowed active:translate-y-1"
+                style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Generating your stack...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="mr-2 h-5 w-5" />
+                    Generate {selectedSize} Cards
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </motion.div>
       </motion.div>

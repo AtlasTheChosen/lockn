@@ -23,6 +23,23 @@ function getCacheKey(text: string, language: string, voiceGender: string): strin
   return hash;
 }
 
+/**
+ * Preprocess text for OpenAI TTS to avoid known issues:
+ * - Replace colons with periods (prevents word skipping)
+ * - Remove/reduce blank lines (prevents truncation)
+ * - Normalize punctuation for better pronunciation
+ */
+function preprocessTextForTTS(text: string): string {
+  return text
+    // Replace colons with periods (known issue: TTS skips words after colons)
+    .replace(/:/g, '.')
+    // Replace multiple newlines/blank lines with single space (prevents truncation)
+    .replace(/\n\s*\n/g, ' ')
+    // Trim and clean up extra whitespace
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { text, language, voiceGender = 'female', cardId } = await request.json();
@@ -83,11 +100,14 @@ export async function POST(request: NextRequest) {
     // Select voice based on gender
     const voice = VOICE_MAP[voiceGender as keyof typeof VOICE_MAP] || VOICE_MAP.female;
 
+    // Preprocess text to avoid TTS misreading issues
+    const processedText = preprocessTextForTTS(text);
+
     // Generate speech with OpenAI TTS
     const mp3Response = await openai.audio.speech.create({
       model: 'tts-1',
       voice: voice,
-      input: text,
+      input: processedText,
       response_format: 'mp3',
     });
 

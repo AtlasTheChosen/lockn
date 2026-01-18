@@ -29,6 +29,7 @@ interface StackCarouselProps {
   stacks: Stack[];
   onDeleteClick?: (stack: Stack, e: React.MouseEvent) => void;
   deletingStackId?: string | null;
+  onGenerateMore?: (stack: Stack, e: React.MouseEvent) => void;
 }
 
 // Check if deadline has passed
@@ -52,7 +53,7 @@ function formatCountdown(deadline: string): string {
   return 'Soon';
 }
 
-export default function StackCarousel({ stacks, onDeleteClick, deletingStackId }: StackCarouselProps) {
+export default function StackCarousel({ stacks, onDeleteClick, deletingStackId, onGenerateMore }: StackCarouselProps) {
   const router = useRouter();
   const [emblaRef, emblaApi] = useEmblaCarousel({
     align: 'start',
@@ -274,6 +275,17 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId }
                           <Clock className="h-3 w-3" />
                           {formatCountdown(stack.test_deadline)}
                         </span>
+                      )}
+                      {/* Generate More button */}
+                      {onGenerateMore && (
+                        <button
+                          className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-[var(--accent-green)]/20 text-[var(--text-muted)] hover:text-[var(--accent-green)] transition-colors"
+                          style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}
+                          onClick={(e) => onGenerateMore(stack, e)}
+                          title="Generate more cards on this topic"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
                       )}
                       {/* Delete button */}
                       {onDeleteClick && (

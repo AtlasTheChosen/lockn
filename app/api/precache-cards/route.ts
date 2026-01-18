@@ -74,6 +74,23 @@ Focus on teaching PATTERNS that unlock many sentences, not just this one phrase.
   }
 }
 
+/**
+ * Preprocess text for OpenAI TTS to avoid known issues:
+ * - Replace colons with periods (prevents word skipping)
+ * - Remove/reduce blank lines (prevents truncation)
+ * - Normalize punctuation for better pronunciation
+ */
+function preprocessTextForTTS(text: string): string {
+  return text
+    // Replace colons with periods (known issue: TTS skips words after colons)
+    .replace(/:/g, '.')
+    // Replace multiple newlines/blank lines with single space (prevents truncation)
+    .replace(/\n\s*\n/g, ' ')
+    // Trim and clean up extra whitespace
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
 // Generate and cache TTS audio
 async function generateAndCacheAudio(
   openai: OpenAI,
@@ -102,12 +119,15 @@ async function generateAndCacheAudio(
     }
   }
 
+  // Preprocess text to avoid TTS misreading issues
+  const processedText = preprocessTextForTTS(text);
+
   // Generate new audio
   const voice = voiceGender === 'male' ? 'onyx' : 'nova';
   const mp3Response = await openai.audio.speech.create({
     model: 'tts-1',
     voice: voice,
-    input: text,
+    input: processedText,
     response_format: 'mp3',
   });
 

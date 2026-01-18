@@ -297,6 +297,7 @@ export interface PublicProfile {
   created_at: string;
   // Stats
   current_streak: number;
+  longest_streak?: number;
   total_cards_mastered: number;
   total_stacks_completed: number;
   current_week_cards: number;

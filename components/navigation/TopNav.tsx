@@ -33,8 +33,8 @@ function StreakBadge({ count, isFrozen }: { count: number; isFrozen: boolean }) 
   return (
     <motion.div
       className={cn(
-        'relative flex items-center gap-1.5 rounded-xl px-4 py-2',
-        'font-bold text-white text-sm',
+        'relative flex items-center gap-1 sm:gap-1.5 rounded-lg sm:rounded-xl px-2 sm:px-3 py-1.5 sm:py-2',
+        'font-bold text-white text-xs sm:text-sm',
         'shadow-md'
       )}
       style={{
@@ -46,9 +46,9 @@ function StreakBadge({ count, isFrozen }: { count: number; isFrozen: boolean }) 
       whileTap={{ scale: 0.95 }}
       title={isFrozen ? `${count} day streak (frozen)` : `${count} day streak`}
     >
-      {/* Pulse glow effect */}
+      {/* Pulse glow effect - hidden on mobile for performance */}
       <motion.div
-        className="absolute inset-0 rounded-xl opacity-50"
+        className="absolute inset-0 rounded-lg sm:rounded-xl opacity-50 hidden sm:block"
         style={{
           background: isFrozen
             ? 'linear-gradient(135deg, #1cb0f6 0%, #00d4ff 100%)'
@@ -76,7 +76,7 @@ function StreakBadge({ count, isFrozen }: { count: number; isFrozen: boolean }) 
           ease: 'easeInOut',
         }}
       >
-        {isFrozen ? <Snowflake className="h-5 w-5" strokeWidth={2.5} /> : <Flame className="h-5 w-5" />}
+        {isFrozen ? <Snowflake className="h-4 w-4 sm:h-5 sm:w-5" strokeWidth={2.5} /> : <Flame className="h-4 w-4 sm:h-5 sm:w-5" />}
       </motion.span>
       {/* Count */}
       <span className="relative z-10">{count}</span>
@@ -101,17 +101,17 @@ function UserAvatar({
   return (
     <div className="relative">
       <motion.button
-        className={cn('relative flex items-center gap-2 rounded-full p-0.5', 'transition-all duration-300', 'group')}
+        className={cn('relative flex items-center gap-1 sm:gap-2 rounded-full p-0.5', 'transition-all duration-300', 'group')}
         onClick={() => setIsOpen(!isOpen)}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
         {/* Avatar */}
-        <div className="relative h-11 w-11 overflow-hidden rounded-full bg-gradient-to-br from-[#1cb0f6] to-[#1a9ad6] shadow-[var(--shadow-sm)]">
+        <div className="relative h-9 w-9 sm:h-11 sm:w-11 overflow-hidden rounded-full bg-gradient-to-br from-[#1cb0f6] to-[#1a9ad6] shadow-[var(--shadow-sm)]">
           {avatarUrl ? (
             <img src={avatarUrl} alt={displayName} className="h-full w-full object-cover scale-110" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center font-bold text-lg text-white">
+            <div className="flex h-full w-full items-center justify-center font-bold text-sm sm:text-lg text-white">
               {getInitials(displayName)}
             </div>
           )}
@@ -119,7 +119,7 @@ function UserAvatar({
 
         <ChevronDown
           className={cn(
-            'h-4 w-4 text-[var(--text-secondary)] transition-transform duration-200',
+            'h-3 w-3 sm:h-4 sm:w-4 text-[var(--text-secondary)] transition-transform duration-200',
             isOpen && 'rotate-180'
           )}
         />
@@ -227,9 +227,9 @@ export default function TopNav({
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
       className={cn(
-        'hidden md:flex sticky top-0 z-[100]',
+        'flex sticky top-0 z-[100]',
         'w-full items-center justify-between',
-        'px-8 py-5',
+        'px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4',
         'bg-[var(--bg-card)]/80 backdrop-blur-xl',
         'border-b-2 border-[var(--border-color)]',
         'shadow-[var(--shadow-sm)]',
@@ -237,15 +237,15 @@ export default function TopNav({
       )}
     >
       {/* Logo */}
-      <Link href="/" className="flex items-center gap-2">
+      <Link href="/" className="flex items-center gap-2 flex-shrink-0">
         <motion.div className="flex items-center gap-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-          <Logo size="xl" />
-          <span className="font-display text-3xl font-semibold text-[#58cc02]">Lockn</span>
+          <Logo size="md" />
+          <span className="font-display text-xl lg:text-2xl font-semibold text-[#58cc02]">Lockn</span>
         </motion.div>
       </Link>
 
-      {/* Nav Links */}
-      <nav className="flex gap-1">
+      {/* Nav Links - Labels hidden on small screens, shown on lg+ */}
+      <nav className="flex gap-1 lg:gap-2">
         {navLinks.map((link) => {
           const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
 
@@ -258,19 +258,24 @@ export default function TopNav({
                   setShowAuthModal(true);
                 }}
                 className={cn(
-                  'px-6 py-3 rounded-xl font-bold text-base transition-all duration-200 flex items-center gap-2',
+                  'p-2.5 lg:px-5 lg:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2',
                   'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
                 )}
+                title={link.label}
               >
                 <link.icon className="h-5 w-5" />
-                {link.label}
+                <span className="hidden lg:inline font-bold text-base">{link.label}</span>
               </button>
             );
           }
 
           return (
-            <Link key={link.href} href={link.href}>
-              <motion.div className="relative px-6 py-3 flex items-center gap-2" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <Link key={link.href} href={link.href} title={link.label}>
+              <motion.div 
+                className="relative p-2.5 lg:px-5 lg:py-3 flex items-center justify-center gap-2" 
+                whileHover={{ scale: 1.02 }} 
+                whileTap={{ scale: 0.98 }}
+              >
                 {/* Active indicator pill */}
                 {isActive && (
                   <motion.div
@@ -293,7 +298,7 @@ export default function TopNav({
                 />
                 <span
                   className={cn(
-                    'relative z-10 font-bold text-base transition-colors duration-200',
+                    'relative z-10 font-bold text-base transition-colors duration-200 hidden lg:inline',
                     isActive ? 'text-[#58cc02]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   )}
                 >
@@ -307,15 +312,15 @@ export default function TopNav({
 
       {/* Right section */}
       {isLoggedIn ? (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
           {/* Theme Toggle */}
           <ThemeToggle size="sm" />
 
           {/* Streak Badge */}
           {!dataLoaded ? (
             <div
-              className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-white relative overflow-hidden bg-[var(--bg-secondary)] animate-pulse"
-              style={{ minWidth: '70px', height: '36px' }}
+              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl font-bold text-white relative overflow-hidden bg-[var(--bg-secondary)] animate-pulse"
+              style={{ minWidth: '50px', height: '32px' }}
             />
           ) : (
             <StreakBadge count={streak} isFrozen={streakFrozen} />
@@ -328,16 +333,17 @@ export default function TopNav({
           <UserAvatar displayName={displayName} avatarUrl={avatarUrl} onLogout={handleLogout} />
         </div>
       ) : (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
           {/* Theme Toggle */}
           <ThemeToggle size="sm" />
 
+          {/* Sign In - hidden on smaller screens */}
           <button
             onClick={() => {
               setAuthModalMode('login');
               setShowAuthModal(true);
             }}
-            className="px-6 py-3 rounded-xl font-bold text-base text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all duration-200"
+            className="hidden lg:block px-5 py-2.5 rounded-xl font-bold text-base text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all duration-200"
           >
             Sign In
           </button>
@@ -346,12 +352,12 @@ export default function TopNav({
               setAuthModalMode('signup');
               setShowAuthModal(true);
             }}
-            className="px-6 py-3 rounded-xl font-bold text-base bg-[#58cc02] text-white"
-            style={{ boxShadow: '0 4px 0 #46a302' }}
+            className="px-4 lg:px-6 py-2 lg:py-2.5 rounded-xl font-bold text-sm lg:text-base bg-[#58cc02] text-white whitespace-nowrap"
+            style={{ boxShadow: '0 3px 0 #46a302' }}
             whileHover={{ y: -2 }}
             whileTap={{ y: 2, boxShadow: '0 0px 0 #46a302' }}
           >
-            Get Started
+            Sign Up
           </motion.button>
         </div>
       )}

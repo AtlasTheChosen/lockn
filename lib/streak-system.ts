@@ -114,6 +114,51 @@ export async function checkAndHandleStreakExpiration(
 }
 
 // ============================================================
+// CARD DOWNGRADE IMPACT CHECK
+// ============================================================
+
+export interface CardDowngradeImpact {
+  wouldBreakStreak: boolean;
+  warning: string | null;
+}
+
+/**
+ * Check if lowering a card rating would break the same-day streak.
+ * Only warns if the streak was awarded today and lowering would drop below the requirement.
+ * 
+ * @param userId - User ID
+ * @param currentCardsMasteredToday - Current count of cards mastered today
+ * @param streakAwardedToday - Whether streak was awarded today
+ * @param isNewDay - Whether it's a new day (streak already locked)
+ * @returns Impact assessment with warning message if applicable
+ */
+export async function checkCardDowngradeImpact(
+  userId: string,
+  currentCardsMasteredToday: number,
+  streakAwardedToday: boolean,
+  isNewDay: boolean
+): Promise<CardDowngradeImpact> {
+  // No warning needed if:
+  // 1. It's a new day (streak already locked from previous day)
+  // 2. Streak wasn't awarded today
+  // 3. Lowering wouldn't drop below the requirement
+  if (isNewDay || !streakAwardedToday) {
+    return { wouldBreakStreak: false, warning: null };
+  }
+  
+  const wouldDropBelow = (currentCardsMasteredToday - 1) < STREAK_DAILY_REQUIREMENT;
+  
+  if (wouldDropBelow) {
+    return {
+      wouldBreakStreak: true,
+      warning: `Lowering this card will drop you below the ${STREAK_DAILY_REQUIREMENT}-card requirement and break your streak today. You currently have ${currentCardsMasteredToday}/${STREAK_DAILY_REQUIREMENT} cards mastered.`,
+    };
+  }
+  
+  return { wouldBreakStreak: false, warning: null };
+}
+
+// ============================================================
 // CARD MASTERY PROCESSING (STEP 2-3 of Review Exit Flow)
 // ============================================================
 

@@ -20,9 +20,11 @@ import {
   User
 } from 'lucide-react';
 import type { UserProfile, Badge as BadgeType } from '@/lib/types';
-import Link from 'next/link';
 import { AVATAR_COUNT, getAvatarUrl } from '@/lib/avatars';
 import { PROFILE_UPDATED_EVENT } from '@/components/layout/AppLayout';
+import { containsInappropriateContent } from '@/lib/content-filter';
+import { createClient } from '@/lib/supabase/client';
+import PublicProfileModal from '@/components/dashboard/PublicProfileModal';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -74,8 +76,10 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   );
   const [badges, setBadges] = useState<BadgeType[]>(profile.badges || []);
   const [saving, setSaving] = useState(false);
+  const [savingDisplayName, setSavingDisplayName] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
+  const [showPublicProfile, setShowPublicProfile] = useState(false);
 
   // Check if display name can be changed (once per month)
   const canChangeDisplayName = () => {
@@ -116,6 +120,122 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
     }
   };
 
+  // Save display name separately with month restriction
+  const handleSaveDisplayName = async () => {
+    if (!isDisplayNameChanged) return;
+    
+    // Validate display name before checking time restriction
+    const trimmedName = displayName.trim();
+    
+    if (!trimmedName) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Please enter a display name.' 
+      });
+      return;
+    }
+
+    if (trimmedName.length < 2) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Display name must be at least 2 characters.' 
+      });
+      return;
+    }
+
+    if (trimmedName.length > 30) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Display name must be 30 characters or less.' 
+      });
+      return;
+    }
+
+    // Check for inappropriate content
+    if (containsInappropriateContent(trimmedName)) {
+      setMessage({ 
+        type: 'error', 
+        text: 'This display name contains inappropriate content. Please choose another.' 
+      });
+      return;
+    }
+
+    // Only allow alphanumeric, spaces, underscores, and dashes
+    if (!/^[a-zA-Z0-9\s_\-]+$/.test(trimmedName)) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Display name can only contain letters, numbers, spaces, underscores, and dashes.' 
+      });
+      return;
+    }
+    
+    // Check time restriction
+    if (!canChangeDisplayName()) {
+      setMessage({ 
+        type: 'error', 
+        text: `You can only change your display name once per month. ${getDaysUntilCanChange()} days remaining.` 
+      });
+      return;
+    }
+
+    try {
+      setSavingDisplayName(true);
+      setMessage(null);
+
+      // Check if display name is already taken (case-insensitive)
+      const supabase = createClient();
+      const { data: existing } = await supabase
+        .from('user_profiles')
+        .select('id')
+        .ilike('display_name', trimmedName)
+        .neq('id', profile.id)
+        .maybeSingle();
+
+      if (existing) {
+        setMessage({ 
+          type: 'error', 
+          text: 'This display name is already taken. Please choose another.' 
+        });
+        setSavingDisplayName(false);
+        return;
+      }
+
+      // Save the display name
+      const response = await fetch(
+        `${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            display_name: trimmedName,
+            display_name_changed_at: new Date().toISOString(),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to update display name');
+      }
+
+      setMessage({ type: 'success', text: 'Display name updated! You can change it again in 30 days.' });
+      onUpdate();
+      window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
+    } catch (error: any) {
+      console.error('Error saving display name:', error);
+      setMessage({ 
+        type: 'error', 
+        text: error.message || 'Failed to save display name. Please try again.' 
+      });
+    } finally {
+      setSavingDisplayName(false);
+    }
+  };
+
   const handleRemoveLanguage = (langCode: string) => {
     setLanguagesLearning(languagesLearning.filter(l => l !== langCode));
   };
@@ -125,30 +245,13 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
       setSaving(true);
       setMessage(null);
 
-      // Check if display name is being changed and if it's allowed
-      if (isDisplayNameChanged && !canChangeDisplayName()) {
-        setMessage({ 
-          type: 'error', 
-          text: `You can only change your display name once per month. ${getDaysUntilCanChange()} days remaining.` 
-        });
-        setSaving(false);
-        return;
-      }
-
-      // Build update object
+      // Build update object (display name is saved separately with its own button)
       const updateData: any = {
-        avatar_url: avatarUrl,
         profile_public: profilePublic,
         languages_learning: languagesLearning,
         theme_preference: theme,
         notification_prefs: notificationPrefs,
       };
-
-      // Only update display name fields if name is actually changing
-      if (isDisplayNameChanged) {
-        updateData.display_name = displayName || null;
-        updateData.display_name_changed_at = new Date().toISOString();
-      }
 
       const response = await fetch(
         `${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`,
@@ -165,7 +268,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
 
       if (!response.ok) throw new Error('Failed to update profile');
 
-      setMessage({ type: 'success', text: 'Profile updated successfully!' });
+      setMessage({ type: 'success', text: 'Settings saved successfully!' });
       onUpdate();
       // Dispatch event to update nav bars immediately
       window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
@@ -195,7 +298,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
           <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Your Profile</h3>
         </div>
         <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>
-          Choose your avatar from 25 cute options!
+          Choose your avatar from 25 cute options! <span style={{ color: 'var(--accent-green)' }}>Changes save instantly.</span>
         </p>
         <div className="flex items-center gap-6 mb-6">
           <button
@@ -215,11 +318,14 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
           <div>
             <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{displayName || 'Your Name'}</p>
             <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>{profile.email}</p>
-            <Link href={`/profile/${profile.id}`}>
-              <Button variant="link" className="p-0 h-auto mt-2 font-semibold" style={{ color: 'var(--accent-green)' }}>
-                View public profile →
-              </Button>
-            </Link>
+            <Button 
+              variant="link" 
+              onClick={() => setShowPublicProfile(true)}
+              className="p-0 h-auto mt-2 font-semibold" 
+              style={{ color: 'var(--accent-green)' }}
+            >
+              View public profile →
+            </Button>
           </div>
         </div>
 
@@ -321,31 +427,62 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
             <Label htmlFor="display-name" className="font-semibold" style={{ color: 'var(--text-primary)' }}>
               Display Name
             </Label>
-            <Input
-              id="display-name"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Enter your display name"
-              className="rounded-2xl mt-2 font-medium focus:ring-0"
-              style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
-              maxLength={50}
-            />
-            {/* Display name change warning */}
-            {isDisplayNameChanged && (
-              <div 
-                className="mt-2 p-3 rounded-xl text-sm"
-                style={canChangeDisplayName() 
-                  ? { backgroundColor: 'rgba(251, 146, 60, 0.2)', color: 'var(--accent-orange)' }
-                  : { backgroundColor: 'rgba(255, 75, 75, 0.2)', color: 'var(--accent-red)' }
-                }
+            <div className="flex gap-3 mt-2">
+              <Input
+                id="display-name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Enter your display name"
+                className="rounded-2xl font-medium focus:ring-0 flex-1"
+                style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
+                maxLength={50}
+                disabled={!canChangeDisplayName()}
+              />
+              <Button
+                onClick={handleSaveDisplayName}
+                disabled={!isDisplayNameChanged || savingDisplayName || !canChangeDisplayName()}
+                className="text-white font-bold rounded-2xl px-6 disabled:opacity-50"
+                style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
               >
-                {canChangeDisplayName() ? (
-                  <p className="font-medium">⚠️ You can only change your display name once per month.</p>
+                {savingDisplayName ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <p className="font-medium">🚫 You can change your display name again in {getDaysUntilCanChange()} days.</p>
+                  'Save'
                 )}
-              </div>
-            )}
+              </Button>
+            </div>
+            {/* Display name change info/warning */}
+            <div 
+              className="mt-2 p-3 rounded-xl text-sm"
+              style={canChangeDisplayName() 
+                ? { backgroundColor: 'rgba(88, 204, 2, 0.1)', color: 'var(--text-secondary)' }
+                : { backgroundColor: 'rgba(255, 75, 75, 0.15)', color: 'var(--accent-red)' }
+              }
+            >
+              {canChangeDisplayName() ? (
+                <p className="font-medium">ℹ️ Display name can be changed once every 30 days.</p>
+              ) : (
+                <p className="font-medium">🔒 Name locked. You can change it again in {getDaysUntilCanChange()} days.</p>
+              )}
+              {profile.display_name_changed_at && (
+                <p className="text-xs mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
+                  Last changed: {new Date(profile.display_name_changed_at).toLocaleDateString('en-US', { 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </p>
+              )}
+              {!profile.display_name_changed_at && profile.created_at && (
+                <p className="text-xs mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
+                  Created: {new Date(profile.created_at).toLocaleDateString('en-US', { 
+                    month: 'long', 
+                    day: 'numeric', 
+                    year: 'numeric' 
+                  })}
+                </p>
+              )}
+            </div>
           </div>
 
           <div>
@@ -526,7 +663,7 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
         </div>
       )}
 
-      {/* Save Button */}
+      {/* Save Button - for all settings except display name */}
       <Button
         onClick={handleSaveProfile}
         disabled={saving}
@@ -539,9 +676,19 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
             Saving...
           </>
         ) : (
-          'Save Changes ✨'
+          'Save Settings ✨'
         )}
       </Button>
+      <p className="text-center text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
+        Saves languages, privacy, and notification settings. Avatar saves instantly when clicked.
+      </p>
+
+      {/* Public Profile Modal */}
+      <PublicProfileModal
+        userId={profile.id}
+        isOpen={showPublicProfile}
+        onClose={() => setShowPublicProfile(false)}
+      />
     </div>
   );
 }

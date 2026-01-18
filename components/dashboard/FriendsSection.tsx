@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,6 +16,7 @@ import {
   Flame,
   Calendar,
   Target,
+  ExternalLink,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { FriendsListIcon, RequestsIcon, BlockedIcon } from '@/components/ui/GradientIcons';
@@ -515,29 +517,37 @@ export default function FriendsSection({ userId, accessToken }: Props) {
               <p style={{ color: 'var(--text-secondary)' }}>Search for users above to send friend requests</p>
             </div>
           ) : (
-            friends.map((friendship) => (
+            friends.map((friendship) => {
+              const friendId = friendship.user_id === userId ? friendship.friend_id : friendship.user_id;
+              return (
               <div key={friendship.id} className="rounded-3xl p-6 transition-all" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-4">
+                  <Link 
+                    href={`/profile/${friendId}`}
+                    className="flex items-center gap-4 flex-1 min-w-0 group cursor-pointer"
+                  >
                     {friendship.profile?.avatar_url ? (
                       <img 
                         src={friendship.profile.avatar_url} 
                         alt={friendship.profile?.display_name || 'User'} 
-                        className="w-14 h-14 rounded-full object-cover"
+                        className="w-14 h-14 rounded-full object-cover transition-transform group-hover:scale-105"
                         style={{ boxShadow: '0 4px 12px rgba(28, 176, 246, 0.3)' }}
                       />
                     ) : (
-                      <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg text-white" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))' }}>
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-lg text-white transition-transform group-hover:scale-105" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))' }}>
                         {getInitials(friendship.profile)}
                       </div>
                     )}
-                    <div>
-                      <p className="font-display text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
-                        {friendship.profile?.display_name || 'User'}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-display text-lg font-semibold group-hover:text-[var(--accent-green)] transition-colors truncate" style={{ color: 'var(--text-primary)' }}>
+                          {friendship.profile?.display_name || 'User'}
+                        </p>
+                        <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
+                      </div>
                       {/* Languages Learning */}
                       {friendship.profile?.languages_learning && friendship.profile.languages_learning.length > 0 && (
-                        <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                        <p className="text-sm font-medium mt-0.5 truncate" style={{ color: 'var(--text-secondary)' }}>
                           📚 {friendship.profile.languages_learning.map(code => {
                             const langMap: Record<string, string> = {
                               es: '🇪🇸', fr: '🇫🇷', de: '🇩🇪', it: '🇮🇹', pt: '🇧🇷',
@@ -550,7 +560,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                         </p>
                       )}
                     </div>
-                  </div>
+                  </Link>
                   <div className="flex gap-2">
                     <Button
                       variant="ghost"
@@ -610,7 +620,8 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                   </div>
                 </div>
               </div>
-            ))
+            );
+            })
           )}
         </div>
       )}

@@ -16,6 +16,15 @@ import ProgressRing from './ProgressRing';
 import WeeklyCalendar from './WeeklyCalendar';
 import StackCarousel from './StackCarousel';
 import ArchiveVault from './ArchiveVault';
+import StackGenerationModal from './StackGenerationModal';
+
+// Source stack data for generating more cards with similar topic
+interface SourceStackData {
+  scenario: string;
+  language: string;
+  difficulty: string;
+  excludePhrases: string[];
+}
 
 interface Stack {
   id: string;
@@ -69,6 +78,22 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
   const [deletionCheck, setDeletionCheck] = useState<StackDeletionCheck | null>(null);
   const [isCheckingDeletion, setIsCheckingDeletion] = useState(false);
   const supabase = createClient();
+  
+  // Generate More modal state
+  const [showGenerationModal, setShowGenerationModal] = useState(false);
+  const [generationSourceStack, setGenerationSourceStack] = useState<SourceStackData | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Fetch user ID on mount
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        setUserId(session.user.id);
+      }
+    };
+    fetchUserId();
+  }, [supabase.auth]);
 
   // Separate stacks into carousel (unfinished) and archive (completed)
   const { carouselStacks, archivedStacks } = useMemo(() => {
@@ -255,6 +280,51 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
       setStackToDelete(null);
       setDeletionCheck(null);
     }
+  };
+  
+  // Handle "Generate More" from existing stack
+  const handleGenerateMore = async (stack: Stack, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    try {
+      // Fetch the flashcard phrases from this stack to exclude duplicates
+      const { data: flashcards, error } = await supabase
+        .from('flashcards')
+        .select('target_phrase')
+        .eq('stack_id', stack.id);
+      
+      if (error) {
+        console.error('Error fetching flashcard phrases:', error);
+        toast.error('Failed to load stack data');
+        return;
+      }
+      
+      // Extract phrases to exclude
+      const excludePhrases = flashcards?.map(card => card.target_phrase) || [];
+      
+      // Determine difficulty from stack's CEFR level or default
+      const difficulty = stack.cefr_level || 'B1';
+      
+      // Set source stack data for the modal
+      setGenerationSourceStack({
+        scenario: stack.scenario || stack.title,
+        language: stack.language,
+        difficulty,
+        excludePhrases,
+      });
+      
+      // Open the generation modal
+      setShowGenerationModal(true);
+    } catch (err) {
+      console.error('Error preparing generate more:', err);
+      toast.error('Failed to prepare stack generation');
+    }
+  };
+  
+  // Close generation modal and clear source data
+  const handleCloseGenerationModal = () => {
+    setShowGenerationModal(false);
+    setGenerationSourceStack(null);
   };
 
   return (
@@ -473,6 +543,7 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
         stacks={carouselStacks} 
         onDeleteClick={handleDeleteClick}
         deletingStackId={deletingStackId}
+        onGenerateMore={handleGenerateMore}
       />
 
       {/* Archive/Vault Section (Completed Stacks) */}
@@ -489,6 +560,16 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
         onUpdate={onUpdate}
         className="animate-fade-in stagger-4"
       />
+
+      {/* Stack Generation Modal */}
+      {userId && (
+        <StackGenerationModal
+          isOpen={showGenerationModal}
+          onClose={handleCloseGenerationModal}
+          userId={userId}
+          sourceStack={generationSourceStack}
+        />
+      )}
 
       {/* Delete Dialog with Streak System v2 Warnings */}
       <AlertDialog open={showDeleteDialog} onOpenChange={(open) => {
