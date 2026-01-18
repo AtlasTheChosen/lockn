@@ -29,13 +29,18 @@ export default function LeaderboardPage() {
   const { user: sessionUser, loading: sessionLoading } = useSession();
   
   const [loading, setLoading] = useState(true);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('current_streak');
 
-  const loadLeaderboardData = useCallback(async () => {
+  const loadLeaderboardData = useCallback(async (isInitialLoad = false) => {
     try {
+      // Only show skeleton on initial load to prevent flash on navigation
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       setError(null);
       
       // Use server-side API route that bypasses RLS (with cache-busting)
@@ -92,14 +97,20 @@ export default function LeaderboardPage() {
     }
 
     setCurrentUserId(sessionUser.id);
-    loadLeaderboardData();
-  }, [sessionUser, sessionLoading, router, loadLeaderboardData]);
+    // Only show skeleton on first load
+    if (!initialLoadDone) {
+      loadLeaderboardData(true);
+      setInitialLoadDone(true);
+    } else {
+      loadLeaderboardData(false);
+    }
+  }, [sessionUser, sessionLoading, router, loadLeaderboardData, initialLoadDone]);
 
   // Refresh leaderboard when user returns to tab (catches updates after mastering cards)
   useEffect(() => {
     const handleFocus = () => {
       if (sessionUser && !loading) {
-        loadLeaderboardData();
+        loadLeaderboardData(false); // Silent refresh without skeleton
       }
     };
     

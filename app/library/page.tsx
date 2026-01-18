@@ -40,13 +40,17 @@ function LibraryContent() {
   
   const [sharedStacks, setSharedStacks] = useState<SharedStack[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [copying, setCopying] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const loadSharedStacks = useCallback(async () => {
+  const loadSharedStacks = useCallback(async (isInitialLoad = false) => {
     try {
-      setLoading(true);
+      // Only show skeleton on initial load to prevent flash on navigation
+      if (isInitialLoad) {
+        setLoading(true);
+      }
 
       // Fetch public shared stacks
       const sharesResponse = await fetch(
@@ -109,8 +113,14 @@ function LibraryContent() {
   }, []);
 
   useEffect(() => {
-    loadSharedStacks();
-  }, [loadSharedStacks]);
+    // Only show skeleton on first load
+    if (!initialLoadDone) {
+      loadSharedStacks(true);
+      setInitialLoadDone(true);
+    } else {
+      loadSharedStacks(false);
+    }
+  }, [loadSharedStacks, initialLoadDone]);
 
   const handleCopyStack = async (sharedStack: SharedStack) => {
     if (!sessionUser) {
@@ -192,7 +202,7 @@ function LibraryContent() {
       );
 
       setMessage({ type: 'success', text: 'Stack copied to your collection!' });
-      loadSharedStacks();
+      loadSharedStacks(false); // Silent refresh without skeleton
     } catch (err: any) {
       console.error('Failed to copy stack:', err);
       setMessage({ type: 'error', text: err.message || 'Failed to copy stack' });

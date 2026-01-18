@@ -36,14 +36,18 @@ export default function ChallengesPage() {
   
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [loading, setLoading] = useState(true);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [createModalOpen, setCreateModalOpen] = useState(false);
 
-  const loadChallenges = useCallback(async () => {
+  const loadChallenges = useCallback(async (isInitialLoad = false) => {
     if (!sessionUser) return;
 
     try {
-      setLoading(true);
+      // Only show skeleton on initial load to prevent flash on navigation
+      if (isInitialLoad) {
+        setLoading(true);
+      }
       setError(null);
 
       // Fetch all challenges where user is involved
@@ -108,9 +112,15 @@ export default function ChallengesPage() {
 
   useEffect(() => {
     if (sessionUser) {
-      loadChallenges();
+      // Only show skeleton on first load
+      if (!initialLoadDone) {
+        loadChallenges(true);
+        setInitialLoadDone(true);
+      } else {
+        loadChallenges(false);
+      }
     }
-  }, [sessionUser, loadChallenges]);
+  }, [sessionUser, loadChallenges, initialLoadDone]);
 
   const activeChallenges = challenges.filter(c => c.status === 'active');
   const pendingChallenges = challenges.filter(c => c.status === 'pending');

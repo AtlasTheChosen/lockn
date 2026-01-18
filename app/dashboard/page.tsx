@@ -22,6 +22,7 @@ export default function DashboardPage() {
   
   const loadingRef = useRef(false);
   const trialMigrationRef = useRef(false);
+  const initialLoadDoneRef = useRef(false);
   const [dataLoading, setDataLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [needsDisplayName, setNeedsDisplayName] = useState(false);
@@ -407,7 +408,11 @@ export default function DashboardPage() {
       return;
     }
 
-    setDataLoading(true);
+    // Only show skeleton on first load to prevent flash on navigation
+    if (!initialLoadDoneRef.current) {
+      setDataLoading(true);
+      initialLoadDoneRef.current = true;
+    }
     loadDashboardData(sessionUser.id, sessionUser.email);
   }, [sessionUser, sessionLoading, router, loadDashboardData]);
 
