@@ -356,15 +356,17 @@ export default function TopNav({
           {/* Theme Toggle */}
           <ThemeToggle size="sm" />
 
-          {/* Streak Badge */}
-          {!dataLoaded ? (
-            <div
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl font-bold text-white relative overflow-hidden bg-[var(--bg-secondary)] animate-pulse"
-              style={{ minWidth: '50px', height: '32px' }}
-            />
-          ) : (
-            <StreakBadge count={streak} isFrozen={streakFrozen} />
-          )}
+          {/* Streak Badge - hidden on mobile to save space */}
+          <div className="hidden sm:block">
+            {!dataLoaded ? (
+              <div
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold text-white relative overflow-hidden bg-[var(--bg-secondary)] animate-pulse"
+                style={{ minWidth: '50px', height: '32px' }}
+              />
+            ) : (
+              <StreakBadge count={streak} isFrozen={streakFrozen} />
+            )}
+          </div>
 
           {/* Notifications Bell */}
           {userId && <NotificationBell userId={userId} />}
