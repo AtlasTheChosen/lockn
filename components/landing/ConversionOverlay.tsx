@@ -13,9 +13,10 @@ import { getRandomAvatarId, getAvatarUrl } from '@/lib/avatars';
 interface ConversionOverlayProps {
   scenario: string;
   onClose?: () => void;
+  onGoHome?: () => void;
 }
 
-export default function ConversionOverlay({ scenario, onClose }: ConversionOverlayProps) {
+export default function ConversionOverlay({ scenario, onClose, onGoHome }: ConversionOverlayProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -148,13 +149,15 @@ export default function ConversionOverlay({ scenario, onClose }: ConversionOverl
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-        className="relative w-full max-w-md bg-white rounded-3xl p-8 shadow-talka-lg overflow-hidden"
+        className="relative w-full max-w-md rounded-3xl p-8 overflow-hidden"
+        style={{ background: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}
       >
         {/* Close Button */}
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+            className="absolute top-4 right-4 p-2 rounded-xl transition-all hover:bg-[var(--bg-secondary)]"
+            style={{ color: 'var(--text-secondary)' }}
           >
             <X className="h-5 w-5" />
           </button>
@@ -168,18 +171,18 @@ export default function ConversionOverlay({ scenario, onClose }: ConversionOverl
             transition={{ delay: 0.2, type: 'spring' }}
             className="flex justify-center mb-4"
           >
-            <Logo size="xl" />
+            <Logo size="lg" />
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
           >
-            <h3 className="font-display text-2xl font-semibold text-slate-800 mb-2">
+            <h3 className="font-display text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
               Great job! Ready to continue?
             </h3>
-            <p className="text-lg font-semibold gradient-text capitalize mb-2">"{scenario}"</p>
-            <p className="text-slate-500 text-sm font-medium">
+            <p className="text-lg font-semibold text-[#58cc02] capitalize mb-2">"{scenario}"</p>
+            <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
               Create your free account to save your progress
             </p>
           </motion.div>
@@ -187,57 +190,62 @@ export default function ConversionOverlay({ scenario, onClose }: ConversionOverl
 
         <form onSubmit={handleSignup} className="space-y-4">
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             <Input
               type="email"
               placeholder="Email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 py-6 font-medium focus:border-talka-purple focus:ring-0"
+              className="rounded-2xl pl-12 py-6 font-medium focus:border-[#58cc02] focus:ring-0"
+              style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
             />
           </div>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             <Input
               type={showPassword ? 'text' : 'password'}
               placeholder="Password (6+ characters)"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 pr-12 py-6 font-medium focus:border-talka-purple focus:ring-0"
+              className="rounded-2xl pl-12 pr-12 py-6 font-medium focus:border-[#58cc02] focus:ring-0"
+              style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-4 top-1/2 -translate-y-1/2"
+              style={{ color: 'var(--text-muted)' }}
             >
               {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
             </button>
           </div>
           <div className="relative">
-            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
             <Input
               type={showPassword ? 'text' : 'password'}
               placeholder="Confirm password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="bg-slate-50 border-2 border-slate-200 text-slate-800 placeholder:text-slate-400 rounded-2xl pl-12 py-6 font-medium focus:border-talka-purple focus:ring-0"
+              className="rounded-2xl pl-12 py-6 font-medium focus:border-[#58cc02] focus:ring-0"
+              style={{ background: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-primary)' }}
             />
           </div>
           {error && (
             <motion.p
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-red-500 text-sm font-medium text-center"
+              className="text-[#ff4b4b] text-sm font-medium text-center"
             >
               {error}
             </motion.p>
           )}
           <Button
             type="submit"
-            className="w-full bg-gradient-purple-pink hover:opacity-90 text-white rounded-2xl py-5 text-base font-bold shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            className="w-full text-white rounded-2xl py-5 text-base font-bold hover:shadow-lg hover:-translate-y-0.5 transition-all"
+            style={{ background: '#58cc02', boxShadow: '0 4px 0 #46a302' }}
             disabled={loading}
           >
             {loading ? (
@@ -251,16 +259,28 @@ export default function ConversionOverlay({ scenario, onClose }: ConversionOverl
           </Button>
         </form>
 
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="w-full text-center text-slate-500 text-sm font-medium mt-4 hover:text-talka-purple transition-colors"
-          >
-            Keep reviewing cards
-          </button>
-        )}
+        <div className="flex flex-col gap-2 mt-4">
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="w-full text-center text-sm font-medium hover:text-[#58cc02] transition-colors"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Keep reviewing cards
+            </button>
+          )}
+          {onGoHome && (
+            <button
+              onClick={onGoHome}
+              className="w-full text-center text-sm font-medium transition-colors"
+              style={{ color: 'var(--text-muted)' }}
+            >
+              Return to homepage
+            </button>
+          )}
+        </div>
 
-        <p className="text-center text-slate-400 text-xs font-medium mt-6">
+        <p className="text-center text-xs font-medium mt-6" style={{ color: 'var(--text-muted)' }}>
           By signing up, you agree to our Terms of Service
         </p>
       </motion.div>

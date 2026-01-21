@@ -187,10 +187,19 @@ export function getStreakTimeRemaining(currentStreak: number = 0, hasMetTodayGoa
 
 /**
  * Calculate streak deadlines based on user's timezone
- * Display deadline: 11:59pm tomorrow in user's timezone (converted to UTC)
- * Actual deadline: +2 hours grace period
+ * 
+ * NEW TIMING:
+ * - countdownStartsAt: Midnight of the SAME day (when cards lock)
+ * - displayDeadline: 11:59pm NEXT day in user's timezone
+ * - actualDeadline: +2 hours grace period after displayDeadline
+ * 
+ * Example: User earns streak at 3pm Monday
+ * - countdownStartsAt: Midnight Monday (start of Tuesday) - cards LOCK here
+ * - displayDeadline: 11:59pm Tuesday
+ * - actualDeadline: 1:59am Wednesday
  */
 export function calculateStreakDeadlines(userTimezone: string = 'UTC'): {
+  countdownStartsAt: Date;
   displayDeadline: Date;
   actualDeadline: Date;
 } {
@@ -216,36 +225,44 @@ export function calculateStreakDeadlines(userTimezone: string = 'UTC'): {
   const month = parseInt(getPart('month')) - 1; // JS months are 0-indexed
   const day = parseInt(getPart('day'));
   
-  // Create a date for 11:59:59 PM tomorrow in user's timezone
-  // We'll work in UTC and adjust
-  const tomorrowEndLocal = new Date(Date.UTC(year, month, day + 1, 23, 59, 59, 999));
-  
-  // Get the timezone offset for the target time
-  const targetFormatter = new Intl.DateTimeFormat('en-US', {
-    timeZone: userTimezone,
-    timeZoneName: 'shortOffset',
-  });
-  
-  // Calculate offset by comparing local midnight to UTC
+  // Calculate timezone offset
   const userMidnight = new Date(Date.UTC(year, month, day + 1, 0, 0, 0));
   const offsetMs = getTimezoneOffsetMs(userTimezone, userMidnight);
   
-  // Display deadline: 11:59pm tomorrow in user's TZ, stored as UTC
+  // Countdown starts at: Midnight of the SAME day (start of next day in user's TZ)
+  // This is when cards become LOCKED
+  const midnightLocal = new Date(Date.UTC(year, month, day + 1, 0, 0, 0, 0));
+  const countdownStartsAt = new Date(midnightLocal.getTime() - offsetMs);
+  
+  // Display deadline: 11:59pm NEXT day in user's TZ, stored as UTC
+  const tomorrowEndLocal = new Date(Date.UTC(year, month, day + 1, 23, 59, 59, 999));
   const displayDeadline = new Date(tomorrowEndLocal.getTime() - offsetMs);
   
   // Actual deadline: +2 hours grace
   const actualDeadline = new Date(displayDeadline.getTime() + (GRACE_PERIOD_HOURS * 60 * 60 * 1000));
   
-  return { displayDeadline, actualDeadline };
+  return { countdownStartsAt, displayDeadline, actualDeadline };
 }
 
 /**
  * Get timezone offset in milliseconds for a given timezone at a specific time
  */
-function getTimezoneOffsetMs(timezone: string, date: Date): number {
+export function getTimezoneOffsetMs(timezone: string, date: Date): number {
   const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
   const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
   return tzDate.getTime() - utcDate.getTime();
+}
+
+/**
+ * Check if streak cards are currently locked (past countdown start time)
+ * Cards are locked after midnight of the day the streak was earned.
+ * Before midnight: cards can be freely downgraded without penalty
+ * After midnight: downgrading locked cards triggers streak loss
+ */
+export function areCardsLocked(countdownStartsAt: string | Date | null): boolean {
+  if (!countdownStartsAt) return false;
+  const startTime = new Date(countdownStartsAt);
+  return new Date() >= startTime;
 }
 
 /**

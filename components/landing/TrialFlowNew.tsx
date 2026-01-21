@@ -29,11 +29,12 @@ interface TrialFlowProps {
   scenario: string;
   cards: Card[];
   onComplete: () => void;
+  onBack?: () => void;
 }
 
 type Phase = 'learning' | 'testing';
 
-export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProps) {
+export default function TrialFlow({ scenario, cards, onComplete, onBack }: TrialFlowProps) {
   const [phase, setPhase] = useState<Phase>('learning');
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -294,11 +295,12 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-slate-50 to-white">
+    <div className="min-h-screen flex flex-col" style={{ background: 'var(--bg-primary)' }}>
       {/* Progress Bar */}
-      <div className="h-2 bg-slate-200">
+      <div className="h-2" style={{ background: 'var(--bg-secondary)' }}>
         <motion.div
-          className="h-full bg-gradient-purple-pink"
+          className="h-full"
+          style={{ background: 'linear-gradient(90deg, #58cc02, #1cb0f6)' }}
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
           transition={{ duration: 0.3 }}
@@ -306,11 +308,12 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
       </div>
 
       {/* Toolbar - matches signed-in experience */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100">
+      <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b" style={{ borderColor: 'var(--border-color)', background: 'var(--bg-card)' }}>
         <Button 
-          onClick={onComplete}
+          onClick={onBack || onComplete}
           variant="ghost" 
-          className="text-slate-500 hover:text-slate-700 font-semibold rounded-xl px-2 sm:px-4"
+          className="font-semibold rounded-xl px-2 sm:px-4"
+          style={{ color: 'var(--text-secondary)' }}
         >
           <ArrowLeft className="h-5 w-5 sm:mr-2" />
           <span className="hidden sm:inline">Back</span>
@@ -320,13 +323,14 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
             onClick={() => { setReverseMode(!reverseMode); setIsFlipped(false); }}
             variant="ghost"
             size="sm"
-            className={`font-semibold rounded-xl p-2 sm:px-3 ${reverseMode ? 'bg-talka-purple/10 text-talka-purple' : 'text-slate-500'}`}
+            className={`font-semibold rounded-xl p-2 sm:px-3 ${reverseMode ? 'bg-[#58cc02]/10 text-[#58cc02]' : ''}`}
+            style={{ color: reverseMode ? '#58cc02' : 'var(--text-secondary)' }}
             title="Reverse Mode"
           >
             <ArrowLeftRight className="h-5 w-5 sm:mr-1" />
             <span className="hidden sm:inline">Reverse</span>
           </Button>
-          <span className="text-slate-500 font-semibold px-2 sm:px-3 py-1 bg-slate-100 rounded-xl text-sm">
+          <span className="font-semibold px-2 sm:px-3 py-1 rounded-xl text-sm" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
             {currentIndex + 1}/{cards.length}
           </span>
         </div>
@@ -342,22 +346,22 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
           >
             {phase === 'learning' ? (
               <>
-                <h2 className="font-display text-xl sm:text-2xl font-semibold text-slate-800 capitalize">{scenario}</h2>
+                <h2 className="font-display text-xl sm:text-2xl font-semibold capitalize" style={{ color: 'var(--text-primary)' }}>{scenario}</h2>
                 {isLoggedIn && !allCardsMastered && Object.keys(cardRatings).length === cards.length && (
-                  <p className="text-amber-600 text-sm font-medium mt-2">
+                  <p className="text-amber-500 text-sm font-medium mt-2">
                     Rate all cards as "Kinda Know" or "Really Know" to unlock the test
                   </p>
                 )}
               </>
             ) : (
               <>
-                <span className="inline-block px-4 py-2 bg-gradient-green-cyan text-white font-bold rounded-full text-sm mb-4 shadow-green">
+                <span className="inline-block px-4 py-2 text-white font-bold rounded-full text-sm mb-4" style={{ background: 'linear-gradient(135deg, #58cc02, #1cb0f6)' }}>
                   📝 Testing Phase
                 </span>
-                <p className="text-slate-500 text-sm font-semibold mb-2">
+                <p className="text-sm font-semibold mb-2" style={{ color: 'var(--text-secondary)' }}>
                   Question {testResults.length + 1} of {cards.length}
                 </p>
-                <h2 className="font-display text-2xl font-semibold text-slate-800">Type the English translation</h2>
+                <h2 className="font-display text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>Type the English translation</h2>
               </>
             )}
           </motion.div>
@@ -375,26 +379,31 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
               {phase === 'learning' ? (
                 <div
                   onClick={handleFlip}
-                  className="bg-white border-2 border-slate-200 rounded-2xl sm:rounded-3xl p-5 sm:p-8 pt-12 sm:pt-8 min-h-[300px] sm:min-h-[400px] flex flex-col justify-center cursor-pointer hover:border-talka-purple hover:shadow-talka-md transition-all duration-300 shadow-talka-sm active:scale-[0.99] relative"
+                  className="rounded-2xl sm:rounded-3xl p-5 sm:p-8 pt-12 sm:pt-8 min-h-[300px] sm:min-h-[400px] flex flex-col justify-center cursor-pointer hover:border-[#58cc02] transition-all duration-300 active:scale-[0.99] relative"
+                  style={{ 
+                    background: 'var(--bg-card)', 
+                    border: '2px solid var(--border-color)',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
                 >
                   {/* CEFR Level Badge */}
-                  <span className="absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 sm:px-3 py-1 bg-gradient-green-cyan text-white font-bold rounded-xl text-xs sm:text-sm z-10">
+                  <span className="absolute top-3 right-3 sm:top-4 sm:right-4 px-2.5 sm:px-3 py-1 text-white font-bold rounded-xl text-xs sm:text-sm z-10" style={{ background: 'linear-gradient(135deg, #58cc02, #1cb0f6)' }}>
                     {cefrLevel}
                   </span>
 
                   {!isFlipped ? (
                     <div className="space-y-4 sm:space-y-6">
                       <div className="text-center space-y-4">
-                        <h3 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold text-slate-800 leading-tight">
+                        <h3 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight" style={{ color: 'var(--text-primary)' }}>
                           {reverseMode ? currentCard.nativeTranslation : currentCard.targetPhrase}
                         </h3>
                         {!reverseMode && (
-                          <span className="inline-block px-4 py-2 bg-talka-purple/10 text-talka-purple font-semibold rounded-xl">
+                          <span className="inline-block px-4 py-2 bg-[#58cc02]/10 text-[#58cc02] font-semibold rounded-xl">
                             {currentCard.toneAdvice}
                           </span>
                         )}
                       </div>
-                      <p className="text-center text-slate-400 text-xs sm:text-sm font-medium mt-8">
+                      <p className="text-center text-xs sm:text-sm font-medium mt-8" style={{ color: 'var(--text-muted)' }}>
                         Tap anywhere to flip
                       </p>
                     </div>
@@ -402,7 +411,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                     <div className="space-y-4 sm:space-y-6">
                       {/* Answer Header */}
                       <div className="text-center space-y-4">
-                        <h3 className="font-display text-2xl sm:text-3xl md:text-4xl font-semibold text-slate-800">
+                        <h3 className="font-display text-2xl sm:text-3xl md:text-4xl font-semibold" style={{ color: 'var(--text-primary)' }}>
                           {reverseMode ? (
                             <WordHoverText
                               text={currentCard.targetPhrase}
@@ -412,7 +421,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                             currentCard.nativeTranslation
                           )}
                         </h3>
-                        <p className="text-lg sm:text-xl text-slate-500 font-medium">
+                        <p className="text-lg sm:text-xl font-medium" style={{ color: 'var(--text-secondary)' }}>
                           {reverseMode ? (
                             currentCard.nativeTranslation
                           ) : (
@@ -426,7 +435,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
 
                       {/* Tone Badge */}
                       <div className="flex items-center justify-center">
-                        <span className="px-4 py-2 bg-talka-purple/10 text-talka-purple font-semibold rounded-xl">
+                        <span className="px-4 py-2 bg-[#58cc02]/10 text-[#58cc02] font-semibold rounded-xl">
                           {currentCard.toneAdvice}
                         </span>
                       </div>
@@ -435,7 +444,7 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                       <button
                         onClick={(e) => { e.stopPropagation(); showBreakdown ? setShowBreakdown(false) : fetchBreakdown(); }}
                         disabled={isLoadingBreakdown}
-                        className="mx-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-amber-600 hover:text-amber-700 font-medium rounded-lg hover:bg-amber-50 transition-all disabled:opacity-50"
+                        className="mx-auto flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-[#ff9600] hover:text-[#ffaa00] font-medium rounded-lg hover:bg-[#ff9600]/10 transition-all disabled:opacity-50"
                       >
                         {isLoadingBreakdown ? (
                           <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -453,21 +462,22 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: 'auto' }}
                             exit={{ opacity: 0, height: 0 }}
-                            className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 sm:p-5 border-2 border-amber-200 space-y-3 overflow-hidden"
+                            className="rounded-2xl p-4 sm:p-5 border-2 border-[#ff9600]/30 space-y-3 overflow-hidden"
+                            style={{ background: 'var(--bg-secondary)' }}
                           >
                             {/* Word-by-Word Breakdown */}
                             {breakdownData[currentIndex].wordBreakdown?.length > 0 && (
                               <div>
-                                <h4 className="text-amber-700 font-bold text-sm mb-2 flex items-center gap-2">
+                                <h4 className="text-[#ff9600] font-bold text-sm mb-2 flex items-center gap-2">
                                   Word-by-Word
                                 </h4>
                                 <div className="space-y-1.5">
                                   {breakdownData[currentIndex].wordBreakdown?.map((item: any, i: number) => (
                                     <div key={i} className="flex items-start gap-2 text-sm">
-                                      <span className="font-bold text-slate-800 min-w-[60px]">{item.word}</span>
-                                      <span className="text-slate-600">→ {item.meaning}</span>
+                                      <span className="font-bold min-w-[60px]" style={{ color: 'var(--text-primary)' }}>{item.word}</span>
+                                      <span style={{ color: 'var(--text-secondary)' }}>→ {item.meaning}</span>
                                       {item.grammar && (
-                                        <span className="text-amber-600 text-xs bg-amber-100 px-1.5 py-0.5 rounded-full">{item.grammar}</span>
+                                        <span className="text-[#ff9600] text-xs bg-[#ff9600]/20 px-1.5 py-0.5 rounded-full">{item.grammar}</span>
                                       )}
                                     </div>
                                   ))}
@@ -477,9 +487,9 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
 
                             {/* Grammar Pattern */}
                             {(breakdownData[currentIndex].grammarPattern || breakdownData[currentIndex].grammarNotes) && (
-                              <div className="pt-2 border-t border-amber-200">
-                                <h4 className="text-amber-700 font-bold text-sm mb-1">Grammar</h4>
-                                <p className="text-slate-700 text-sm leading-relaxed">
+                              <div className="pt-2 border-t border-[#ff9600]/20">
+                                <h4 className="text-[#ff9600] font-bold text-sm mb-1">Grammar</h4>
+                                <p className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                                   {breakdownData[currentIndex].grammarPattern || breakdownData[currentIndex].grammarNotes}
                                 </p>
                               </div>
@@ -488,22 +498,29 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                         )}
                       </AnimatePresence>
 
-                      <p className="text-center text-slate-400 text-[10px] sm:text-xs font-medium">
+                      <p className="text-center text-[10px] sm:text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                         Hover over words to see definitions
                       </p>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="bg-white border-2 border-slate-200 rounded-2xl sm:rounded-3xl p-5 sm:p-8 min-h-[280px] sm:min-h-[350px] flex flex-col justify-center shadow-talka-sm">
+                <div 
+                  className="rounded-2xl sm:rounded-3xl p-5 sm:p-8 min-h-[280px] sm:min-h-[350px] flex flex-col justify-center"
+                  style={{ 
+                    background: 'var(--bg-card)', 
+                    border: '2px solid var(--border-color)',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}
+                >
                   <div className="space-y-4 sm:space-y-6">
                     <div className="flex justify-center mb-3 sm:mb-4">
-                      <span className="px-3 sm:px-4 py-1.5 sm:py-2 bg-slate-100 text-slate-600 font-semibold rounded-full text-xs sm:text-sm">
+                      <span className="px-3 sm:px-4 py-1.5 sm:py-2 font-semibold rounded-full text-xs sm:text-sm" style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
                         {currentCard.toneAdvice}
                       </span>
                     </div>
                     <div className="text-center">
-                      <h3 className="font-display text-2xl sm:text-4xl font-semibold text-slate-800 mb-5 sm:mb-8">{currentCard.targetPhrase}</h3>
+                      <h3 className="font-display text-2xl sm:text-4xl font-semibold mb-5 sm:mb-8" style={{ color: 'var(--text-primary)' }}>{currentCard.targetPhrase}</h3>
                     </div>
 
                     {!feedback ? (
@@ -513,13 +530,19 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                           onChange={(e) => setUserAnswer(e.target.value)}
                           onKeyPress={handleKeyPress}
                           placeholder="Type the English translation..."
-                          className="bg-slate-50 border-2 border-slate-200 text-slate-800 text-base sm:text-lg h-14 sm:h-16 rounded-xl sm:rounded-2xl placeholder:text-slate-400 focus:border-talka-purple focus:ring-0 font-medium"
+                          className="text-base sm:text-lg h-14 sm:h-16 rounded-xl sm:rounded-2xl font-medium focus:border-[#58cc02] focus:ring-0"
+                          style={{ 
+                            background: 'var(--bg-secondary)', 
+                            borderColor: 'var(--border-color)',
+                            color: 'var(--text-primary)'
+                          }}
                           autoFocus
                         />
                         <Button
                           onClick={handleSubmitAnswer}
                           disabled={!userAnswer.trim()}
-                          className="w-full bg-gradient-purple-pink text-white font-bold rounded-xl sm:rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-4 text-base shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]"
+                          className="w-full text-white font-bold rounded-xl sm:rounded-2xl min-h-[52px] sm:min-h-[56px] py-3 sm:py-4 text-base hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]"
+                          style={{ background: '#58cc02', boxShadow: '0 4px 0 #46a302' }}
                         >
                           Submit Answer
                         </Button>
@@ -531,33 +554,34 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                           animate={{ opacity: 1, scale: 1 }}
                           className={`p-6 rounded-2xl border-2 ${
                             feedback.passed
-                              ? 'bg-green-50 border-green-200'
-                              : 'bg-amber-50 border-amber-200'
+                              ? 'bg-[#58cc02]/10 border-[#58cc02]/30'
+                              : 'bg-[#ff9600]/10 border-[#ff9600]/30'
                           }`}
                         >
                           <div className="flex items-start gap-3">
                             {feedback.passed ? (
-                              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
-                                <Check className="h-6 w-6 text-green-500" />
+                              <div className="w-10 h-10 rounded-full bg-[#58cc02]/20 flex items-center justify-center flex-shrink-0">
+                                <Check className="h-6 w-6 text-[#58cc02]" />
                               </div>
                             ) : (
-                              <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0">
-                                <X className="h-6 w-6 text-amber-500" />
+                              <div className="w-10 h-10 rounded-full bg-[#ff9600]/20 flex items-center justify-center flex-shrink-0">
+                                <X className="h-6 w-6 text-[#ff9600]" />
                               </div>
                             )}
                             <div>
                               <p className={`font-bold mb-2 ${
-                                feedback.passed ? 'text-green-600' : 'text-amber-600'
+                                feedback.passed ? 'text-[#58cc02]' : 'text-[#ff9600]'
                               }`}>
                                 {feedback.passed ? '🎉 Correct!' : 'Not quite'}
                               </p>
-                              <p className="text-slate-600 text-sm font-medium">{feedback.message}</p>
+                              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{feedback.message}</p>
                             </div>
                           </div>
                         </motion.div>
                         <Button
                           onClick={handleNextTestCard}
-                          className="w-full bg-gradient-purple-pink text-white font-bold rounded-2xl py-6 text-base shadow-purple hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                          className="w-full text-white font-bold rounded-2xl py-6 text-base hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                          style={{ background: '#58cc02', boxShadow: '0 4px 0 #46a302' }}
                         >
                           {currentIndex < cards.length - 1 ? 'Next Card' : 'Complete Trial'}
                         </Button>
@@ -604,7 +628,8 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                     handlePrev();
                   }}
                   variant="ghost"
-                  className="text-slate-500 hover:text-slate-800 font-semibold"
+                  className="font-semibold"
+                  style={{ color: 'var(--text-secondary)' }}
                 >
                   <ChevronLeft className="h-5 w-5 mr-1" />
                   Previous
@@ -617,7 +642,8 @@ export default function TrialFlow({ scenario, cards, onComplete }: TrialFlowProp
                     handleNext();
                   }}
                   variant="ghost"
-                  className="text-slate-500 hover:text-slate-800 font-semibold"
+                  className="font-semibold"
+                  style={{ color: 'var(--text-secondary)' }}
                 >
                   Next
                   <ChevronLeft className="h-5 w-5 ml-1 rotate-180" />

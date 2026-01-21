@@ -156,7 +156,7 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId, 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="mb-8"
+        className="mb-8 overflow-hidden"
       >
         <h2 className="font-display text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
           Continue Learning <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: 'var(--accent-green)' }} />
@@ -190,7 +190,7 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId, 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="mb-8"
+      className="mb-8 overflow-hidden"
     >
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-display text-xl sm:text-2xl font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>

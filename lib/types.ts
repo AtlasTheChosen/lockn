@@ -134,6 +134,7 @@ export interface UserStats {
   last_mastery_date: string | null;
   streak_deadline: string | null;
   display_deadline: string | null;
+  streak_countdown_starts: string | null; // When cards become locked (midnight of day streak was earned)
   streak_awarded_today: boolean; // Whether today's streak has been earned (for revert tracking)
   // Streak freeze for pending tests
   streak_frozen: boolean;

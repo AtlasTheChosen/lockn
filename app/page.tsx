@@ -115,7 +115,7 @@ export default function LandingPage() {
           scenario,
           targetLanguage: language,
           nativeLanguage: 'English',
-          stackSize: 3,
+          stackSize: 10,
           difficulty: level,
           scriptPreference,
         }),
@@ -186,6 +186,12 @@ export default function LandingPage() {
 
   const handleCloseConversion = () => {
     setAppState('trial');
+  };
+
+  const handleGoHome = () => {
+    setAppState('command');
+    setGeneratedCards([]);
+    setSelectedScenario('');
   };
 
   return (
@@ -319,6 +325,7 @@ export default function LandingPage() {
               scenario={selectedScenario}
               cards={generatedCards}
               onComplete={handleCompleteTrialFlow}
+              onBack={handleGoHome}
             />
           </motion.div>
         )}
@@ -326,7 +333,7 @@ export default function LandingPage() {
 
       <AnimatePresence>
         {appState === 'conversion' && (
-          <ConversionOverlay scenario={selectedScenario} onClose={handleCloseConversion} />
+          <ConversionOverlay scenario={selectedScenario} onClose={handleCloseConversion} onGoHome={handleGoHome} />
         )}
       </AnimatePresence>
     </AppLayout>

@@ -22,6 +22,7 @@ import {
   getTodayDateInTimezone,
   isNewDayInTimezone,
   isInGracePeriod,
+  areCardsLocked,
 } from '@/lib/streak';
 import { CARD_RATINGS } from '@/lib/constants';
 
@@ -81,6 +82,7 @@ export async function checkAndHandleStreakExpiration(
         cards_mastered_today: 0,
         streak_deadline: null,
         display_deadline: null,
+        streak_countdown_starts: null, // Clear countdown on expiration
         longest_streak: newLongest,
       })
       .eq('user_id', userId);
@@ -119,43 +121,61 @@ export async function checkAndHandleStreakExpiration(
 
 export interface CardDowngradeImpact {
   wouldBreakStreak: boolean;
+  cardsAreLocked: boolean;
   warning: string | null;
 }
 
 /**
- * Check if lowering a card rating would break the same-day streak.
- * Only warns if the streak was awarded today and lowering would drop below the requirement.
+ * Check if lowering a card rating would break the streak.
+ * 
+ * NEW LOCKING LOGIC:
+ * - Before midnight (countdown hasn't started): Cards can be freely downgraded
+ * - After midnight (countdown has started): Cards are LOCKED, downgrading triggers penalty
  * 
  * @param userId - User ID
  * @param currentCardsMasteredToday - Current count of cards mastered today
  * @param streakAwardedToday - Whether streak was awarded today
- * @param isNewDay - Whether it's a new day (streak already locked)
+ * @param countdownStartsAt - When countdown begins (midnight of the day streak was earned)
  * @returns Impact assessment with warning message if applicable
  */
 export async function checkCardDowngradeImpact(
   userId: string,
   currentCardsMasteredToday: number,
   streakAwardedToday: boolean,
-  isNewDay: boolean
+  countdownStartsAt: string | null
 ): Promise<CardDowngradeImpact> {
-  // No warning needed if:
-  // 1. It's a new day (streak already locked from previous day)
-  // 2. Streak wasn't awarded today
-  // 3. Lowering wouldn't drop below the requirement
-  if (isNewDay || !streakAwardedToday) {
-    return { wouldBreakStreak: false, warning: null };
+  // Check if cards are locked (past countdown start time = past midnight)
+  const cardsLocked = areCardsLocked(countdownStartsAt);
+  
+  // Before midnight: cards can be freely downgraded without penalty
+  if (!cardsLocked) {
+    // However, if streak was awarded today and we'd drop below threshold,
+    // still warn but allow it (streak will be reverted, not "broken")
+    if (streakAwardedToday) {
+      const wouldDropBelow = (currentCardsMasteredToday - 1) < STREAK_DAILY_REQUIREMENT;
+      if (wouldDropBelow) {
+        return {
+          wouldBreakStreak: false, // Not truly "breaking" since cards aren't locked yet
+          cardsAreLocked: false,
+          warning: `Lowering this card will revert today's streak progress. You'll need to reach ${STREAK_DAILY_REQUIREMENT} mastered cards again to earn today's streak.`,
+        };
+      }
+    }
+    return { wouldBreakStreak: false, cardsAreLocked: false, warning: null };
   }
   
+  // After midnight: cards are LOCKED - downgrading breaks the streak
   const wouldDropBelow = (currentCardsMasteredToday - 1) < STREAK_DAILY_REQUIREMENT;
   
   if (wouldDropBelow) {
     return {
       wouldBreakStreak: true,
-      warning: `Lowering this card will drop you below the ${STREAK_DAILY_REQUIREMENT}-card requirement and break your streak today. You currently have ${currentCardsMasteredToday}/${STREAK_DAILY_REQUIREMENT} cards mastered.`,
+      cardsAreLocked: true,
+      warning: `⚠️ Cards are LOCKED! Lowering this card will BREAK your streak. Cards that contributed to your streak are locked after midnight. You have ${currentCardsMasteredToday}/${STREAK_DAILY_REQUIREMENT} cards mastered.`,
     };
   }
   
-  return { wouldBreakStreak: false, warning: null };
+  return { wouldBreakStreak: false, cardsAreLocked: true, warning: null };
 }
 
 // ============================================================
@@ -168,6 +188,8 @@ export interface CardMasteryChangeResult {
   newStreak: number;
   testTriggered: boolean;
   stacksLocked: string[];
+  countdownStartsAt: string | null; // When cards become locked (midnight)
+  cardsAreLocked: boolean; // Whether cards are currently locked
 }
 
 /**
@@ -254,8 +276,8 @@ export async function processCardMasteryChange(
       }
     }
     
-    // Calculate new deadlines
-    const { displayDeadline, actualDeadline } = calculateStreakDeadlines(timezone);
+    // Calculate new deadlines (now includes countdownStartsAt)
+    const { countdownStartsAt, displayDeadline, actualDeadline } = calculateStreakDeadlines(timezone);
     
     updateData = {
       ...updateData,
@@ -263,11 +285,12 @@ export async function processCardMasteryChange(
       longest_streak: longestStreak,
       // Keep cards_mastered_today at actual count (don't reset to 0) for revert tracking
       streak_awarded_today: true, // Mark that today's streak has been earned
+      streak_countdown_starts: countdownStartsAt.toISOString(), // When cards become locked (midnight)
       display_deadline: displayDeadline.toISOString(),
       streak_deadline: actualDeadline.toISOString(),
     };
     
-    // Lock all stacks that contributed to this cycle
+    // Mark stacks as contributed (but NOT locked yet - locking happens at midnight)
     if (stacksContributedThisSession.size > 0) {
       const stackIds = Array.from(stacksContributedThisSession);
       await supabase
@@ -304,6 +327,7 @@ export async function processCardMasteryChange(
         current_streak: currentStreak,
         longest_streak: longestStreak,
         streak_awarded_today: false, // Mark that today's streak needs to be re-earned
+        streak_countdown_starts: null, // Clear countdown since streak was reverted
       };
       
       // Unlock stacks that contributed to this cycle (they can contribute again)
@@ -320,12 +344,20 @@ export async function processCardMasteryChange(
     .update(updateData)
     .eq('user_id', userId);
   
+  // Determine current lock status
+  const finalCountdownStarts = updateData.streak_countdown_starts !== undefined 
+    ? updateData.streak_countdown_starts 
+    : stats.streak_countdown_starts;
+  const cardsCurrentlyLocked = areCardsLocked(finalCountdownStarts);
+  
   return {
     cardsMasteredToday: updateData.cards_mastered_today || cardsMasteredToday,
     streakIncremented,
     newStreak: currentStreak,
     testTriggered: false, // Will be set by checkAndTriggerTest
     stacksLocked,
+    countdownStartsAt: finalCountdownStarts || null,
+    cardsAreLocked: cardsCurrentlyLocked,
   };
 }
 
@@ -806,6 +838,7 @@ export async function executeStackDeletion(
         cards_mastered_today: 0,
         streak_deadline: null,
         display_deadline: null,
+        streak_countdown_starts: null, // Clear countdown on streak reset
         longest_streak: newLongest,
         total_cards_mastered: newTotalMastered,
         current_week_cards: newWeekCards,

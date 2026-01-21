@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import Logo from '@/components/ui/Logo';
 import { getRandomAvatarId, getAvatarUrl } from '@/lib/avatars';
+import { createSession } from '@/lib/session-manager';
 
 // Password strength calculation
 function calculatePasswordStrength(password: string): {
@@ -188,6 +189,18 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
           console.warn('Profile/trial migration error:', profileError);
         }
         
+        // Create a device session (invalidates other devices)
+        try {
+          const sessionResult = await createSession(userId);
+          if (!sessionResult.success) {
+            console.warn('[AuthModal] Session creation failed:', sessionResult.error);
+          } else {
+            console.log('[AuthModal] Device session created for new user');
+          }
+        } catch (err) {
+          console.warn('[AuthModal] Session creation error:', err);
+        }
+        
         setLoading(false);
         router.push('/onboarding');
         router.refresh();
@@ -207,6 +220,20 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
         }
         setLoading(false);
       } else if (data.session) {
+        // Create a device session (invalidates other devices)
+        try {
+          const sessionResult = await createSession(data.session.user.id);
+          if (!sessionResult.success) {
+            console.warn('[AuthModal] Session creation failed:', sessionResult.error);
+            // Continue anyway - don't block login if session table doesn't exist yet
+          } else {
+            console.log('[AuthModal] Device session created');
+          }
+        } catch (err) {
+          console.warn('[AuthModal] Session creation error:', err);
+          // Continue anyway
+        }
+        
         setLoading(false);
         onClose();
         router.push('/dashboard');

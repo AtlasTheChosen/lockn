@@ -61,6 +61,7 @@ interface Props {
 export default function ProfileSettings({ profile, accessToken, onUpdate }: Props) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [originalDisplayName] = useState(profile.display_name || '');
+  const [originalAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(0));
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(0));
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [profilePublic, setProfilePublic] = useState(profile.profile_public ?? true);
@@ -76,7 +77,6 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   );
   const [badges, setBadges] = useState<BadgeType[]>(profile.badges || []);
   const [saving, setSaving] = useState(false);
-  const [savingDisplayName, setSavingDisplayName] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
   const [showPublicProfile, setShowPublicProfile] = useState(false);
@@ -99,6 +99,17 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   };
 
   const isDisplayNameChanged = displayName !== originalDisplayName;
+  const isAvatarChanged = avatarUrl !== originalAvatarUrl;
+  const hasChanges = isDisplayNameChanged || isAvatarChanged || 
+    profilePublic !== (profile.profile_public ?? true) ||
+    JSON.stringify(languagesLearning) !== JSON.stringify(profile.languages_learning || []) ||
+    theme !== (profile.theme_preference || 'system') ||
+    JSON.stringify(notificationPrefs) !== JSON.stringify(profile.notification_prefs || {
+      email: true,
+      push: false,
+      friend_requests: true,
+      streak_reminders: true,
+    });
 
   useEffect(() => {
     if (profile.badges) {
@@ -120,122 +131,6 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
     }
   };
 
-  // Save display name separately with month restriction
-  const handleSaveDisplayName = async () => {
-    if (!isDisplayNameChanged) return;
-    
-    // Validate display name before checking time restriction
-    const trimmedName = displayName.trim();
-    
-    if (!trimmedName) {
-      setMessage({ 
-        type: 'error', 
-        text: 'Please enter a display name.' 
-      });
-      return;
-    }
-
-    if (trimmedName.length < 2) {
-      setMessage({ 
-        type: 'error', 
-        text: 'Display name must be at least 2 characters.' 
-      });
-      return;
-    }
-
-    if (trimmedName.length > 30) {
-      setMessage({ 
-        type: 'error', 
-        text: 'Display name must be 30 characters or less.' 
-      });
-      return;
-    }
-
-    // Check for inappropriate content
-    if (containsInappropriateContent(trimmedName)) {
-      setMessage({ 
-        type: 'error', 
-        text: 'This display name contains inappropriate content. Please choose another.' 
-      });
-      return;
-    }
-
-    // Only allow alphanumeric, spaces, underscores, and dashes
-    if (!/^[a-zA-Z0-9\s_\-]+$/.test(trimmedName)) {
-      setMessage({ 
-        type: 'error', 
-        text: 'Display name can only contain letters, numbers, spaces, underscores, and dashes.' 
-      });
-      return;
-    }
-    
-    // Check time restriction
-    if (!canChangeDisplayName()) {
-      setMessage({ 
-        type: 'error', 
-        text: `You can only change your display name once per month. ${getDaysUntilCanChange()} days remaining.` 
-      });
-      return;
-    }
-
-    try {
-      setSavingDisplayName(true);
-      setMessage(null);
-
-      // Check if display name is already taken (case-insensitive)
-      const supabase = createClient();
-      const { data: existing } = await supabase
-        .from('user_profiles')
-        .select('id')
-        .ilike('display_name', trimmedName)
-        .neq('id', profile.id)
-        .maybeSingle();
-
-      if (existing) {
-        setMessage({ 
-          type: 'error', 
-          text: 'This display name is already taken. Please choose another.' 
-        });
-        setSavingDisplayName(false);
-        return;
-      }
-
-      // Save the display name
-      const response = await fetch(
-        `${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`,
-        {
-          method: 'PATCH',
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            display_name: trimmedName,
-            display_name_changed_at: new Date().toISOString(),
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || 'Failed to update display name');
-      }
-
-      setMessage({ type: 'success', text: 'Display name updated! You can change it again in 30 days.' });
-      onUpdate();
-      window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
-    } catch (error: any) {
-      console.error('Error saving display name:', error);
-      setMessage({ 
-        type: 'error', 
-        text: error.message || 'Failed to save display name. Please try again.' 
-      });
-    } finally {
-      setSavingDisplayName(false);
-    }
-  };
-
   const handleRemoveLanguage = (langCode: string) => {
     setLanguagesLearning(languagesLearning.filter(l => l !== langCode));
   };
@@ -245,13 +140,104 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
       setSaving(true);
       setMessage(null);
 
-      // Build update object (display name is saved separately with its own button)
+      // Validate display name if it changed
+      if (isDisplayNameChanged) {
+        const trimmedName = displayName.trim();
+        
+        if (!trimmedName) {
+          setMessage({ 
+            type: 'error', 
+            text: 'Please enter a display name.' 
+          });
+          setSaving(false);
+          return;
+        }
+
+        if (trimmedName.length < 2) {
+          setMessage({ 
+            type: 'error', 
+            text: 'Display name must be at least 2 characters.' 
+          });
+          setSaving(false);
+          return;
+        }
+
+        if (trimmedName.length > 30) {
+          setMessage({ 
+            type: 'error', 
+            text: 'Display name must be 30 characters or less.' 
+          });
+          setSaving(false);
+          return;
+        }
+
+        // Check for inappropriate content
+        if (containsInappropriateContent(trimmedName)) {
+          setMessage({ 
+            type: 'error', 
+            text: 'This display name contains inappropriate content. Please choose another.' 
+          });
+          setSaving(false);
+          return;
+        }
+
+        // Only allow alphanumeric, spaces, underscores, and dashes
+        if (!/^[a-zA-Z0-9\s_\-]+$/.test(trimmedName)) {
+          setMessage({ 
+            type: 'error', 
+            text: 'Display name can only contain letters, numbers, spaces, underscores, and dashes.' 
+          });
+          setSaving(false);
+          return;
+        }
+        
+        // Check time restriction
+        if (!canChangeDisplayName()) {
+          setMessage({ 
+            type: 'error', 
+            text: `You can only change your display name once per month. ${getDaysUntilCanChange()} days remaining.` 
+          });
+          setSaving(false);
+          return;
+        }
+
+        // Check if display name is already taken (case-insensitive)
+        const supabase = createClient();
+        const { data: existing } = await supabase
+          .from('user_profiles')
+          .select('id')
+          .ilike('display_name', trimmedName)
+          .neq('id', profile.id)
+          .maybeSingle();
+
+        if (existing) {
+          setMessage({ 
+            type: 'error', 
+            text: 'This display name is already taken. Please choose another.' 
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      // Build update object with all changes
       const updateData: any = {
         profile_public: profilePublic,
         languages_learning: languagesLearning,
         theme_preference: theme,
         notification_prefs: notificationPrefs,
       };
+
+      // Include display name if it changed
+      if (isDisplayNameChanged) {
+        updateData.display_name = displayName.trim();
+        updateData.display_name_changed_at = new Date().toISOString();
+      }
+
+      // Include avatar if it changed
+      if (isAvatarChanged) {
+        updateData.avatar_url = avatarUrl;
+      }
 
       const response = await fetch(
         `${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`,
@@ -266,14 +252,17 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
         }
       );
 
-      if (!response.ok) throw new Error('Failed to update profile');
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to update profile');
+      }
 
-      setMessage({ type: 'success', text: 'Settings saved successfully!' });
+      setMessage({ type: 'success', text: 'Profile saved successfully!' });
       onUpdate();
       // Dispatch event to update nav bars immediately
       window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
+      setMessage({ type: 'error', text: error.message || 'Failed to save profile. Please try again.' });
     } finally {
       setSaving(false);
     }
@@ -291,6 +280,41 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
 
   return (
     <div className="space-y-6">
+      {/* Save Button - at top */}
+      <Button
+        onClick={handleSaveProfile}
+        disabled={saving || !hasChanges}
+        className="w-full text-white font-bold rounded-2xl py-4 hover:-translate-y-0.5 transition-all disabled:opacity-50 active:translate-y-1"
+        style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
+      >
+        {saving ? (
+          <>
+            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            Saving...
+          </>
+        ) : (
+          'Save Profile ✨'
+        )}
+      </Button>
+
+      {/* Message */}
+      {message && (
+        <div
+          className="flex items-center gap-3 p-4 rounded-2xl animate-fade-in"
+          style={message.type === 'success' 
+            ? { backgroundColor: 'rgba(88, 204, 2, 0.15)', color: 'var(--accent-green)', border: '2px solid rgba(88, 204, 2, 0.3)' }
+            : { backgroundColor: 'rgba(255, 75, 75, 0.15)', color: 'var(--accent-red)', border: '2px solid rgba(255, 75, 75, 0.3)' }
+          }
+        >
+          {message.type === 'success' ? (
+            <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+          ) : (
+            <AlertCircle className="h-5 w-5" style={{ color: 'var(--accent-red)' }} />
+          )}
+          <span className="font-semibold">{message.text}</span>
+        </div>
+      )}
+
       {/* Profile Avatar Picker */}
       <div className="rounded-3xl p-6 animate-fade-in" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
         <div className="flex items-center gap-2 mb-4">
@@ -298,7 +322,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
           <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Your Profile</h3>
         </div>
         <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>
-          Choose your avatar from 20 robot options! <span style={{ color: 'var(--accent-green)' }}>Changes save instantly.</span>
+          Choose your avatar from 20 robot options!
         </p>
         <div className="flex items-center gap-6 mb-6">
           <button
@@ -353,49 +377,11 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
                         transition={{ delay: index * 0.02, duration: 0.2 }}
                         whileHover={{ scale: 1.1, y: -4 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={async () => {
-                      // Update local state immediately for responsive UI
-                      const previousUrl = avatarUrl;
-                      setAvatarUrl(url);
-                      setShowAvatarPicker(false);
-                      
-                      try {
-                        // Save to database using user's access token for RLS
-                        console.log('[Avatar] Saving avatar, token length:', accessToken?.length);
-                        console.log('[Avatar] Profile ID:', profile.id);
-                        console.log('[Avatar] New URL:', url);
-                        
-                        const response = await fetch(`${supabaseUrl}/rest/v1/user_profiles?id=eq.${profile.id}`, {
-                          method: 'PATCH',
-                          headers: {
-                            'apikey': supabaseKey,
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({ avatar_url: url }),
-                        });
-                        
-                        console.log('[Avatar] Response status:', response.status);
-                        
-                        if (!response.ok) {
-                          const errorText = await response.text();
-                          console.error('[Avatar] Error response:', errorText);
-                          throw new Error(`Failed to save avatar: ${response.status}`);
-                        }
-                        
-                        console.log('[Avatar] Save successful!');
-                        // Notify parent to refresh data
-                        onUpdate();
-                        // Dispatch event to update nav bars immediately
-                        window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
-                        setMessage({ type: 'success', text: 'Avatar updated!' });
-                      } catch (error: any) {
-                        // Revert on error
-                        console.error('[Avatar] Error:', error);
-                        setAvatarUrl(previousUrl);
-                        setMessage({ type: 'error', text: error.message || 'Failed to save avatar. Please try again.' });
-                      }
-                    }}
+                        onClick={() => {
+                          // Update local state only - save will happen when user clicks Save button
+                          setAvatarUrl(url);
+                          setShowAvatarPicker(false);
+                        }}
 className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
                           isSelected
                             ? 'ring-4 ring-[var(--accent-green)] scale-110'
@@ -427,30 +413,16 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
             <Label htmlFor="display-name" className="font-semibold" style={{ color: 'var(--text-primary)' }}>
               Display Name
             </Label>
-            <div className="flex gap-3 mt-2">
-              <Input
-                id="display-name"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Enter your display name"
-                className="rounded-2xl font-medium focus:ring-0 flex-1"
-                style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
-                maxLength={50}
-                disabled={!canChangeDisplayName()}
-              />
-              <Button
-                onClick={handleSaveDisplayName}
-                disabled={!isDisplayNameChanged || savingDisplayName || !canChangeDisplayName()}
-                className="text-white font-bold rounded-2xl px-6 disabled:opacity-50"
-                style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
-              >
-                {savingDisplayName ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  'Save'
-                )}
-              </Button>
-            </div>
+            <Input
+              id="display-name"
+              value={displayName}
+              onChange={(e) => setDisplayName(e.target.value)}
+              placeholder="Enter your display name"
+              className="rounded-2xl font-medium focus:ring-0 mt-2"
+              style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}
+              maxLength={50}
+              disabled={!canChangeDisplayName()}
+            />
             {/* Display name change info/warning */}
             <div 
               className="mt-2 p-3 rounded-xl text-sm"
@@ -645,43 +617,6 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
         </div>
       </div>
 
-      {/* Message */}
-      {message && (
-        <div
-          className="flex items-center gap-3 p-4 rounded-2xl animate-fade-in"
-          style={message.type === 'success' 
-            ? { backgroundColor: 'rgba(88, 204, 2, 0.15)', color: 'var(--accent-green)', border: '2px solid rgba(88, 204, 2, 0.3)' }
-            : { backgroundColor: 'rgba(255, 75, 75, 0.15)', color: 'var(--accent-red)', border: '2px solid rgba(255, 75, 75, 0.3)' }
-          }
-        >
-          {message.type === 'success' ? (
-            <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
-          ) : (
-            <AlertCircle className="h-5 w-5" style={{ color: 'var(--accent-red)' }} />
-          )}
-          <span className="font-semibold">{message.text}</span>
-        </div>
-      )}
-
-      {/* Save Button - for all settings except display name */}
-      <Button
-        onClick={handleSaveProfile}
-        disabled={saving}
-        className="w-full text-white font-bold rounded-2xl py-4 hover:-translate-y-0.5 transition-all disabled:opacity-50 active:translate-y-1"
-        style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
-      >
-        {saving ? (
-          <>
-            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-            Saving...
-          </>
-        ) : (
-          'Save Settings ✨'
-        )}
-      </Button>
-      <p className="text-center text-sm mt-2" style={{ color: 'var(--text-muted)' }}>
-        Saves languages, privacy, and notification settings. Avatar saves instantly when clicked.
-      </p>
 
       {/* Public Profile Modal */}
       <PublicProfileModal

@@ -106,7 +106,7 @@ async function generateAndCacheAudio(
   }
 
   // Preprocess text to avoid TTS misreading issues
-  const processedText = preprocessTextForTTS(text);
+  const processedText = preprocessTextForTTS(text, language);
 
   // Generate new audio
   const voice = voiceGender === 'male' ? 'onyx' : 'nova';
@@ -209,7 +209,8 @@ export async function POST(request: NextRequest) {
               supabase,
               card.id,
               card.target_phrase,
-              cardLanguage
+              cardLanguage,
+              'female' // Default voice gender for precaching
             );
             if (audioUrl) {
               updates.audio_url = audioUrl;

@@ -650,7 +650,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                           className="w-12 h-12 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))' }}>
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white bg-white">
                           {getInitials(friendship.profile)}
                         </div>
                       )}
@@ -716,7 +716,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                           className="w-12 h-12 rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white" style={{ background: 'linear-gradient(to bottom right, var(--accent-orange), var(--accent-yellow))' }}>
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white bg-white">
                           {getInitials(friendship.profile)}
                         </div>
                       )}

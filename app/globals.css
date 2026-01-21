@@ -114,6 +114,18 @@
     @apply border-border;
   }
   
+  /* Prevent horizontal overflow at html and body level */
+  html {
+    overflow-x: hidden;
+    max-width: 100%;
+    overscroll-behavior-x: none;
+  }
+  
+  html, body {
+    overflow-x: hidden;
+    overscroll-behavior-x: none;
+  }
+  
   body {
     @apply antialiased;
     font-family: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -121,7 +133,19 @@
     color: var(--text-primary);
     line-height: 1.6;
     overflow-x: hidden;
+    max-width: 100vw;
     transition: background 0.3s ease, color 0.3s ease;
+  }
+  
+  /* Ensure all media elements respect container bounds */
+  img, video, iframe, svg {
+    max-width: 100%;
+    height: auto;
+  }
+  
+  /* Contain direct children of body */
+  body > * {
+    max-width: 100%;
   }
 
   .dark body,
@@ -407,6 +431,18 @@
 
 /* Mobile-specific utilities */
 @layer utilities {
+  /* Safe full-width that prevents overflow */
+  .w-safe-full {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  
+  /* Container that clips all overflow */
+  .overflow-clip-x {
+    overflow-x: clip;
+  }
+  
   /* Touch-friendly target (minimum 44x44px) */
   .touch-target {
     @apply min-h-[44px] min-w-[44px];

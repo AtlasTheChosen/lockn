@@ -25,7 +25,7 @@ import Confetti from 'react-confetti';
 import { CARD_RATINGS, NON_LATIN_LANGUAGES, ROMANIZATION_NAMES } from '@/lib/constants';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
 import { shouldResetWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
-import { isNewDay, getTodayDate, calculateTestDeadline, STREAK_DAILY_REQUIREMENT, isNewDayInTimezone } from '@/lib/streak';
+import { isNewDay, getTodayDate, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
 import { useBadgeChecker, buildBadgeStats } from '@/hooks/useBadgeChecker';
 import type { Badge as BadgeType } from '@/lib/types';
 import {
@@ -86,6 +86,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [showExitWarning, setShowExitWarning] = useState(false);
   const [cardsMasteredToday, setCardsMasteredToday] = useState(0);
   const [showDowngradeWarning, setShowDowngradeWarning] = useState(false);
+  const [downgradeWarningMessage, setDowngradeWarningMessage] = useState<string | null>(null);
+  const [downgradeIsLocked, setDowngradeIsLocked] = useState(false);
   const [pendingRating, setPendingRating] = useState<{ rating: number; oldRating: number } | null>(null);
   const [showRomanization, setShowRomanization] = useState(true); // Toggle for romanization display
   
@@ -230,6 +232,74 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       setTimeout(() => setShowConfetti(false), 5000);
     }
   }, [allCardsMastered]);
+
+  // Reset stack function - resets without affecting stats
+  const handleResetStack = async () => {
+    try {
+      // Reset all card ratings to default (1)
+      await supabase
+        .from('flashcards')
+        .update({ user_rating: 1 })
+        .eq('stack_id', stack.id);
+
+      // Delete stack_tests record if it exists (to avoid streak complications)
+      await supabase
+        .from('stack_tests')
+        .delete()
+        .eq('stack_id', stack.id);
+
+      // Reset stack status and test data
+      await supabase
+        .from('card_stacks')
+        .update({
+          test_progress: 0,
+          test_notes: [],
+          is_completed: false,
+          status: 'in_progress',
+          completion_date: null,
+          mastered_count: 0,
+          cards_mastered: 0,
+          test_deadline: null,
+          mastery_reached_at: null,
+          last_test_date: null,
+          contributed_to_streak: false,
+        })
+        .eq('id', stack.id);
+
+      // Update local state
+      const resetCards = cards.map(card => ({ ...card, user_rating: 1 }));
+      setCards(resetCards);
+      setStack({
+        ...stack,
+        test_progress: 0,
+        test_notes: [],
+        is_completed: false,
+        status: 'in_progress',
+        completion_date: null,
+        mastered_count: 0,
+        test_deadline: null,
+        mastery_reached_at: null,
+        last_test_date: null,
+        contributed_to_streak: false,
+      });
+      
+      // Reset test mode state
+      setTestMode(false);
+      setTestComplete(false);
+      setTestCardIndex(0);
+      setTestAnswer('');
+      setTestResults([]);
+      setCurrentFeedback(null);
+      setCurrentIndex(0);
+      setIsFlipped(false);
+      setShowMasteredModal(false);
+
+      // Notify nav to refresh if needed
+      window.dispatchEvent(new Event(STATS_UPDATED_EVENT));
+    } catch (error) {
+      console.error('Error resetting stack:', error);
+    }
+  };
 
   useEffect(() => {
     if (conversationalMode) {
@@ -387,24 +457,24 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       // Fetch user stats to check current state
       const { data: userStats } = await supabase
         .from('user_stats')
-        .select('cards_mastered_today, streak_awarded_today, last_mastery_date, timezone')
+        .select('cards_mastered_today, streak_awarded_today, streak_countdown_starts')
         .eq('user_id', stack.user_id)
         .single();
 
       if (userStats) {
-        const timezone = userStats.timezone || 'UTC';
-        const isNewDay = isNewDayInTimezone(userStats.last_mastery_date, timezone);
-        
         const impact = await checkCardDowngradeImpact(
           stack.user_id,
           userStats.cards_mastered_today || 0,
           userStats.streak_awarded_today || false,
-          isNewDay
+          userStats.streak_countdown_starts || null
         );
 
-        if (impact.wouldBreakStreak) {
+        // Show warning if downgrade would break streak OR if it would revert progress
+        if (impact.wouldBreakStreak || impact.warning) {
           // Store pending rating and show warning dialog
           setPendingRating({ rating, oldRating });
+          setDowngradeWarningMessage(impact.warning);
+          setDowngradeIsLocked(impact.cardsAreLocked);
           setShowDowngradeWarning(true);
           return; // Don't proceed with rating change yet
         }
@@ -750,6 +820,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const handleCancelDowngrade = () => {
     setShowDowngradeWarning(false);
     setPendingRating(null);
+    setDowngradeWarningMessage(null);
+    setDowngradeIsLocked(false);
   };
 
   const getNextCardBySpacedRepetition = (cardList: typeof cards, currentIdx: number): number => {
@@ -1321,8 +1393,18 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             )}
           </AnimatePresence>
 
-          {/* Return Button */}
-          <div className="mt-6 flex justify-center">
+          {/* Return Button and Reset Button (for completed stacks) */}
+          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center items-center">
+            {stack.is_completed && (
+              <button
+                onClick={handleResetStack}
+                className="inline-flex items-center justify-center text-white font-bold rounded-xl px-6 py-3 transition-all hover:-translate-y-0.5 active:translate-y-0"
+                style={{ backgroundColor: '#1cb0f6', boxShadow: '0 4px 0 #1899d6' }}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset Stack (No Stats Penalty)
+              </button>
+            )}
             <Link href="/dashboard">
               <button 
                 className="inline-flex items-center justify-center border-2 font-semibold rounded-xl px-6 py-3 transition-all hover:-translate-y-0.5"
@@ -1593,6 +1675,14 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
               >
                 Retake Test
               </button>
+              <button
+                onClick={handleResetStack}
+                className="w-full inline-flex items-center justify-center text-white font-bold rounded-2xl py-4 hover:-translate-y-0.5 transition-all active:translate-y-0"
+                style={{ backgroundColor: '#1cb0f6', boxShadow: '0 4px 0 #1899d6' }}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Reset Stack (No Stats Penalty)
+              </button>
               <Link href="/dashboard" className="block">
                 <button 
                   className="w-full inline-flex items-center justify-center border-2 font-semibold rounded-2xl py-4 transition-all hover:-translate-y-0.5"
@@ -1643,12 +1733,14 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <AlertDialogContent style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-              ⚠️ Streak Protection
+              {downgradeIsLocked ? '🔒 Cards Locked!' : '⚠️ Streak Progress'}
             </AlertDialogTitle>
             <AlertDialogDescription style={{ color: 'var(--text-secondary)' }}>
-              Lowering this card will drop you below the {STREAK_DAILY_REQUIREMENT}-card requirement and break your streak today. You currently have <span className="font-bold" style={{ color: '#ff9600' }}>{cardsMasteredToday}/{STREAK_DAILY_REQUIREMENT}</span> cards mastered today.
+              {downgradeWarningMessage || `This action will affect your streak progress.`}
               <br /><br />
-              Are you sure you want to continue? This will decrement your streak.
+              {downgradeIsLocked 
+                ? 'Cards that contributed to your streak are locked after midnight. Lowering this card will BREAK your streak.'
+                : 'You can still modify cards freely until midnight. After that, they become locked.'}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1660,9 +1752,13 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDowngrade}
-              className="bg-[#ff4b4b] hover:bg-[#e04444] text-white shadow-[0_4px_0_0_#cc3b3b] hover:brightness-105"
+              className={`text-white shadow-[0_4px_0_0_#cc3b3b] hover:brightness-105 ${
+                downgradeIsLocked 
+                  ? 'bg-[#ff4b4b] hover:bg-[#e04444]' 
+                  : 'bg-[#ff9600] hover:bg-[#e08800]'
+              }`}
             >
-              Lower Rating Anyway
+              {downgradeIsLocked ? 'Break Streak & Lower' : 'Lower Rating'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

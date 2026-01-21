@@ -28,8 +28,14 @@ export async function POST(request: NextRequest) {
   try {
     const { text, language, voiceGender = 'female', cardId } = await request.json();
 
-    if (!text) {
-      return NextResponse.json({ error: 'Text is required' }, { status: 400 });
+    // Validate text input
+    if (!text || typeof text !== 'string') {
+      return NextResponse.json({ error: 'Text is required and must be a string' }, { status: 400 });
+    }
+    
+    // Check if text is only whitespace
+    if (text.trim().length === 0) {
+      return NextResponse.json({ error: 'Text cannot be empty or whitespace only' }, { status: 400 });
     }
 
     const cacheKey = getCacheKey(text, language || 'default', voiceGender);
@@ -85,7 +91,12 @@ export async function POST(request: NextRequest) {
     const voice = VOICE_MAP[voiceGender as keyof typeof VOICE_MAP] || VOICE_MAP.female;
 
     // Preprocess text to avoid TTS misreading issues
-    const processedText = preprocessTextForTTS(text);
+    const processedText = preprocessTextForTTS(text, language);
+    
+    // Log preprocessing changes for debugging (only if text changed significantly)
+    if (processedText !== text.trim() && Math.abs(processedText.length - text.length) > 5) {
+      console.log(`[TTS OpenAI] Preprocessing: "${text.substring(0, 50)}..." → "${processedText.substring(0, 50)}..." (length: ${text.length} → ${processedText.length})`);
+    }
 
     // Generate speech with OpenAI TTS
     const mp3Response = await openai.audio.speech.create({

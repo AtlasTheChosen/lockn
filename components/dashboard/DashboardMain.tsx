@@ -345,8 +345,8 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
           background: 'linear-gradient(135deg, rgba(255, 150, 0, 0.08) 0%, rgba(88, 204, 2, 0.08) 50%, rgba(28, 176, 246, 0.08) 100%)'
         }}
       >
-        {/* Background glow */}
-        <div className="absolute -top-1/2 -right-[10%] w-[300px] h-[300px] bg-[radial-gradient(circle,rgba(255,150,0,0.1),transparent_60%)] rounded-full pointer-events-none" />
+        {/* Background glow - constrained to prevent horizontal overflow */}
+        <div className="absolute -top-1/2 right-0 w-[150px] sm:w-[200px] md:w-[300px] h-[150px] sm:h-[200px] md:h-[300px] bg-[radial-gradient(circle,rgba(255,150,0,0.1),transparent_60%)] rounded-full pointer-events-none" />
         
         {/* Top Row: Streak Ring + Calendar */}
         <div className="flex flex-col sm:flex-row items-center gap-6 sm:gap-8 relative z-10 mb-6">

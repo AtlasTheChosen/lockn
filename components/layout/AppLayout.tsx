@@ -126,7 +126,7 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   }
 
   return (
-    <div className="min-h-screen relative safe-area-x">
+    <div className="min-h-screen relative safe-area-x overflow-x-hidden w-full max-w-[100vw]">
       <TopNav 
         streak={streak} 
         streakFrozen={streakFrozen} 
@@ -137,7 +137,7 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
         userId={userId}
         dataLoaded={navDataLoaded}
       />
-      <main className="pb-40 md:pb-0 safe-area-bottom relative z-0" style={{ paddingBottom: showBottomNav ? '100px' : '0' }}>
+      <main className="pb-40 md:pb-0 safe-area-bottom relative z-0 overflow-x-hidden" style={{ paddingBottom: showBottomNav ? '100px' : '0' }}>
         {children}
       </main>
       {showBottomNav && <BottomNav streak={streak} streakFrozen={streakFrozen} isLoggedIn={isLoggedIn} dataLoaded={navDataLoaded} />}
