@@ -87,7 +87,7 @@ export function useSessionValidation(): UseSessionValidationResult {
           isChecking: false,
           isValid: false,
           wasKickedOut: wasKicked,
-          kickedOutReason: wasKicked ? result.invalidatedReason : null,
+          kickedOutReason: wasKicked ? (result.invalidatedReason ?? null) : null,
         }));
         
         // Clear local token if session is invalid

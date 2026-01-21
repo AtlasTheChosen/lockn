@@ -231,6 +231,8 @@ export async function processCardMasteryChange(
       newStreak: 0,
       testTriggered: false,
       stacksLocked: [],
+      countdownStartsAt: null,
+      cardsAreLocked: false,
     };
   }
   

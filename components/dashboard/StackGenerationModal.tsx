@@ -308,7 +308,7 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-start justify-center pt-20 pb-4 px-4 sm:px-6 bg-black/80 backdrop-blur-xl overflow-y-auto"
+        className="fixed inset-0 z-[101] flex items-start justify-center pt-20 pb-4 px-4 sm:px-6 bg-black/80 backdrop-blur-xl overflow-y-auto"
         onClick={handleClose}
       >
         <motion.div

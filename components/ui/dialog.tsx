@@ -39,7 +39,7 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         // Mobile: slide up from bottom, full width, rounded top corners
-        'fixed inset-x-0 bottom-0 z-50 grid w-full gap-4 border bg-background p-4 shadow-lg duration-200',
+        'fixed inset-x-0 bottom-0 z-[101] grid w-full gap-4 border bg-background p-4 shadow-lg duration-200',
         'max-h-[90vh] overflow-y-auto',
         'rounded-t-2xl',
         // Desktop: centered modal with max-width

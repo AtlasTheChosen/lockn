@@ -1427,7 +1427,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50"
+          className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-[101]"
         >
           <motion.div 
             initial={{ scale: 0.9, y: 20 }}
@@ -1486,7 +1486,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-50"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 z-[101]"
         >
           <motion.div 
             initial={{ scale: 0.9, y: 20 }}

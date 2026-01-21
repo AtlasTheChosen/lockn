@@ -281,7 +281,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 sm:p-4"
+        className="fixed inset-0 z-[101] flex items-end sm:items-center justify-center p-4 sm:p-4"
         style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
       >
         {/* Backdrop */}

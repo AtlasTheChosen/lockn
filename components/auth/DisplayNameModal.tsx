@@ -177,7 +177,7 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
   // Show tutorial prompt after display name is saved
   if (showTutorialPrompt) {
     return (
-      <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-6 z-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+      <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-6 z-[101]" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
         <Card className="w-full max-w-md border-0 rounded-3xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}>
           <CardHeader className="text-center pt-8">
             <div className="h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'linear-gradient(to bottom right, var(--accent-green), var(--accent-blue))', boxShadow: '0 8px 20px rgba(88, 204, 2, 0.3)' }}>
@@ -212,7 +212,7 @@ export default function DisplayNameModal({ userId, onComplete }: DisplayNameModa
   }
 
   return (
-    <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-6 z-50" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
+    <div className="fixed inset-0 backdrop-blur-sm flex items-center justify-center p-6 z-[101]" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}>
       <Card className="w-full max-w-md border-0 rounded-3xl overflow-hidden" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-lg)' }}>
         <CardHeader className="text-center pt-8">
           <div className="h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: 'linear-gradient(to bottom right, var(--accent-blue), var(--accent-green))', boxShadow: '0 8px 20px rgba(28, 176, 246, 0.3)' }}>
