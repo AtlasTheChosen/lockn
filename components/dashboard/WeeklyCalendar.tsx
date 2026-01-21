@@ -297,15 +297,26 @@ export default function WeeklyCalendar({
           status = 'today-empty';
         }
       } else {
+        // Past day - check if it should be marked as completed based on streak
         const daysAgo = Math.floor((today.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
         const todayMetGoal = cardsMasteredToday >= dailyRequirement;
-        const effectiveStreak = todayMetGoal ? currentStreak : currentStreak;
-
-        if (daysAgo < effectiveStreak) {
-          status = 'completed';
+        
+        // The streak represents consecutive completed days
+        // If today is completed: streak includes today, so show previous (currentStreak - 1) days as green
+        // If today is NOT completed: streak doesn't include today, so show previous currentStreak days as green
+        // daysAgo = 1 means yesterday, daysAgo = 2 means day before yesterday, etc.
+        let shouldBeCompleted = false;
+        if (todayMetGoal) {
+          // Today is completed, so streak includes today (counts as 1)
+          // Show the previous (currentStreak - 1) days as green
+          shouldBeCompleted = daysAgo > 0 && daysAgo <= (currentStreak - 1);
         } else {
-          status = 'missed';
+          // Today is NOT completed, so streak doesn't include today
+          // Show the previous currentStreak days as green
+          shouldBeCompleted = daysAgo > 0 && daysAgo <= currentStreak;
         }
+        
+        status = shouldBeCompleted ? 'completed' : 'missed';
       }
 
       result.push({

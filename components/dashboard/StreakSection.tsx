@@ -13,19 +13,45 @@ interface StreakSectionProps {
 const getDayOfWeek = () => new Date().getDay();
 
 // Get days data for the week
-const getWeekDays = (dailyCardsLearned: number, dailyGoal: number) => {
+const getWeekDays = (dailyCardsLearned: number, dailyGoal: number, currentStreak: number) => {
   const today = getDayOfWeek();
   const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
   // Reorder to start from Monday
   const orderedDays = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
   const todayMondayBased = today === 0 ? 6 : today - 1; // Convert Sunday=0 to Monday-based
+  const todayMetGoal = dailyCardsLearned >= dailyGoal;
   
   return orderedDays.map((day, index) => {
     const isToday = index === todayMondayBased;
     const isPast = index < todayMondayBased;
     const isFuture = index > todayMondayBased;
-    // For demo: assume past days are completed, today depends on progress
-    const isCompleted = isPast || (isToday && dailyCardsLearned >= dailyGoal);
+    
+    // Calculate days ago from today (0 = today, 1 = yesterday, 2 = day before, etc.)
+    const daysAgo = todayMondayBased - index;
+    
+    // Determine if this day should be marked as completed
+    let isCompleted = false;
+    if (isFuture) {
+      isCompleted = false;
+    } else if (isToday) {
+      // Today is completed if goal is met
+      isCompleted = todayMetGoal;
+    } else if (isPast) {
+      // For past days, show green circles matching the streak count
+      // The streak represents consecutive completed days
+      // If today is completed: streak includes today, so show previous (currentStreak - 1) days
+      // If today is NOT completed: streak doesn't include today, so show previous currentStreak days
+      // daysAgo will be positive for past days (1 = yesterday, 2 = day before, etc.)
+      if (todayMetGoal) {
+        // Today is completed, so streak includes today (counts as 1)
+        // Show the previous (currentStreak - 1) days as green
+        isCompleted = daysAgo > 0 && daysAgo <= (currentStreak - 1);
+      } else {
+        // Today is NOT completed, so streak doesn't include today
+        // Show the previous currentStreak days as green
+        isCompleted = daysAgo > 0 && daysAgo <= currentStreak;
+      }
+    }
     
     return {
       label: day,
@@ -43,12 +69,12 @@ export default function StreakSection({
   dailyGoal = 5,
   className = '' 
 }: StreakSectionProps) {
-  const [weekDays, setWeekDays] = useState(getWeekDays(dailyCardsLearned, dailyGoal));
+  const [weekDays, setWeekDays] = useState(getWeekDays(dailyCardsLearned, dailyGoal, currentStreak));
   const [parrotMessage, setParrotMessage] = useState('Keep it up! 🔥');
   
   useEffect(() => {
-    setWeekDays(getWeekDays(dailyCardsLearned, dailyGoal));
-  }, [dailyCardsLearned, dailyGoal]);
+    setWeekDays(getWeekDays(dailyCardsLearned, dailyGoal, currentStreak));
+  }, [dailyCardsLearned, dailyGoal, currentStreak]);
 
   // Calculate streak circle progress (0-100%)
   const streakGoal = 7; // Weekly goal for visual representation
