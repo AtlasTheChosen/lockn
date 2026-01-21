@@ -4,7 +4,7 @@ import { containsInappropriateContent } from '@/lib/content-filter';
 
 export async function POST(request: NextRequest) {
   try {
-    const { displayName, username } = await request.json();
+    const { displayName, username, notificationPrefs } = await request.json();
 
     const supabase = await createClient();
     const {
@@ -90,6 +90,17 @@ export async function POST(request: NextRequest) {
       }
 
       updates.username = trimmedUsername;
+    }
+
+    // Update notification preferences
+    if (notificationPrefs !== undefined) {
+      if (typeof notificationPrefs !== 'object' || notificationPrefs === null) {
+        return NextResponse.json(
+          { error: 'Notification preferences must be an object' },
+          { status: 400 }
+        );
+      }
+      updates.notification_prefs = notificationPrefs;
     }
 
     if (Object.keys(updates).length === 0) {

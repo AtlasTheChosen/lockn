@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import DashboardMain from './DashboardMain';
-import ProfileSettings from './ProfileSettings';
+import ProfileView from './ProfileView';
 import FriendsSection from './FriendsSection';
 import AchievementsSection from './AchievementsSection';
 import { OverviewIcon, ProfileIcon, FriendsIcon, TrophyIcon } from '@/components/ui/GradientIcons';
@@ -134,18 +134,20 @@ export default function DashboardTabs({
       )}
 
       {activeTab === 'profile' && (
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="font-display text-3xl font-semibold mb-8 animate-fade-in" style={{ color: 'var(--accent-green)' }}>
-            ⚙️ Profile Settings
-          </h1>
-          {profile ? (
-            <ProfileSettings 
-              profile={profile} 
-              accessToken={accessToken} 
-              onUpdate={onUpdate} 
+        <div>
+          {profile && stats ? (
+            <ProfileView 
+              profile={profile}
+              stats={{
+                current_streak: stats.current_streak ?? 0,
+                total_cards_mastered: stats.total_mastered ?? 0,
+                current_week_cards: stats.current_week_cards ?? 0,
+              }}
             />
           ) : (
-            <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>Loading profile...</div>
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              <div className="text-center py-12" style={{ color: 'var(--text-muted)' }}>Loading profile...</div>
+            </div>
           )}
         </div>
       )}

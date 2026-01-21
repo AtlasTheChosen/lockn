@@ -59,8 +59,7 @@ export default function LoginPage() {
         if (existingSession?.user) {
           console.log('User already logged in, redirecting to dashboard');
           setLoading(false);
-          router.push('/dashboard');
-          router.refresh();
+          window.location.href = '/dashboard';
           return;
         }
       } catch (sessionError) {
@@ -173,11 +172,8 @@ export default function LoginPage() {
         }
         
         setLoading(false);
-        console.log('[Login] Redirecting to dashboard in 500ms...');
-        // Small delay to ensure cookies are written
-        setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 500);
+        // Always redirect to dashboard after successful login
+        window.location.href = '/dashboard';
       } else {
         setError('Sign-in succeeded but no session was created. Please try again.');
         setLoading(false);

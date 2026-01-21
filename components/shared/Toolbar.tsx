@@ -99,7 +99,7 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
   };
 
   return (
-    <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-background/60" style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }}>
+    <nav className="sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:sticky" style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border-color)' }}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -200,16 +200,16 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator style={{ backgroundColor: 'var(--border-color)' }} />
-                    <Link href="/dashboard?tab=profile">
-                      <DropdownMenuItem className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
-                        <UserIcon className="mr-2 h-4 w-4" />
-                        <span>Profile Settings</span>
-                      </DropdownMenuItem>
-                    </Link>
                     <Link href="/account">
                       <DropdownMenuItem className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
+                      </DropdownMenuItem>
+                    </Link>
+                    <Link href="/profile">
+                      <DropdownMenuItem className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
+                        <UserIcon className="mr-2 h-4 w-4" />
+                        <span>Profile Settings</span>
                       </DropdownMenuItem>
                     </Link>
                     <DropdownMenuSeparator style={{ backgroundColor: 'var(--border-color)' }} />
@@ -334,6 +334,12 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                     <Button variant="ghost" className="w-full justify-start gap-2">
                       <Settings className="h-4 w-4" />
                       Account Settings
+                    </Button>
+                  </Link>
+                  <Link href="/profile" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start gap-2">
+                      <UserIcon className="h-4 w-4" />
+                      Profile Settings
                     </Button>
                   </Link>
                   <Button

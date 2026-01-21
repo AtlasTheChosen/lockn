@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import PublicProfileModal from '@/components/dashboard/PublicProfileModal';
 import { Input } from '@/components/ui/input';
 import {
   UserPlus,
@@ -98,6 +98,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
   const [pendingRequests, setPendingRequests] = useState<FriendWithProfile[]>([]);
   const [sentRequests, setSentRequests] = useState<FriendWithProfile[]>([]);
   const [blockedUsers, setBlockedUsers] = useState<FriendWithProfile[]>([]);
+  const [selectedFriendId, setSelectedFriendId] = useState<string | null>(null);
   const [searchDisplayName, setSearchDisplayName] = useState('');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -522,15 +523,15 @@ export default function FriendsSection({ userId, accessToken }: Props) {
               return (
               <div key={friendship.id} className="rounded-3xl p-6 transition-all" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
                 <div className="flex items-center justify-between mb-4">
-                  <Link 
-                    href={`/profile/${friendId}`}
+                  <div 
+                    onClick={() => setSelectedFriendId(friendId)}
                     className="flex items-center gap-4 flex-1 min-w-0 group cursor-pointer"
                   >
                     {friendship.profile?.avatar_url ? (
                       <img 
                         src={friendship.profile.avatar_url} 
                         alt={friendship.profile?.display_name || 'User'} 
-                        className="w-14 h-14 rounded-full object-cover transition-transform group-hover:scale-105"
+                        className="w-14 h-14 rounded-full object-cover transition-transform group-hover:scale-105 bg-white scale-[0.75]"
                         style={{ boxShadow: '0 4px 12px rgba(28, 176, 246, 0.3)' }}
                       />
                     ) : (
@@ -560,7 +561,7 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                         </p>
                       )}
                     </div>
-                  </Link>
+                  </div>
                   <div className="flex gap-2">
                     <Button
                       variant="ghost"
@@ -642,20 +643,23 @@ export default function FriendsSection({ userId, accessToken }: Props) {
               <div className="space-y-3">
                 {pendingRequests.map((friendship) => (
                   <div key={friendship.id} className="rounded-2xl p-5 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '2px solid rgba(88, 204, 2, 0.3)' }}>
-                    <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => setSelectedFriendId(friendId)}
+                      className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer group"
+                    >
                       {friendship.profile?.avatar_url ? (
                         <img 
                           src={friendship.profile.avatar_url} 
                           alt={friendship.profile?.display_name || 'User'} 
-                          className="w-12 h-12 rounded-full object-cover"
+                          className="w-12 h-12 rounded-full object-cover bg-white scale-[0.75] transition-transform group-hover:scale-110"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white bg-white">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white bg-white" style={{ color: 'var(--accent-green)' }}>
                           {getInitials(friendship.profile)}
                         </div>
                       )}
-                      <div>
-                        <p className="font-display font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-display font-semibold group-hover:text-[var(--accent-green)] transition-colors" style={{ color: 'var(--text-primary)' }}>
                           {friendship.profile?.display_name || 'User'}
                         </p>
                       </div>
@@ -706,22 +710,27 @@ export default function FriendsSection({ userId, accessToken }: Props) {
               </div>
             ) : (
               <div className="space-y-3">
-                {sentRequests.map((friendship) => (
-                  <div key={friendship.id} className="rounded-2xl p-5 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '2px solid rgba(251, 146, 60, 0.3)' }}>
-                    <div className="flex items-center gap-4">
+                {sentRequests.map((friendship) => {
+                  const friendId = friendship.user_id === userId ? friendship.friend_id : friendship.user_id;
+                  return (
+                    <div key={friendship.id} className="rounded-2xl p-5 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '2px solid rgba(251, 146, 60, 0.3)' }}>
+                    <div 
+                      onClick={() => setSelectedFriendId(friendId)}
+                      className="flex items-center gap-4 flex-1 min-w-0 cursor-pointer group"
+                    >
                       {friendship.profile?.avatar_url ? (
                         <img 
                           src={friendship.profile.avatar_url} 
                           alt={friendship.profile?.display_name || 'User'} 
-                          className="w-12 h-12 rounded-full object-cover"
+                          className="w-12 h-12 rounded-full object-cover bg-white scale-[0.75] transition-transform group-hover:scale-110"
                         />
                       ) : (
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white bg-white">
+                        <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-white bg-white" style={{ color: 'var(--accent-green)' }}>
                           {getInitials(friendship.profile)}
                         </div>
                       )}
-                      <div>
-                        <p className="font-display font-semibold" style={{ color: 'var(--text-primary)' }}>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-display font-semibold group-hover:text-[var(--accent-green)] transition-colors" style={{ color: 'var(--text-primary)' }}>
                           {friendship.profile?.display_name || 'User'}
                         </p>
                         <p className="text-xs font-medium" style={{ color: 'var(--accent-orange)' }}>Awaiting response...</p>
@@ -742,7 +751,8 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                       )}
                     </Button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -799,6 +809,15 @@ export default function FriendsSection({ userId, accessToken }: Props) {
             ))
           )}
         </div>
+      )}
+
+      {/* Public Profile Modal */}
+      {selectedFriendId && (
+        <PublicProfileModal
+          userId={selectedFriendId}
+          isOpen={!!selectedFriendId}
+          onClose={() => setSelectedFriendId(null)}
+        />
       )}
     </div>
   );

@@ -11,6 +11,8 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
   ArrowLeft, 
   Crown, 
@@ -24,7 +26,10 @@ import {
   Eye,
   EyeOff,
   Save,
-  X
+  X,
+  HelpCircle,
+  MessageSquare,
+  Accessibility
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -44,14 +49,10 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export default function AccountSettingsPage() {
   const router = useRouter();
-  const { user: sessionUser, profile: sessionProfile, loading: sessionLoading } = useSession();
+  const { user: sessionUser, profile: sessionProfile, accessToken: sessionAccessToken, loading: sessionLoading } = useSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  
-  // Profile editing state
-  const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
   
   // Password change state
   const [currentPassword, setCurrentPassword] = useState('');
@@ -65,6 +66,28 @@ export default function AccountSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  
+  // Notifications state
+  const [notificationPrefs, setNotificationPrefs] = useState(
+    sessionProfile?.notification_prefs || {
+      email: true,
+      push: false,
+      friend_requests: true,
+      streak_reminders: true,
+    }
+  );
+  const [savingNotifications, setSavingNotifications] = useState(false);
+  
+  // Feedback state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [sendingFeedback, setSendingFeedback] = useState(false);
+  
+  // Accessibility state
+  const [fontSize, setFontSize] = useState<'normal' | 'large' | 'extra-large'>('normal');
+  const [highContrast, setHighContrast] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [savingAccessibility, setSavingAccessibility] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!sessionUser) return;
@@ -75,8 +98,12 @@ export default function AccountSettingsPage() {
       // Use session profile if available
       if (sessionProfile) {
         setProfile(sessionProfile);
-        setDisplayName(sessionProfile.display_name || '');
-        setUsername(sessionProfile.display_name || ''); // Using display_name as username for now
+        setNotificationPrefs(sessionProfile.notification_prefs || {
+          email: true,
+          push: false,
+          friend_requests: true,
+          streak_reminders: true,
+        });
       } else {
         const profileResponse = await fetch(
           `${supabaseUrl}/rest/v1/user_profiles?id=eq.${sessionUser.id}&select=*`,
@@ -92,8 +119,12 @@ export default function AccountSettingsPage() {
         const loadedProfile = profileData?.[0] || null;
         setProfile(loadedProfile);
         if (loadedProfile) {
-          setDisplayName(loadedProfile.display_name || '');
-          setUsername(loadedProfile.display_name || '');
+          setNotificationPrefs(loadedProfile.notification_prefs || {
+            email: true,
+            push: false,
+            friend_requests: true,
+            streak_reminders: true,
+          });
         }
       }
     } catch (err: any) {
@@ -119,20 +150,12 @@ export default function AccountSettingsPage() {
     router.refresh();
   };
 
-  const hasProfileChanges = () => {
-    if (!profile) return false;
-    return displayName !== (profile.display_name || '') || 
-           username !== (profile.display_name || '');
-  };
-
   const hasPasswordChanges = () => {
     return currentPassword.length > 0 || newPassword.length > 0 || confirmPassword.length > 0;
   };
 
-  const hasChanges = hasProfileChanges() || hasPasswordChanges();
-
-  const handleSaveChanges = async () => {
-    if (!hasChanges || !sessionUser) return;
+  const handleSavePassword = async () => {
+    if (!hasPasswordChanges() || !sessionUser) return;
 
     setSaving(true);
     setSaveMessage(null);
@@ -140,68 +163,45 @@ export default function AccountSettingsPage() {
     try {
       const errors: string[] = [];
 
-      // Validate password change if provided
-      if (hasPasswordChanges()) {
-        if (!currentPassword) {
-          errors.push('Current password is required to change password');
-        }
-        if (newPassword.length < 8) {
-          errors.push('New password must be at least 8 characters long');
-        }
-        if (newPassword !== confirmPassword) {
-          errors.push('New passwords do not match');
-        }
-
-        if (errors.length === 0) {
-          // Change password
-          const passwordResponse = await fetch('/api/account/change-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ currentPassword, newPassword }),
-          });
-
-          const passwordData = await passwordResponse.json();
-          if (!passwordResponse.ok) {
-            errors.push(passwordData.error || 'Failed to change password');
-          } else {
-            // Clear password fields on success
-            setCurrentPassword('');
-            setNewPassword('');
-            setConfirmPassword('');
-          }
-        }
+      // Validate password change
+      if (!currentPassword) {
+        errors.push('Current password is required to change password');
+      }
+      if (newPassword.length < 8) {
+        errors.push('New password must be at least 8 characters long');
+      }
+      if (newPassword !== confirmPassword) {
+        errors.push('New passwords do not match');
       }
 
-      // Update profile if changed
-      if (hasProfileChanges() && errors.length === 0) {
-        const profileResponse = await fetch('/api/account/update-profile', {
+      if (errors.length === 0) {
+        // Change password
+        const passwordResponse = await fetch('/api/account/change-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ displayName, username }),
+          body: JSON.stringify({ currentPassword, newPassword }),
         });
 
-        const profileData = await profileResponse.json();
-        if (!profileResponse.ok) {
-          errors.push(profileData.error || 'Failed to update profile');
+        const passwordData = await passwordResponse.json();
+        if (!passwordResponse.ok) {
+          errors.push(passwordData.error || 'Failed to change password');
         } else {
-          // Update local profile
-          if (profileData.profile) {
-            setProfile(profileData.profile);
-          }
+          // Clear password fields on success
+          setCurrentPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
         }
       }
 
       if (errors.length > 0) {
         setSaveMessage({ type: 'error', text: errors.join('. ') });
       } else {
-        setSaveMessage({ type: 'success', text: 'Changes saved successfully!' });
-        // Reload data to get latest profile
-        loadData();
+        setSaveMessage({ type: 'success', text: 'Password changed successfully!' });
         // Clear message after 3 seconds
         setTimeout(() => setSaveMessage(null), 3000);
       }
     } catch (err: any) {
-      setSaveMessage({ type: 'error', text: err.message || 'Failed to save changes' });
+      setSaveMessage({ type: 'error', text: err.message || 'Failed to save password' });
     } finally {
       setSaving(false);
     }
@@ -258,6 +258,95 @@ export default function AccountSettingsPage() {
       alert(err.message || 'Failed to cancel subscription');
     }
   };
+
+  const handleSaveNotifications = async () => {
+    if (!sessionUser || !sessionAccessToken) return;
+
+    setSavingNotifications(true);
+    try {
+      const response = await fetch('/api/account/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationPrefs }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setSaveMessage({ type: 'error', text: data.error || 'Failed to update notifications' });
+      } else {
+        setSaveMessage({ type: 'success', text: 'Notification preferences saved!' });
+        loadData();
+        setTimeout(() => setSaveMessage(null), 3000);
+      }
+    } catch (err: any) {
+      setSaveMessage({ type: 'error', text: err.message || 'Failed to save notifications' });
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
+
+  const handleSendFeedback = async () => {
+    if (!feedbackText.trim() || !sessionUser) return;
+
+    setSendingFeedback(true);
+    try {
+      // In a real app, you'd send this to a feedback API endpoint
+      // For now, we'll just show a success message
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+      
+      setSaveMessage({ type: 'success', text: 'Thank you for your feedback! We appreciate your input.' });
+      setFeedbackText('');
+      setShowFeedbackModal(false);
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (err: any) {
+      setSaveMessage({ type: 'error', text: 'Failed to send feedback. Please try again.' });
+    } finally {
+      setSendingFeedback(false);
+    }
+  };
+
+  const handleSaveAccessibility = async () => {
+    if (!sessionUser) return;
+
+    setSavingAccessibility(true);
+    try {
+      // Apply accessibility settings to localStorage and document
+      localStorage.setItem('accessibility-font-size', fontSize);
+      localStorage.setItem('accessibility-high-contrast', highContrast.toString());
+      localStorage.setItem('accessibility-reduced-motion', reducedMotion.toString());
+      
+      // Apply to document
+      document.documentElement.style.fontSize = fontSize === 'large' ? '18px' : fontSize === 'extra-large' ? '20px' : '16px';
+      if (highContrast) {
+        document.documentElement.classList.add('high-contrast');
+      } else {
+        document.documentElement.classList.remove('high-contrast');
+      }
+      if (reducedMotion) {
+        document.documentElement.classList.add('reduce-motion');
+      } else {
+        document.documentElement.classList.remove('reduce-motion');
+      }
+      
+      setSaveMessage({ type: 'success', text: 'Accessibility settings saved!' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (err: any) {
+      setSaveMessage({ type: 'error', text: 'Failed to save accessibility settings' });
+    } finally {
+      setSavingAccessibility(false);
+    }
+  };
+
+  // Load accessibility settings from localStorage on mount
+  useEffect(() => {
+    const savedFontSize = localStorage.getItem('accessibility-font-size') as 'normal' | 'large' | 'extra-large' | null;
+    const savedHighContrast = localStorage.getItem('accessibility-high-contrast') === 'true';
+    const savedReducedMotion = localStorage.getItem('accessibility-reduced-motion') === 'true';
+    
+    if (savedFontSize) setFontSize(savedFontSize);
+    if (savedHighContrast) setHighContrast(savedHighContrast);
+    if (savedReducedMotion) setReducedMotion(savedReducedMotion);
+  }, []);
 
   if (sessionLoading || loading) {
     return (
@@ -337,15 +426,132 @@ export default function AccountSettingsPage() {
         </div>
 
         <div className="space-y-6">
-          {/* Profile Settings */}
+          {/* Account Information */}
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Mail className="h-5 w-5" />
-                Profile Settings
+                Account Information
               </CardTitle>
               <CardDescription className="text-slate-400">
-                Update your account information
+                Your account details
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email-display" className="text-slate-300">Email</Label>
+                <Input
+                  id="email-display"
+                  type="email"
+                  value={sessionUser?.email || ''}
+                  disabled
+                  className="bg-slate-700/50 border-slate-600 text-slate-400 cursor-not-allowed"
+                />
+                <p className="text-xs text-slate-500">Email cannot be changed</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="display-name-display" className="text-slate-300">Display Name</Label>
+                <Input
+                  id="display-name-display"
+                  type="text"
+                  value={profile?.display_name || 'Not set'}
+                  disabled
+                  className="bg-slate-700/50 border-slate-600 text-slate-400 cursor-not-allowed"
+                />
+                <p className="text-xs text-slate-500">
+                  Display name can be changed in{' '}
+                  <Link href="/profile" className="text-blue-400 hover:text-blue-300 underline">
+                    Profile Settings
+                  </Link>
+                </p>
+              </div>
+              <div className="flex justify-between items-center py-2 border-t border-slate-700 pt-4">
+                <span className="text-slate-400">Account Created</span>
+                <span className="text-white">{formatDate(profile?.created_at || null)}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Notifications */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Notifications
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Manage your notification preferences
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between rounded-lg p-4 bg-slate-700/50">
+                <div>
+                  <Label className="text-slate-300 font-semibold">Email Notifications</Label>
+                  <p className="text-sm text-slate-400">Receive updates via email</p>
+                </div>
+                <Switch
+                  checked={notificationPrefs.email}
+                  onCheckedChange={(checked) =>
+                    setNotificationPrefs({ ...notificationPrefs, email: checked })
+                  }
+                />
+              </div>
+              
+              <div className="flex items-center justify-between rounded-lg p-4 bg-slate-700/50">
+                <div>
+                  <Label className="text-slate-300 font-semibold">Friend Requests</Label>
+                  <p className="text-sm text-slate-400">Get notified of new friend requests</p>
+                </div>
+                <Switch
+                  checked={notificationPrefs.friend_requests}
+                  onCheckedChange={(checked) =>
+                    setNotificationPrefs({ ...notificationPrefs, friend_requests: checked })
+                  }
+                />
+              </div>
+              
+              <div className="flex items-center justify-between rounded-lg p-4 bg-slate-700/50">
+                <div>
+                  <Label className="text-slate-300 font-semibold">Streak Reminders</Label>
+                  <p className="text-sm text-slate-400">Daily reminders to maintain your streak</p>
+                </div>
+                <Switch
+                  checked={notificationPrefs.streak_reminders}
+                  onCheckedChange={(checked) =>
+                    setNotificationPrefs({ ...notificationPrefs, streak_reminders: checked })
+                  }
+                />
+              </div>
+              
+              <Button
+                onClick={handleSaveNotifications}
+                disabled={savingNotifications}
+                className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+              >
+                {savingNotifications ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Notification Preferences
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Password Change Section */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Mail className="h-5 w-5" />
+                Change Password
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Update your password
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -362,143 +568,91 @@ export default function AccountSettingsPage() {
                 </div>
               )}
 
-              {/* Name */}
               <div className="space-y-2">
-                <Label htmlFor="name" className="text-slate-300">Name</Label>
-                <Input
-                  id="name"
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="Enter your name"
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
-              </div>
-
-              {/* Username */}
-              <div className="space-y-2">
-                <Label htmlFor="username" className="text-slate-300">Username</Label>
-                <Input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter your username"
-                  className="bg-slate-700 border-slate-600 text-white"
-                />
-              </div>
-
-              {/* Email (read-only) */}
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-300">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={sessionUser?.email || ''}
-                  disabled
-                  className="bg-slate-700/50 border-slate-600 text-slate-400 cursor-not-allowed"
-                />
-                <p className="text-xs text-slate-500">Email cannot be changed</p>
-              </div>
-
-              {/* Account Created (read-only) */}
-              <div className="space-y-2">
-                <Label className="text-slate-300">Account Created</Label>
-                <div className="text-slate-400 text-sm py-2">
-                  {formatDate(profile?.created_at || null)}
+                <Label htmlFor="current-password" className="text-slate-300">Current Password</Label>
+                <div className="relative">
+                  <Input
+                    id="current-password"
+                    type={showCurrentPassword ? 'text' : 'password'}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Enter current password"
+                    className="bg-slate-700 border-slate-600 text-white pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  >
+                    {showCurrentPassword ? (
+                      <EyeOff className="h-4 w-4 text-slate-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-slate-400" />
+                    )}
+                  </Button>
                 </div>
               </div>
 
-              {/* Password Change Section */}
-              <div className="pt-4 border-t border-slate-700 space-y-4">
-                <h3 className="text-sm font-semibold text-slate-300">Change Password</h3>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="current-password" className="text-slate-300">Current Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="current-password"
-                      type={showCurrentPassword ? 'text' : 'password'}
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                      className="bg-slate-700 border-slate-600 text-white pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    >
-                      {showCurrentPassword ? (
-                        <EyeOff className="h-4 w-4 text-slate-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-slate-400" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="new-password" className="text-slate-300">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="new-password"
-                      type={showNewPassword ? 'text' : 'password'}
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password (min 8 characters)"
-                      className="bg-slate-700 border-slate-600 text-white pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="h-4 w-4 text-slate-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-slate-400" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password" className="text-slate-300">Confirm New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirm-password"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                      className="bg-slate-700 border-slate-600 text-white pr-10"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="h-4 w-4 text-slate-400" />
-                      ) : (
-                        <Eye className="h-4 w-4 text-slate-400" />
-                      )}
-                    </Button>
-                  </div>
+              <div className="space-y-2">
+                <Label htmlFor="new-password" className="text-slate-300">New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="new-password"
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Enter new password (min 8 characters)"
+                    className="bg-slate-700 border-slate-600 text-white pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                  >
+                    {showNewPassword ? (
+                      <EyeOff className="h-4 w-4 text-slate-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-slate-400" />
+                    )}
+                  </Button>
                 </div>
               </div>
 
-              {/* Save Changes Button */}
+              <div className="space-y-2">
+                <Label htmlFor="confirm-password" className="text-slate-300">Confirm New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm new password"
+                    className="bg-slate-700 border-slate-600 text-white pr-10"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-4 w-4 text-slate-400" />
+                    ) : (
+                      <Eye className="h-4 w-4 text-slate-400" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Save Password Button */}
               <Button
-                onClick={handleSaveChanges}
-                disabled={!hasChanges || saving}
+                onClick={handleSavePassword}
+                disabled={!hasPasswordChanges() || saving}
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? (
@@ -509,7 +663,7 @@ export default function AccountSettingsPage() {
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Save Changes
+                    Save Password
                   </>
                 )}
               </Button>
@@ -568,6 +722,108 @@ export default function AccountSettingsPage() {
                   </Button>
                 </Link>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Help & Support */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <HelpCircle className="h-5 w-5" />
+                Help & Support
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Get help and support
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start border-slate-700 text-white hover:bg-slate-700"
+                onClick={() => {
+                  // Open help/FAQ - could be a modal or page
+                  window.open('https://help.lockn.app', '_blank');
+                }}
+              >
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Help Center / FAQ
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start border-slate-700 text-white hover:bg-slate-700"
+                onClick={() => setShowFeedbackModal(true)}
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Send Feedback
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Accessibility Settings */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Accessibility className="h-5 w-5" />
+                Accessibility
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Customize your experience
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-slate-300">Font Size</Label>
+                <Select value={fontSize} onValueChange={(value: 'normal' | 'large' | 'extra-large') => setFontSize(value)}>
+                  <SelectTrigger className="bg-slate-700 border-slate-600 text-white">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700">
+                    <SelectItem value="normal" className="text-white">Normal</SelectItem>
+                    <SelectItem value="large" className="text-white">Large</SelectItem>
+                    <SelectItem value="extra-large" className="text-white">Extra Large</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center justify-between rounded-lg p-4 bg-slate-700/50">
+                <div>
+                  <Label className="text-slate-300 font-semibold">High Contrast Mode</Label>
+                  <p className="text-sm text-slate-400">Increase contrast for better visibility</p>
+                </div>
+                <Switch
+                  checked={highContrast}
+                  onCheckedChange={setHighContrast}
+                />
+              </div>
+              
+              <div className="flex items-center justify-between rounded-lg p-4 bg-slate-700/50">
+                <div>
+                  <Label className="text-slate-300 font-semibold">Reduce Motion</Label>
+                  <p className="text-sm text-slate-400">Minimize animations and transitions</p>
+                </div>
+                <Switch
+                  checked={reducedMotion}
+                  onCheckedChange={setReducedMotion}
+                />
+              </div>
+              
+              <Button
+                onClick={handleSaveAccessibility}
+                disabled={savingAccessibility}
+                className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+              >
+                {savingAccessibility ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Accessibility Settings
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
 
@@ -631,6 +887,68 @@ export default function AccountSettingsPage() {
               </AlertDialog>
             </CardContent>
           </Card>
+
+          {/* Feedback Modal */}
+          {showFeedbackModal && (
+            <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 max-w-md w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-white">Send Feedback</h3>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setShowFeedbackModal(false);
+                      setFeedbackText('');
+                    }}
+                    className="text-slate-400 hover:text-white"
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <Label className="text-slate-300 mb-2 block">Your Feedback</Label>
+                    <textarea
+                      value={feedbackText}
+                      onChange={(e) => setFeedbackText(e.target.value)}
+                      placeholder="Tell us what you think, report a bug, or suggest a feature..."
+                      className="w-full min-h-[120px] p-3 rounded-lg bg-slate-700 border border-slate-600 text-white placeholder:text-slate-500 resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowFeedbackModal(false);
+                        setFeedbackText('');
+                      }}
+                      className="flex-1 border-slate-600 text-slate-300"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleSendFeedback}
+                      disabled={!feedbackText.trim() || sendingFeedback}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                    >
+                      {sendingFeedback ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          Send Feedback
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Back to Dashboard */}
           <div className="flex justify-center pt-4">

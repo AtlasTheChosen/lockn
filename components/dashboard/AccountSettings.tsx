@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import AchievementBadges from '@/components/social/AchievementBadges';
 import { 
   Loader2, 
   Check, 
@@ -16,15 +15,13 @@ import {
   X, 
   Eye,
   EyeOff,
-  Trophy,
   User
 } from 'lucide-react';
-import type { UserProfile, Badge as BadgeType } from '@/lib/types';
+import type { UserProfile } from '@/lib/types';
 import { AVATAR_COUNT, getAvatarUrl } from '@/lib/avatars';
 import { PROFILE_UPDATED_EVENT } from '@/components/layout/AppLayout';
 import { containsInappropriateContent } from '@/lib/content-filter';
 import { createClient } from '@/lib/supabase/client';
-import PublicProfileModal from '@/components/dashboard/PublicProfileModal';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -58,7 +55,7 @@ interface Props {
   onUpdate: () => void;
 }
 
-export default function ProfileSettings({ profile, accessToken, onUpdate }: Props) {
+export default function AccountSettings({ profile, accessToken, onUpdate }: Props) {
   const [displayName, setDisplayName] = useState(profile.display_name || '');
   const [originalDisplayName] = useState(profile.display_name || '');
   const [originalAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(0));
@@ -66,11 +63,18 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [profilePublic, setProfilePublic] = useState(profile.profile_public ?? true);
   const [languagesLearning, setLanguagesLearning] = useState<string[]>(profile.languages_learning || []);
-  const [badges, setBadges] = useState<BadgeType[]>(profile.badges || []);
+  const [theme, setTheme] = useState(profile.theme_preference || 'system');
+  const [notificationPrefs, setNotificationPrefs] = useState(
+    profile.notification_prefs || {
+      email: true,
+      push: false,
+      friend_requests: true,
+      streak_reminders: true,
+    }
+  );
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
-  const [showPublicProfile, setShowPublicProfile] = useState(false);
 
   // Check if display name can be changed (once per month)
   const canChangeDisplayName = () => {
@@ -93,15 +97,16 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   const isAvatarChanged = avatarUrl !== originalAvatarUrl;
   const hasChanges = isDisplayNameChanged || isAvatarChanged || 
     profilePublic !== (profile.profile_public ?? true) ||
-    JSON.stringify(languagesLearning) !== JSON.stringify(profile.languages_learning || []);
+    JSON.stringify(languagesLearning) !== JSON.stringify(profile.languages_learning || []) ||
+    theme !== (profile.theme_preference || 'system') ||
+    JSON.stringify(notificationPrefs) !== JSON.stringify(profile.notification_prefs || {
+      email: true,
+      push: false,
+      friend_requests: true,
+      streak_reminders: true,
+    });
 
-  useEffect(() => {
-    if (profile.badges) {
-      setBadges(profile.badges);
-    }
-  }, [profile.badges]);
-
-  // Sync avatar when profile prop changes (e.g., after auto-assignment)
+  // Sync avatar when profile prop changes
   useEffect(() => {
     if (profile.avatar_url) {
       setAvatarUrl(profile.avatar_url);
@@ -208,6 +213,8 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
       const updateData: any = {
         profile_public: profilePublic,
         languages_learning: languagesLearning,
+        theme_preference: theme,
+        notification_prefs: notificationPrefs,
       };
 
       // Include display name if it changed
@@ -239,21 +246,15 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
         throw new Error(errorText || 'Failed to update profile');
       }
 
-      setMessage({ type: 'success', text: 'Profile settings saved successfully!' });
+      setMessage({ type: 'success', text: 'Account settings saved successfully!' });
       onUpdate();
       // Dispatch event to update nav bars immediately
       window.dispatchEvent(new Event(PROFILE_UPDATED_EVENT));
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to save profile. Please try again.' });
+      setMessage({ type: 'error', text: error.message || 'Failed to save account settings. Please try again.' });
     } finally {
       setSaving(false);
     }
-  };
-
-  const getInitials = () => {
-    if (displayName) return displayName.substring(0, 2).toUpperCase();
-    if (profile.email) return profile.email.substring(0, 2).toUpperCase();
-    return 'U';
   };
 
   const getLanguageInfo = (code: string) => {
@@ -275,7 +276,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
             Saving...
           </>
         ) : (
-          'Save Profile ✨'
+          'Save Settings ✨'
         )}
       </Button>
 
@@ -301,7 +302,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
       <div className="rounded-3xl p-6 animate-fade-in" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
         <div className="flex items-center gap-2 mb-4">
           <User className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
-          <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Your Profile</h3>
+          <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Profile Picture</h3>
         </div>
         <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>
           Choose your avatar from 20 robot options!
@@ -315,7 +316,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
             <img 
               src={avatarUrl} 
               alt="Profile avatar" 
-                  className="w-full h-full object-cover bg-white scale-[0.75]"
+              className="w-full h-full object-cover bg-white scale-[0.75]"
             />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <span className="text-white text-xs font-bold">Change</span>
@@ -324,14 +325,6 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
           <div>
             <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{displayName || 'Your Name'}</p>
             <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>{profile.email}</p>
-            <Button 
-              variant="link" 
-              onClick={() => setShowPublicProfile(true)}
-              className="p-0 h-auto mt-2 font-semibold" 
-              style={{ color: 'var(--accent-green)' }}
-            >
-              View public profile →
-            </Button>
           </div>
         </div>
 
@@ -360,11 +353,10 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
                         whileHover={{ scale: 1.1, y: -4 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => {
-                          // Update local state only - save will happen when user clicks Save button
                           setAvatarUrl(url);
                           setShowAvatarPicker(false);
                         }}
-className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
+                        className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
                           isSelected
                             ? 'ring-4 ring-[var(--accent-green)] scale-110'
                             : 'ring-2 ring-[var(--border-color)] hover:ring-[var(--accent-green)]/50'
@@ -385,10 +377,10 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
         </AnimatePresence>
       </div>
 
-      {/* Profile Information */}
+      {/* Display Name */}
       <div className="rounded-3xl p-6 animate-fade-in stagger-1" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
-        <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Profile Information</h3>
-        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Update your personal information</p>
+        <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Display Name</h3>
+        <p className="text-sm font-medium mb-4" style={{ color: 'var(--text-secondary)' }}>This is how others will see you</p>
         
         <div className="space-y-4">
           <div>
@@ -427,18 +419,22 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
                   })}
                 </p>
               )}
-              {!profile.display_name_changed_at && profile.created_at && (
-                <p className="text-xs mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
-                  Created: {new Date(profile.created_at).toLocaleDateString('en-US', { 
-                    month: 'long', 
-                    day: 'numeric', 
-                    year: 'numeric' 
-                  })}
-                </p>
-              )}
             </div>
           </div>
 
+          <div>
+            <Label htmlFor="email" className="font-semibold" style={{ color: 'var(--text-primary)' }}>
+              Email Address
+            </Label>
+            <Input
+              id="email"
+              value={profile.email}
+              disabled
+              className="rounded-2xl mt-2 font-medium"
+              style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-muted)' }}
+            />
+            <p className="text-xs mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>Email cannot be changed</p>
+          </div>
         </div>
       </div>
 
@@ -499,16 +495,6 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
         )}
       </div>
 
-      {/* Achievement Badges */}
-      <div className="rounded-3xl p-6 animate-fade-in stagger-3" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
-        <div className="flex items-center gap-2 mb-2">
-          <Trophy className="h-5 w-5" style={{ color: 'var(--accent-yellow)' }} />
-          <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>My Achievements</h3>
-        </div>
-        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Badges you've earned through your learning journey</p>
-        <AchievementBadges badges={badges} showAll size="lg" />
-      </div>
-
       {/* Privacy */}
       <div className="rounded-3xl p-6 animate-fade-in stagger-4" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
         <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Privacy</h3>
@@ -541,14 +527,50 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
         </div>
       </div>
 
-      {/* Public Profile Modal */}
-      <PublicProfileModal
-        userId={profile.id}
-        isOpen={showPublicProfile}
-        onClose={() => setShowPublicProfile(false)}
-      />
+      {/* Notifications */}
+      <div className="rounded-3xl p-6 animate-fade-in stagger-5" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
+        <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Notifications</h3>
+        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Manage your notification preferences</p>
+        
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div>
+              <Label className="font-semibold" style={{ color: 'var(--text-primary)' }}>Email Notifications</Label>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Receive updates via email</p>
+            </div>
+            <Switch
+              checked={notificationPrefs.email}
+              onCheckedChange={(checked) =>
+                setNotificationPrefs({ ...notificationPrefs, email: checked })
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div>
+              <Label className="font-semibold" style={{ color: 'var(--text-primary)' }}>Friend Requests</Label>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Get notified of new friend requests</p>
+            </div>
+            <Switch
+              checked={notificationPrefs.friend_requests}
+              onCheckedChange={(checked) =>
+                setNotificationPrefs({ ...notificationPrefs, friend_requests: checked })
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div>
+              <Label className="font-semibold" style={{ color: 'var(--text-primary)' }}>Streak Reminders</Label>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Daily reminders to maintain your streak</p>
+            </div>
+            <Switch
+              checked={notificationPrefs.streak_reminders}
+              onCheckedChange={(checked) =>
+                setNotificationPrefs({ ...notificationPrefs, streak_reminders: checked })
+              }
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
-

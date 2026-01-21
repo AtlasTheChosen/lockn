@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { TopNav, BottomNav } from '@/components/navigation';
+import { TopNav } from '@/components/navigation';
 
 // Custom event names for updates
 export const PROFILE_UPDATED_EVENT = 'profile-updated';
@@ -29,9 +29,6 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   const [navDataLoaded, setNavDataLoaded] = useState(false);
   const [initialLoadDone, setInitialLoadDone] = useState(false);
   
-  // Hide bottom nav on home page for non-logged-in users
-  const showBottomNav = isLoggedIn || pathname !== '/';
-
   const loadUserData = useCallback(async (isInitialLoad = false) => {
     // Only show loading skeleton on initial load, not on refreshes (prevents flash)
     if (isInitialLoad) {
@@ -137,10 +134,9 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
         userId={userId}
         dataLoaded={navDataLoaded}
       />
-      <main className="pb-40 md:pb-0 safe-area-bottom relative z-0 overflow-x-hidden" style={{ paddingBottom: showBottomNav ? '100px' : '0' }}>
+      <main className="relative z-0 overflow-x-hidden">
         {children}
       </main>
-      {showBottomNav && <BottomNav streak={streak} streakFrozen={streakFrozen} isLoggedIn={isLoggedIn} dataLoaded={navDataLoaded} />}
     </div>
   );
 }
