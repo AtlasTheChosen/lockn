@@ -93,9 +93,9 @@ export default function DashboardTabs({
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      {/* Tab Navigation - scrolls with page */}
+      {/* Tab Navigation - scrolls with page (NOT sticky) */}
       <div 
-        className="pt-[max(1rem,calc(env(safe-area-inset-top,0px)+0.75rem))] md:pt-4"
+        className="pt-2 md:pt-3"
         style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}
       >
         <div className="max-w-7xl mx-auto px-[max(0.75rem,env(safe-area-inset-left,0px))] sm:px-4 lg:px-8 pr-[max(0.75rem,env(safe-area-inset-right,0px))]">

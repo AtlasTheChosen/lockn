@@ -385,7 +385,8 @@ export default function AccountSettingsPage() {
                   setLoading(true);
                   loadData();
                 }}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
+                className="flex-1"
+                style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Retry
@@ -526,7 +527,8 @@ export default function AccountSettingsPage() {
               <Button
                 onClick={handleSaveNotifications}
                 disabled={savingNotifications}
-                className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+                className="w-full mt-4"
+                style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
               >
                 {savingNotifications ? (
                   <>
@@ -653,7 +655,8 @@ export default function AccountSettingsPage() {
               <Button
                 onClick={handleSavePassword}
                 disabled={!hasPasswordChanges() || saving}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
               >
                 {saving ? (
                   <>
@@ -810,7 +813,8 @@ export default function AccountSettingsPage() {
               <Button
                 onClick={handleSaveAccessibility}
                 disabled={savingAccessibility}
-                className="w-full mt-4 bg-blue-600 hover:bg-blue-700"
+                className="w-full mt-4"
+                style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
               >
                 {savingAccessibility ? (
                   <>
@@ -930,7 +934,8 @@ export default function AccountSettingsPage() {
                     <Button
                       onClick={handleSendFeedback}
                       disabled={!feedbackText.trim() || sendingFeedback}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700"
+                      className="flex-1"
+                      style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
                     >
                       {sendingFeedback ? (
                         <>
