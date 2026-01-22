@@ -349,17 +349,17 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                     ))}
                   </div>
                   {!isPremium && (
-                    <div className="mt-3 flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                    <div className="mt-3 flex flex-col items-center justify-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                      <Link href="/pricing" className="w-full">
+                        <Button
+                          className="w-full bg-[#58cc02] text-white font-bold rounded-xl px-6 py-3 text-sm shadow-[0_3px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"
+                        >
+                          Upgrade to Premium
+                        </Button>
+                      </Link>
                       <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
                         Upgrade to Premium to create 10, 25, 50 card stacks
                       </p>
-                      <Link href="/pricing">
-                        <Button
-                          className="bg-[#58cc02] text-white font-bold rounded-xl px-3 py-1.5 text-xs shadow-[0_3px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"
-                        >
-                          Upgrade
-                        </Button>
-                      </Link>
                     </div>
                   )}
                 </div>
