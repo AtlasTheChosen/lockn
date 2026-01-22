@@ -10,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient } from '@/lib/supabase/client';
 import StackGenerationModal from './StackGenerationModal';
+import PremiumModal from './PremiumModal';
 
 interface Stack {
   id: string;
@@ -55,6 +56,7 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedStackNotes, setSelectedStackNotes] = useState<Stack | null>(null);
   const [showGenerationModal, setShowGenerationModal] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -448,8 +450,13 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
                         Unlock unlimited stacks and advanced features
                       </p>
                       <Button
-                        onClick={() => router.push('/pricing')}
-                        className="bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-6 py-3 font-light"
+                        onClick={() => setShowPremiumModal(true)}
+                        style={{ 
+                          backgroundColor: 'var(--accent-green)', 
+                          color: 'white',
+                          boxShadow: '0 3px 0 var(--accent-green-dark)'
+                        }}
+                        className="rounded-xl px-6 py-3 font-light"
                       >
                         View Plans
                       </Button>
@@ -462,6 +469,9 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
         )}
       </main>
     </div>
+
+    {/* Premium Modal */}
+    <PremiumModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
 
     {/* Notes Modal */}
     <Dialog open={showNotesModal} onOpenChange={setShowNotesModal}>

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
-import { FREE_TIER_LIMITS, NON_LATIN_LANGUAGES, LANGUAGE_SCRIPTS, ROMANIZATION_NAMES } from '@/lib/constants';
+import { FREE_TIER_LIMITS, PREMIUM_TIER_LIMITS, NON_LATIN_LANGUAGES, LANGUAGE_SCRIPTS, ROMANIZATION_NAMES } from '@/lib/constants';
 
 const VALID_STACK_SIZES = {
   FREE: [5],
@@ -243,7 +243,7 @@ export async function POST(request: Request) {
 
     DEBUG_SERVER.api('User stacks count', { count: userStacks?.length || 0, isPremium: profile.is_premium });
 
-    // Free tier: check total stacks limit
+    // Free tier: check total stacks limit (hard cap of 3)
     if (!profile.is_premium && userStacks && userStacks.length >= FREE_TIER_LIMITS.MAX_TOTAL_STACKS) {
       DEBUG_SERVER.apiError('Max total stacks reached', null, {
         count: userStacks.length,
@@ -255,16 +255,39 @@ export async function POST(request: Request) {
       );
     }
 
-    // Premium tier: check incomplete stacks (backward compatibility)
-    if (profile.is_premium && userStacks && userStacks.length >= FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS) {
-      DEBUG_SERVER.apiError('Max incomplete stacks reached (premium)', null, {
-        count: userStacks.length,
-        limit: FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS,
-      });
-      return NextResponse.json(
-        { error: 'Maximum incomplete stacks reached. Complete or delete existing stacks.' },
-        { status: 429 }
-      );
+    // Premium tier: check daily stack creation limit (5 per day)
+    if (profile.is_premium) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayISO = today.toISOString();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowISO = tomorrow.toISOString();
+
+      const { data: todayStacks, error: todayStacksError } = await supabase
+        .from('card_stacks')
+        .select('id')
+        .eq('user_id', user.id)
+        .gte('created_at', todayISO)
+        .lt('created_at', tomorrowISO);
+
+      if (todayStacksError) {
+        DEBUG_SERVER.apiError('Today stacks check error', todayStacksError);
+      }
+
+      const todayStacksCount = todayStacks?.length || 0;
+      DEBUG_SERVER.api('Today stacks count for premium user', { count: todayStacksCount, limit: PREMIUM_TIER_LIMITS.MAX_DAILY_STACKS });
+
+      if (todayStacksCount >= PREMIUM_TIER_LIMITS.MAX_DAILY_STACKS) {
+        DEBUG_SERVER.apiError('Max daily stacks reached (premium)', null, {
+          count: todayStacksCount,
+          limit: PREMIUM_TIER_LIMITS.MAX_DAILY_STACKS,
+        });
+        return NextResponse.json(
+          { error: `You've created ${PREMIUM_TIER_LIMITS.MAX_DAILY_STACKS} stacks today. Delete a stack to create more, or wait until tomorrow.` },
+          { status: 429 }
+        );
+      }
     }
 
     const difficultyGuide = getDifficultyInstructions(difficulty);

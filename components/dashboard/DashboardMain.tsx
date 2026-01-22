@@ -18,6 +18,7 @@ import WeeklyCalendar from './WeeklyCalendar';
 import StackCarousel from './StackCarousel';
 import ArchiveVault from './ArchiveVault';
 import StackGenerationModal from './StackGenerationModal';
+import PremiumModal from './PremiumModal';
 
 // Source stack data for generating more cards with similar topic
 interface SourceStackData {
@@ -78,6 +79,7 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [stackToDelete, setStackToDelete] = useState<Stack | null>(null);
   const [deletionCheck, setDeletionCheck] = useState<StackDeletionCheck | null>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isCheckingDeletion, setIsCheckingDeletion] = useState(false);
   const supabase = createClient();
   
@@ -337,26 +339,12 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* Header */}
       <div className="mb-6 animate-fade-in">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mb-1">
-              Welcome back, {userName || 'Friend'}! 👋
-            </h1>
-            <p className="text-[var(--text-secondary)] font-medium text-sm sm:text-lg">
-              Keep up the great work learning {stacks[0]?.language || 'a new language'}
-            </p>
-          </div>
-          {!isPremium && (
-            <Link href="/pricing">
-              <Button
-                className="bg-[#58cc02] text-white font-extrabold rounded-xl px-6 py-3 shadow-[0_4px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"
-              >
-                <Crown className="h-4 w-4 mr-2" />
-                Upgrade to Premium
-              </Button>
-            </Link>
-          )}
-        </div>
+        <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mb-1">
+          Welcome back, {userName || 'Friend'}! 👋
+        </h1>
+        <p className="text-[var(--text-secondary)] font-medium text-sm sm:text-lg">
+          Keep up the great work learning {stacks[0]?.language || 'a new language'}
+        </p>
       </div>
 
       {/* Unified Streak & Progress Card */}
@@ -566,22 +554,47 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
         onGenerateMore={handleGenerateMore}
       />
 
-      {/* Archive/Vault Section (Completed Stacks) - Premium Only */}
-      {isPremium && (
-        <ArchiveVault 
-          stacks={archivedStacks.map(s => ({
-            id: s.id,
-            title: s.title,
-            language: s.language,
-            total_cards: s.total_cards,
-            cefr_level: s.cefr_level,
-            completion_date: s.completion_date || s.last_test_date,
-            test_notes: s.test_notes,
-          }))}
-          onUpdate={onUpdate}
-          className="animate-fade-in stagger-4"
-        />
-      )}
+      {/* Archive/Vault Section (Completed Stacks) */}
+      <div className="mt-8 animate-fade-in stagger-4">
+        <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] mb-4">
+          Archive
+        </h2>
+        {isPremium ? (
+          <ArchiveVault 
+            stacks={archivedStacks.map(s => ({
+              id: s.id,
+              title: s.title,
+              language: s.language,
+              total_cards: s.total_cards,
+              cefr_level: s.cefr_level,
+              completion_date: s.completion_date || s.last_test_date,
+              test_notes: s.test_notes,
+            }))}
+            onUpdate={onUpdate}
+            className="animate-fade-in stagger-4"
+          />
+        ) : (
+          <div className="rounded-[20px] p-6 border-2 border-[var(--border-color)] shadow-[var(--shadow-md)]" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <p className="text-[var(--text-secondary)] font-medium mb-4 text-center">
+              Upgrade to Premium to create unlimited stacks and store completed stacks
+            </p>
+            <div className="flex justify-center">
+              <Button
+                onClick={() => setShowPremiumModal(true)}
+                style={{ 
+                  backgroundColor: 'var(--accent-green)', 
+                  color: 'white',
+                  boxShadow: '0 3px 0 var(--accent-green-dark)'
+                }}
+                className="font-extrabold rounded-xl px-6 py-3"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Upgrade to Premium
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Stack Generation Modal */}
       {userId && (
@@ -673,6 +686,9 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Premium Modal */}
+      <PremiumModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
     </div>
   );
 }

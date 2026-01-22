@@ -43,6 +43,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { UserProfile } from '@/lib/types';
+import PremiumModal from '@/components/dashboard/PremiumModal';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -88,6 +89,7 @@ export default function AccountSettingsPage() {
   const [highContrast, setHighContrast] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [savingAccessibility, setSavingAccessibility] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!sessionUser) return;
@@ -360,12 +362,15 @@ export default function AccountSettingsPage() {
                   <Skeleton className="h-24 bg-slate-700" />
                 </CardContent>
               </Card>
-            ))}
-          </div>
+            )          )}
         </div>
       </div>
-    );
-  }
+
+      {/* Premium Modal */}
+      <PremiumModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
+    </div>
+  );
+}
 
   if (error) {
     return (
@@ -718,15 +723,14 @@ export default function AccountSettingsPage() {
                 </Button>
               )}
               {!profile?.is_premium && (
-                <Link href="/pricing" className="block mt-4">
-                  <Button 
-                    className="w-full"
-                    style={{ backgroundColor: 'var(--accent-green)', color: 'white' }}
-                  >
-                    <Crown className="h-4 w-4 mr-2" />
-                    Upgrade to Premium
-                  </Button>
-                </Link>
+                <Button 
+                  onClick={() => setShowPremiumModal(true)}
+                  className="w-full mt-4"
+                  style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
+                >
+                  <Crown className="h-4 w-4 mr-2" />
+                  Upgrade to Premium
+                </Button>
               )}
             </CardContent>
           </Card>

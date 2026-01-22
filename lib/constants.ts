@@ -169,6 +169,10 @@ export const FREE_TIER_LIMITS = {
   DAILY_GENERATIONS: 5,
 };
 
+export const PREMIUM_TIER_LIMITS = {
+  MAX_DAILY_STACKS: 5,
+};
+
 export const PREMIUM_PRICING = {
   MONTHLY: {
     amount: 4.99,

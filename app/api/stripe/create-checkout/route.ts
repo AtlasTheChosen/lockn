@@ -22,7 +22,7 @@ export async function POST(request: Request) {
       ],
       mode: 'subscription',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?success=true`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/pricing?canceled=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?canceled=true`,
       metadata: {
         user_id: userId,
       },

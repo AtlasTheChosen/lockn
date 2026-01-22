@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sparkles, Plus, LogOut, Crown, Flame, Trophy, BookOpen, Loader2, AlertCircle, HelpCircle } from 'lucide-react';
 import ThemeSelector from '@/components/dashboard/ThemeSelector';
 import StreakTutorial from '@/components/tutorial/StreakTutorial';
+import PremiumModal from '@/components/dashboard/PremiumModal';
 import { SUPPORTED_LANGUAGES, QUICK_START_SCENARIOS, FREE_TIER_LIMITS } from '@/lib/constants';
 import type { UserProfile, CardStack, UserStats } from '@/lib/types';
 import type { User } from '@supabase/supabase-js';
@@ -33,6 +34,7 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showStreakTutorial, setShowStreakTutorial] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -146,12 +148,15 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
             <div className="flex items-center gap-3">
               <ThemeSelector userId={user.id} />
               {!profile?.is_premium && (
-                <Link href="/pricing">
-                  <Button size="sm" variant="outline" className="gap-2">
-                    <Crown className="h-4 w-4" />
-                    Upgrade
-                  </Button>
-                </Link>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="gap-2"
+                  onClick={() => setShowPremiumModal(true)}
+                >
+                  <Crown className="h-4 w-4" />
+                  Upgrade
+                </Button>
               )}
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
                 <LogOut className="h-4 w-4" />
@@ -300,12 +305,19 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
                       : `Free users can have up to ${FREE_TIER_LIMITS.MAX_TOTAL_STACKS} stacks total. Delete a stack to create a new one, or upgrade to Premium for unlimited stacks.`
                     }
                   </CardDescription>
-                  <Link href="/pricing">
-                    <Button size="sm" className="mt-3">
-                      <Crown className="h-4 w-4 mr-2" />
-                      Upgrade to Premium
-                    </Button>
-                  </Link>
+                  <Button 
+                    size="sm" 
+                    className="mt-3"
+                    onClick={() => setShowPremiumModal(true)}
+                    style={{ 
+                      backgroundColor: 'var(--accent-green)', 
+                      color: 'white',
+                      boxShadow: '0 3px 0 var(--accent-green-dark)'
+                    }}
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
+                    Upgrade to Premium
+                  </Button>
                 </div>
               </div>
             </CardHeader>
@@ -373,6 +385,9 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
           </div>
         )}
       </main>
+
+      {/* Premium Modal */}
+      <PremiumModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
     </div>
   );
 }

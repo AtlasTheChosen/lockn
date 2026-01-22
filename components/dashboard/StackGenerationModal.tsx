@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { X, Loader2, Sparkles, MessageSquare, AlertTriangle, CreditCard, RefreshCw } from 'lucide-react';
+import { X, Loader2, Sparkles, MessageSquare, AlertTriangle, CreditCard, RefreshCw, Crown } from 'lucide-react';
+import PremiumModal from './PremiumModal';
 import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 import { DEBUG } from '@/lib/debug';
@@ -45,6 +46,7 @@ export default function StackGenerationModal({ isOpen, onClose, userId, isPremiu
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const [contentWarning, setContentWarning] = useState<string | null>(null);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   
@@ -497,22 +499,28 @@ export default function StackGenerationModal({ isOpen, onClose, userId, isPremiu
                       <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
                         {count === 5 ? 'Starter' : count === 10 ? 'Quick' : count === 25 ? 'Standard' : count === 50 ? 'Deep dive' : ''}
                       </p>
-                      {!isPremium && count === 5 && (
-                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                          Upgrade for 10, 25, or 50 cards
-                        </p>
-                      )}
                     </CardContent>
                   </Card>
                 ))}
               </div>
               {!isPremium && (
-                <p className="text-xs font-medium mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
-                  <Link href="/pricing" className="underline" style={{ color: 'var(--accent-green)' }}>
+                <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3 p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                  <p className="text-sm font-medium text-center" style={{ color: 'var(--text-muted)' }}>
+                    Upgrade to Premium to create 10, 25, 50 card stacks
+                  </p>
+                  <Button
+                    onClick={() => setShowPremiumModal(true)}
+                    style={{ 
+                      backgroundColor: 'var(--accent-green)', 
+                      color: 'white',
+                      boxShadow: '0 3px 0 var(--accent-green-dark)'
+                    }}
+                    className="font-bold rounded-xl px-4 py-2"
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
                     Upgrade to Premium
-                  </Link>
-                  {' '}to create 10, 25, or 50 card stacks
-                </p>
+                  </Button>
+                </div>
               )}
             </div>
 
@@ -565,6 +573,9 @@ export default function StackGenerationModal({ isOpen, onClose, userId, isPremiu
           </div>
         </motion.div>
       </motion.div>
+
+      {/* Premium Modal */}
+      <PremiumModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
     </AnimatePresence>
   );
 }
