@@ -237,7 +237,13 @@ export default function TopNav({
         'shadow-[var(--shadow-sm)]',
         'transition-all duration-300'
       )}
-      style={{ position: 'sticky', top: 0 }}
+      style={{ 
+        position: 'sticky', 
+        top: 0,
+        willChange: 'transform',
+        WebkitTransform: 'translateZ(0)',
+        transform: 'translateZ(0)'
+      }}
     >
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2 flex-shrink-0">
@@ -266,7 +272,16 @@ export default function TopNav({
                 )}
                 title={link.label}
               >
-                <link.icon className="h-5 w-5" />
+                <link.icon 
+                  className="flex-shrink-0" 
+                  style={{ 
+                    width: '24px', 
+                    height: '24px', 
+                    minWidth: '24px', 
+                    minHeight: '24px',
+                    display: 'block'
+                  }}
+                />
                 <span className="hidden lg:inline font-bold text-base">{link.label}</span>
               </button>
             );
@@ -295,9 +310,16 @@ export default function TopNav({
 
                 <link.icon 
                   className={cn(
-                    'relative z-10 h-5 w-5 transition-colors duration-200',
+                    'relative z-10 transition-colors duration-200 flex-shrink-0',
                     isActive ? 'text-[#58cc02]' : 'text-[var(--text-secondary)]'
                   )}
+                  style={{ 
+                    width: '24px', 
+                    height: '24px', 
+                    minWidth: '24px', 
+                    minHeight: '24px',
+                    display: 'block'
+                  }}
                 />
                 <span
                   className={cn(
@@ -334,9 +356,16 @@ export default function TopNav({
               )}
               <Shield 
                 className={cn(
-                  'relative z-10 h-5 w-5 transition-colors duration-200',
+                  'relative z-10 transition-colors duration-200 flex-shrink-0',
                   pathname === '/admin' ? 'text-red-500' : 'text-red-400'
                 )}
+                style={{ 
+                  width: '24px', 
+                  height: '24px', 
+                  minWidth: '24px', 
+                  minHeight: '24px',
+                  display: 'block'
+                }}
               />
               <span
                 className={cn(

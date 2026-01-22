@@ -3,15 +3,63 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import AchievementBadges from '@/components/social/AchievementBadges';
 import { 
   User, 
   Calendar,
   Shield,
-  Settings
+  Settings,
+  Flame,
+  BookOpen,
+  Globe,
+  Trophy,
+  Crown
 } from 'lucide-react';
 import type { UserProfile } from '@/lib/types';
 import { getAvatarUrl } from '@/lib/avatars';
+
+const LANGUAGE_NAMES: Record<string, string> = {
+  es: 'Spanish',
+  fr: 'French',
+  de: 'German',
+  it: 'Italian',
+  pt: 'Portuguese',
+  ja: 'Japanese',
+  ko: 'Korean',
+  zh: 'Chinese',
+  ru: 'Russian',
+  ar: 'Arabic',
+  hi: 'Hindi',
+  nl: 'Dutch',
+  sv: 'Swedish',
+  pl: 'Polish',
+  tr: 'Turkish',
+  vi: 'Vietnamese',
+  th: 'Thai',
+  he: 'Hebrew',
+};
+
+const LANGUAGE_EMOJIS: Record<string, string> = {
+  es: '🇪🇸',
+  fr: '🇫🇷',
+  de: '🇩🇪',
+  it: '🇮🇹',
+  pt: '🇧🇷',
+  ja: '🇯🇵',
+  ko: '🇰🇷',
+  zh: '🇨🇳',
+  ru: '🇷🇺',
+  ar: '🇸🇦',
+  hi: '🇮🇳',
+  nl: '🇳🇱',
+  sv: '🇸🇪',
+  pl: '🇵🇱',
+  tr: '🇹🇷',
+  vi: '🇻🇳',
+  th: '🇹🇭',
+  he: '🇮🇱',
+};
 
 interface Props {
   profile: UserProfile;
@@ -19,6 +67,7 @@ interface Props {
     current_streak?: number;
     total_cards_mastered?: number;
     current_week_cards?: number;
+    longest_streak?: number;
   } | null;
 }
 
@@ -55,9 +104,7 @@ export default function ProfileView({ profile, stats }: Props) {
               )}
             </div>
 
-            <p className="font-medium mb-3" style={{ color: 'var(--text-secondary)' }}>{profile.email}</p>
-
-            {/* Meta info */}
+            {/* Meta info - NO EMAIL */}
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
               <span className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
@@ -70,6 +117,22 @@ export default function ProfileView({ profile, stats }: Props) {
                 </span>
               )}
             </div>
+
+            {/* Languages Learning */}
+            {profile.languages_learning && profile.languages_learning.length > 0 && (
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-3">
+                <Globe className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+                {profile.languages_learning.map((lang) => (
+                  <span
+                    key={lang}
+                    className="px-2 py-1 text-xs font-semibold rounded-lg"
+                    style={{ backgroundColor: 'rgba(88, 204, 2, 0.2)', color: 'var(--accent-green)' }}
+                  >
+                    {LANGUAGE_EMOJIS[lang] || '🌐'} {LANGUAGE_NAMES[lang] || lang}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Settings Links */}
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 mt-3">
@@ -98,6 +161,50 @@ export default function ProfileView({ profile, stats }: Props) {
         </div>
       </div>
 
+      {/* Stats Grid */}
+      {stats && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="rounded-2xl p-4 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <Flame className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--accent-orange)' }} />
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{stats.current_streak || 0}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Current Streak</p>
+          </div>
+
+          <div className="rounded-2xl p-4 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <BookOpen className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--accent-blue)' }} />
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{stats.current_week_cards || 0}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>This Week</p>
+          </div>
+
+          <div className="rounded-2xl p-4 text-center" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <Trophy className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--accent-green)' }} />
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{stats.total_cards_mastered || 0}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Total Cards</p>
+          </div>
+
+          <div className="rounded-2xl p-4 text-center relative" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+            <Crown className="h-6 w-6 mx-auto mb-2" style={{ color: 'var(--accent-orange)' }} />
+            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>{stats.longest_streak || 0}</p>
+            <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>Best Streak</p>
+            {stats.longest_streak && stats.longest_streak > 0 && (
+              <Badge className="absolute -top-2 -right-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs px-1.5 py-0.5">
+                Best
+              </Badge>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Achievements */}
+      {profile.badges && profile.badges.length > 0 && (
+        <div className="rounded-3xl p-6" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
+          <h3 className="font-display text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+            <Trophy className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+            Achievements ({profile.badges.length})
+          </h3>
+          <AchievementBadges badges={profile.badges} showAll size="lg" />
+        </div>
+      )}
     </div>
   );
 }

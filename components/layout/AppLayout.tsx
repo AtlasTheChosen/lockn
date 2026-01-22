@@ -123,7 +123,7 @@ export default function AppLayout({ children, hideNav = false }: AppLayoutProps)
   }
 
   return (
-    <div className="min-h-screen relative safe-area-x overflow-x-hidden w-full max-w-[100vw]">
+    <div className="min-h-screen relative safe-area-x w-full max-w-[100vw]">
       <TopNav 
         streak={streak} 
         streakFrozen={streakFrozen} 

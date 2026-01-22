@@ -142,6 +142,7 @@ export default function DashboardTabs({
                 current_streak: stats.current_streak ?? 0,
                 total_cards_mastered: stats.total_cards_mastered ?? 0,
                 current_week_cards: stats.current_week_cards ?? 0,
+                longest_streak: stats.longest_streak ?? 0,
               }}
             />
           ) : (
