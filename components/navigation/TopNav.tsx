@@ -237,6 +237,7 @@ export default function TopNav({
         'shadow-[var(--shadow-sm)]',
         'transition-all duration-300'
       )}
+      style={{ position: 'sticky' }}
     >
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2 flex-shrink-0">

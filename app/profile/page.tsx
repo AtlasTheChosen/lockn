@@ -151,7 +151,7 @@ export default function ProfilePage() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-white">Account Settings</h1>
+          <h1 className="text-3xl font-bold text-white">Profile Settings</h1>
         </div>
 
         {/* Account Settings */}
