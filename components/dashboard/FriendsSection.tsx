@@ -641,7 +641,9 @@ export default function FriendsSection({ userId, accessToken }: Props) {
               </div>
             ) : (
               <div className="space-y-3">
-                {pendingRequests.map((friendship) => (
+                {pendingRequests.map((friendship) => {
+                  const friendId = friendship.user_id === userId ? friendship.friend_id : friendship.user_id;
+                  return (
                   <div key={friendship.id} className="rounded-2xl p-5 flex items-center justify-between" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '2px solid rgba(88, 204, 2, 0.3)' }}>
                     <div 
                       onClick={() => setSelectedFriendId(friendId)}
@@ -694,7 +696,8 @@ export default function FriendsSection({ userId, accessToken }: Props) {
                       </Button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
