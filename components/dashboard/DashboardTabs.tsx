@@ -140,7 +140,7 @@ export default function DashboardTabs({
               profile={profile}
               stats={{
                 current_streak: stats.current_streak ?? 0,
-                total_cards_mastered: stats.total_mastered ?? 0,
+                total_cards_mastered: stats.total_cards_mastered ?? 0,
                 current_week_cards: stats.current_week_cards ?? 0,
               }}
             />
