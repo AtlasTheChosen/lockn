@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import Link from 'next/link';
 import { Search, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,8 +15,8 @@ interface CommandLandingProps {
   onStartTrial: (scenario: string, language: string, level: string, cardCount?: number, scriptPreference?: string) => void;
 }
 
-const CARD_COUNT_OPTIONS = [10, 25, 50] as const;
-type CardCount = typeof CARD_COUNT_OPTIONS[number];
+const ALL_CARD_COUNT_OPTIONS = [5, 10, 25, 50] as const;
+type CardCount = typeof ALL_CARD_COUNT_OPTIONS[number];
 
 const SUGGESTIONS = [
   { text: 'ordering pizza in Rome', emoji: '🍕' },
@@ -32,10 +33,11 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
   const [searchValue, setSearchValue] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('Spanish');
   const [selectedLevel, setSelectedLevel] = useState<string>('B2');
-  const [selectedCardCount, setSelectedCardCount] = useState<CardCount>(10);
+  const [selectedCardCount, setSelectedCardCount] = useState<CardCount>(5);
   const [scriptPreference, setScriptPreference] = useState<string | null>(null);
   const [contentWarning, setContentWarning] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isPremium, setIsPremium] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
   
@@ -52,15 +54,34 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
     if (savedLevel) setSelectedLevel(savedLevel);
     if (savedCardCount) {
       const count = parseInt(savedCardCount, 10);
-      if (CARD_COUNT_OPTIONS.includes(count as CardCount)) {
+      if (ALL_CARD_COUNT_OPTIONS.includes(count as CardCount)) {
         setSelectedCardCount(count as CardCount);
+      } else {
+        setSelectedCardCount(5);
       }
+    } else {
+      setSelectedCardCount(5);
     }
 
     const checkAuth = async () => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
       setIsLoggedIn(!!session);
+      
+      if (session?.user) {
+        // Fetch premium status
+        try {
+          const { data: profile } = await supabase
+            .from('user_profiles')
+            .select('is_premium')
+            .eq('id', session.user.id)
+            .single();
+          setIsPremium(profile?.is_premium || false);
+        } catch (error) {
+          console.error('Error fetching premium status:', error);
+          setIsPremium(false);
+        }
+      }
     };
     checkAuth();
   }, []);
@@ -138,6 +159,18 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
     setSelectedCardCount(count);
     localStorage.setItem('lockn-card-count', count.toString());
   };
+
+  // #region agent log
+  useEffect(() => {
+    if (isLoggedIn) {
+      const optionsToShow = isPremium ? ALL_CARD_COUNT_OPTIONS : [5 as CardCount];
+      setTimeout(() => {
+        const cardButtons = document.querySelectorAll('[data-card-count]');
+        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:143',message:'Card options rendering',data:{isPremium,isLoggedIn,optionsToShow:Array.from(optionsToShow),renderedButtons:cardButtons.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
+      }, 100);
+    }
+  }, [isPremium, isLoggedIn]);
+  // #endregion
 
   const getLanguageEmoji = (name: string) => {
     const emojiMap: Record<string, string> = {
@@ -293,11 +326,18 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                     🎴 Cards
                   </label>
                   <div className="flex gap-2">
-                    {CARD_COUNT_OPTIONS.map((count) => (
+                    {(isPremium ? ALL_CARD_COUNT_OPTIONS : [5 as CardCount]).map((count) => (
                       <Button
                         key={count}
                         type="button"
-                        onClick={() => handleCardCountChange(count)}
+                        onClick={() => {
+                          if (!isPremium && count !== 5) {
+                            setShowAuthModal(true);
+                            setAuthModalMode('signup');
+                            return;
+                          }
+                          handleCardCountChange(count);
+                        }}
                         className="flex-1 rounded-xl h-14 py-3 sm:py-4 font-semibold transition-all active:scale-95"
                         style={selectedCardCount === count
                           ? { backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }
@@ -308,6 +348,20 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                       </Button>
                     ))}
                   </div>
+                  {!isPremium && (
+                    <div className="mt-3 flex flex-col sm:flex-row items-center justify-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                      <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
+                        Upgrade to Premium to create 10, 25, 50 card stacks
+                      </p>
+                      <Link href="/pricing">
+                        <Button
+                          className="bg-[#58cc02] text-white font-bold rounded-xl px-3 py-1.5 text-xs shadow-[0_3px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"
+                        >
+                          Upgrade
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

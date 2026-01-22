@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,8 +12,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Check, Crown, Zap, Infinity, Archive, Volume2, Headphones } from 'lucide-react';
+import { Check, Crown, Zap, Infinity, Archive, Volume2, Headphones, Loader2 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
+import { createClient } from '@/lib/supabase/client';
+import { loadStripe } from '@stripe/stripe-js';
 
 interface PremiumModalProps {
   isOpen: boolean;
@@ -21,6 +24,54 @@ interface PremiumModalProps {
 
 export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [supabase, setSupabase] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setSupabase(createClient());
+    }
+  }, []);
+
+  const handleCheckout = async () => {
+    if (!supabase) return;
+
+    setLoading(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push('/');
+        return;
+      }
+
+      const res = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || '',
+          userId: user.id,
+        }),
+      });
+
+      const { sessionId } = await res.json();
+
+      const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+      if (stripeKey) {
+        const stripe = await loadStripe(stripeKey);
+        if (stripe) {
+          await stripe.redirectToCheckout({ sessionId });
+        }
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -158,16 +209,26 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                 className="w-full font-bold text-sm py-2"
                 onClick={() => {
                   onClose();
-                  router.push('/pricing');
+                  handleCheckout();
                 }}
+                disabled={loading}
                 style={{ 
                   backgroundColor: 'var(--accent-green)', 
                   color: 'white', 
                   boxShadow: '0 3px 0 var(--accent-green-dark)'
                 }}
               >
-                <Crown className="h-4 w-4 mr-2" />
-                Upgrade to Premium
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <Crown className="h-4 w-4 mr-2" />
+                    Upgrade to Premium
+                  </>
+                )}
               </Button>
               <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
                 Cancel anytime. No questions asked.

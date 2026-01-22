@@ -230,33 +230,23 @@ export default function TopNav({
   };
 
   return (
-    <motion.nav
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
+    <nav
       className={cn(
-        'flex sticky top-0 z-[100]',
-        'w-full items-center justify-between',
+        'sticky top-0 z-[100]',
+        'w-full flex items-center justify-between',
         'px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4',
         'bg-[var(--bg-card)]/80 backdrop-blur-xl',
         'border-b-2 border-[var(--border-color)]',
         'shadow-[var(--shadow-sm)]',
         'transition-all duration-300'
       )}
-      style={{ 
-        position: 'sticky', 
-        top: 0,
-        willChange: 'transform',
-        WebkitTransform: 'translateZ(0)',
-        transform: 'translateZ(0)'
-      }}
     >
       {/* Logo */}
       <Link href="/" className="flex items-center gap-2 flex-shrink-0">
-        <motion.div className="flex items-center gap-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+        <div className="flex items-center gap-2">
           <Logo size="md" />
           <span className="font-display text-xl lg:text-2xl font-semibold text-[#58cc02]">Lockn</span>
-        </motion.div>
+        </div>
       </Link>
 
       {/* Nav Links - Labels hidden on small screens, shown on lg+ */}
@@ -442,6 +432,6 @@ export default function TopNav({
 
       {/* Auth Modal for guests */}
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} initialMode={authModalMode} />
-    </motion.nav>
+    </nav>
   );
 }

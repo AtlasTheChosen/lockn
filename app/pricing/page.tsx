@@ -68,16 +68,16 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      <nav className="border-b bg-white/80 backdrop-blur-sm">
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      <nav className="border-b backdrop-blur-sm sticky top-0 z-50" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <Sparkles className="h-6 w-6 text-blue-600" />
-              <span className="text-xl font-bold">ScenarioFluent</span>
+              <Sparkles className="h-6 w-6" style={{ color: 'var(--accent-green)' }} />
+              <span className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Lockn</span>
             </Link>
             <Link href="/dashboard">
-              <Button variant="ghost">Back to Dashboard</Button>
+              <Button variant="ghost" style={{ color: 'var(--text-secondary)' }}>Back to Dashboard</Button>
             </Link>
           </div>
         </div>
@@ -85,109 +85,98 @@ export default function PricingPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4">Upgrade to Premium</h1>
-          <p className="text-xl text-slate-600 mb-2">
+          <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Upgrade to Premium</h1>
+          <p className="text-xl mb-2" style={{ color: 'var(--text-secondary)' }}>
             Unlimited AI generations, unlimited stacks, and advanced features
           </p>
-          <p className="text-lg text-slate-500">
+          <p className="text-lg" style={{ color: 'var(--text-muted)' }}>
             Just $4.99/month - Cancel anytime
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          <Card className="border-2">
+          <Card className="border-2" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--border-color)' }}>
             <CardHeader>
-              <CardTitle className="text-2xl">Free</CardTitle>
-              <CardDescription>Perfect to get started</CardDescription>
+              <CardTitle className="text-2xl" style={{ color: 'var(--text-primary)' }}>Free</CardTitle>
+              <CardDescription style={{ color: 'var(--text-secondary)' }}>Perfect to get started</CardDescription>
               <div className="pt-4">
-                <span className="text-4xl font-bold">$0</span>
-                <span className="text-slate-600">/month</span>
+                <span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>$0</span>
+                <span style={{ color: 'var(--text-secondary)' }}>/month</span>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span>5 AI generations per day</span>
+                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                  <span style={{ color: 'var(--text-primary)' }}>Up to 3 stacks total</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span>Up to 3 stacks total</span>
+                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                  <span style={{ color: 'var(--text-primary)' }}>5-card stacks only</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span>5-card stacks only</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span>Basic audio playback</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span>Spaced repetition algorithm</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span>Tests, streaks, and social features</span>
+                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                  <span style={{ color: 'var(--text-primary)' }}>Tests, streaks, and social features</span>
                 </div>
               </div>
               <Button 
                 variant="outline" 
                 className="w-full opacity-60 cursor-not-allowed"
                 disabled
+                style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
               >
                 Current Plan
               </Button>
             </CardContent>
           </Card>
 
-          <Card className="border-4 border-blue-600 relative">
+          <Card className="border-4 relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--accent-green)' }}>
             <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-              <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-1">
+              <Badge className="px-4 py-1" style={{ backgroundColor: 'var(--accent-green)', color: 'white' }}>
                 Most Popular
               </Badge>
             </div>
             <CardHeader>
               <div className="flex items-center gap-2 mb-2">
-                <Crown className="h-6 w-6 text-yellow-500" />
-                <CardTitle className="text-2xl">Premium</CardTitle>
+                <Crown className="h-6 w-6" style={{ color: 'var(--accent-green)' }} />
+                <CardTitle className="text-2xl" style={{ color: 'var(--text-primary)' }}>Premium</CardTitle>
               </div>
-              <CardDescription>Unlimited learning potential</CardDescription>
+              <CardDescription style={{ color: 'var(--text-secondary)' }}>Unlimited learning potential</CardDescription>
               <div className="pt-4">
-                <span className="text-4xl font-bold">$4.99</span>
-                <span className="text-slate-600">/month</span>
+                <span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>$4.99</span>
+                <span style={{ color: 'var(--text-secondary)' }}>/month</span>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span className="font-semibold">Unlimited AI generations</span>
+                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Unlimited AI generations</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span className="font-semibold">Unlimited stacks</span>
+                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Unlimited stacks</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span className="font-semibold">10, 25, or 50 card stacks</span>
+                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>10, 25, or 50 card stacks</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span className="font-semibold">Archive completed stacks</span>
+                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>Archive completed stacks</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span>Advanced audio speeds (0.75x, 1.25x)</span>
+                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                  <span style={{ color: 'var(--text-primary)' }}>Advanced audio speeds (0.75x, 1.25x)</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span>Priority support</span>
+                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+                  <span style={{ color: 'var(--text-primary)' }}>Priority support</span>
                 </div>
               </div>
               <Button
                 className="w-full font-bold"
-                style={{ backgroundColor: '#58cc02', color: 'white' }}
+                style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
                 onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || '', 'monthly')}
                 disabled={loading === 'monthly'}
               >
@@ -203,7 +192,7 @@ export default function PricingPage() {
                   </>
                 )}
               </Button>
-              <p className="text-xs text-center text-slate-500">
+              <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
                 Cancel anytime. No questions asked.
               </p>
             </CardContent>
