@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +16,7 @@ import { checkContentAppropriateness } from '@/lib/content-filter';
 import { DEBUG } from '@/lib/debug';
 import { toast } from 'sonner';
 
-const CARD_COUNT_OPTIONS = [10, 25, 50] as const;
+const CARD_COUNT_OPTIONS = [5, 10, 25, 50] as const;
 type CardCount = typeof CARD_COUNT_OPTIONS[number];
 
 // Source stack data for generating more cards with similar topic
@@ -30,14 +31,15 @@ interface StackGenerationModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
+  isPremium?: boolean; // Premium status to determine available options
   sourceStack?: SourceStackData | null; // Optional: for "Generate More" from existing stack
 }
 
-export default function StackGenerationModal({ isOpen, onClose, userId, sourceStack }: StackGenerationModalProps) {
+export default function StackGenerationModal({ isOpen, onClose, userId, isPremium = false, sourceStack }: StackGenerationModalProps) {
   const [scenario, setScenario] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('es');
   const [selectedDifficulty, setSelectedDifficulty] = useState('B1');
-  const [selectedSize, setSelectedSize] = useState<CardCount>(10);
+  const [selectedSize, setSelectedSize] = useState<CardCount>(isPremium ? 10 : 5);
   const [conversationalMode, setConversationalMode] = useState(false);
   const [scriptPreference, setScriptPreference] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
@@ -465,12 +467,21 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
               <label className="text-sm font-semibold mb-3 block flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                 <CreditCard className="h-4 w-4" />
                 Number of Cards
+                {!isPremium && (
+                  <Badge className="ml-2 text-xs" style={{ backgroundColor: 'rgba(88, 204, 2, 0.2)', color: 'var(--accent-green)' }}>
+                    Free
+                  </Badge>
+                )}
               </label>
-              <div className="grid grid-cols-3 gap-3">
-                {CARD_COUNT_OPTIONS.map((count) => (
+              <div className={`grid gap-3 ${isPremium ? 'grid-cols-3' : 'grid-cols-1'}`}>
+                {(isPremium ? CARD_COUNT_OPTIONS : [5 as CardCount]).map((count) => (
                   <Card
                     key={count}
                     onClick={() => {
+                      if (!isPremium && count !== 5) {
+                        toast.error('Upgrade to Premium to create 10, 25, or 50 card stacks');
+                        return;
+                      }
                       setSelectedSize(count);
                       localStorage.setItem('talka-card-count', count.toString());
                       DEBUG.storage('Card count changed in modal', count);
@@ -484,12 +495,25 @@ export default function StackGenerationModal({ isOpen, onClose, userId, sourceSt
                     <CardContent className="p-4 text-center">
                       <p className="text-2xl font-bold mb-1" style={{ color: 'var(--text-primary)' }}>{count}</p>
                       <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                        {count === 10 ? 'Quick' : count === 25 ? 'Standard' : 'Deep dive'}
+                        {count === 5 ? 'Starter' : count === 10 ? 'Quick' : count === 25 ? 'Standard' : count === 50 ? 'Deep dive' : ''}
                       </p>
+                      {!isPremium && count === 5 && (
+                        <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                          Upgrade for 10, 25, or 50 cards
+                        </p>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
               </div>
+              {!isPremium && (
+                <p className="text-xs font-medium mt-2 text-center" style={{ color: 'var(--text-muted)' }}>
+                  <Link href="/pricing" className="underline" style={{ color: 'var(--accent-green)' }}>
+                    Upgrade to Premium
+                  </Link>
+                  {' '}to create 10, 25, or 50 card stacks
+                </p>
+              )}
             </div>
 
             <div className="flex items-center justify-between p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>

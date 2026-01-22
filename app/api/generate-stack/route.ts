@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { FREE_TIER_LIMITS, NON_LATIN_LANGUAGES, LANGUAGE_SCRIPTS, ROMANIZATION_NAMES } from '@/lib/constants';
+
+const VALID_STACK_SIZES = {
+  FREE: [5],
+  PREMIUM: [10, 25, 50],
+};
 import { DEBUG_SERVER } from '@/lib/debug';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 
@@ -178,6 +183,20 @@ export async function POST(request: Request) {
       profile.daily_generations_count = 0;
     }
 
+    // Validate stack size based on tier
+    const validSizes = profile.is_premium ? VALID_STACK_SIZES.PREMIUM : VALID_STACK_SIZES.FREE;
+    if (!validSizes.includes(stackSize)) {
+      DEBUG_SERVER.apiError('Invalid stack size for tier', null, {
+        stackSize,
+        isPremium: profile.is_premium,
+        validSizes,
+      });
+      return NextResponse.json(
+        { error: `Free users can only create 5-card stacks. Upgrade to Premium for 10, 25, or 50 card stacks.` },
+        { status: 403 }
+      );
+    }
+
     if (!profile.is_premium && profile.daily_generations_count >= FREE_TIER_LIMITS.DAILY_GENERATIONS) {
       DEBUG_SERVER.apiError('Daily generation limit reached', null, {
         count: profile.daily_generations_count,
@@ -189,32 +208,61 @@ export async function POST(request: Request) {
       );
     }
 
-    DEBUG_SERVER.api('Checking incomplete stacks');
+    DEBUG_SERVER.api('Checking stacks');
     const stacksStartTime = Date.now();
-    const { data: incompleteStacks, error: stacksError } = await supabase
-      .from('card_stacks')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('is_completed', false);
-    DEBUG_SERVER.timing('Incomplete stacks check', stacksStartTime);
+    
+    // For free users: check total stacks (not just incomplete)
+    // For premium users: check incomplete stacks (backward compatibility)
+    let userStacks;
+    let stacksError;
+    
+    if (profile.is_premium) {
+      // Premium: check incomplete stacks only
+      const result = await supabase
+        .from('card_stacks')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('is_completed', false);
+      userStacks = result.data;
+      stacksError = result.error;
+    } else {
+      // Free: check total stacks
+      const result = await supabase
+        .from('card_stacks')
+        .select('id')
+        .eq('user_id', user.id);
+      userStacks = result.data;
+      stacksError = result.error;
+    }
+    
+    DEBUG_SERVER.timing('Stacks check', stacksStartTime);
 
     if (stacksError) {
-      DEBUG_SERVER.apiError('Incomplete stacks check error', stacksError);
+      DEBUG_SERVER.apiError('Stacks check error', stacksError);
     }
 
-    DEBUG_SERVER.api('Incomplete stacks count', { count: incompleteStacks?.length || 0 });
+    DEBUG_SERVER.api('User stacks count', { count: userStacks?.length || 0, isPremium: profile.is_premium });
 
-    if (
-      !profile.is_premium &&
-      incompleteStacks &&
-      incompleteStacks.length >= FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS
-    ) {
-      DEBUG_SERVER.apiError('Max incomplete stacks reached', null, {
-        count: incompleteStacks.length,
+    // Free tier: check total stacks limit
+    if (!profile.is_premium && userStacks && userStacks.length >= FREE_TIER_LIMITS.MAX_TOTAL_STACKS) {
+      DEBUG_SERVER.apiError('Max total stacks reached', null, {
+        count: userStacks.length,
+        limit: FREE_TIER_LIMITS.MAX_TOTAL_STACKS,
+      });
+      return NextResponse.json(
+        { error: `Maximum ${FREE_TIER_LIMITS.MAX_TOTAL_STACKS} stacks reached. Delete a stack to create a new one, or upgrade to Premium for unlimited stacks.` },
+        { status: 429 }
+      );
+    }
+
+    // Premium tier: check incomplete stacks (backward compatibility)
+    if (profile.is_premium && userStacks && userStacks.length >= FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS) {
+      DEBUG_SERVER.apiError('Max incomplete stacks reached (premium)', null, {
+        count: userStacks.length,
         limit: FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS,
       });
       return NextResponse.json(
-        { error: 'Maximum incomplete stacks reached. Complete or delete existing stacks, or upgrade to Premium.' },
+        { error: 'Maximum incomplete stacks reached. Complete or delete existing stacks.' },
         { status: 429 }
       );
     }

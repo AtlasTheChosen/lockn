@@ -195,16 +195,22 @@ export default function ProfileView({ profile, stats }: Props) {
         </div>
       )}
 
-      {/* Achievements */}
-      {profile.badges && profile.badges.length > 0 && (
-        <div className="rounded-3xl p-6" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
-          <h3 className="font-display text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            <Trophy className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
-            Achievements ({profile.badges.length})
-          </h3>
+      {/* Achievements - Always show, even if empty */}
+      <div className="rounded-3xl p-6" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
+        <h3 className="font-display text-xl font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Trophy className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
+          Achievements {profile.badges && profile.badges.length > 0 && `(${profile.badges.length})`}
+        </h3>
+        {profile.badges && profile.badges.length > 0 ? (
           <AchievementBadges badges={profile.badges} showAll size="lg" />
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-8">
+            <Trophy className="h-12 w-12 mx-auto mb-3 opacity-30" style={{ color: 'var(--text-muted)' }} />
+            <p className="text-sm font-medium mb-1" style={{ color: 'var(--text-primary)' }}>No achievements yet</p>
+            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Complete challenges and maintain your streak to earn badges!</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -139,9 +139,15 @@ function UserAvatar({
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.15, ease: 'easeOut' }}
               className={cn(
-                'absolute right-0 top-full mt-2 w-48 overflow-hidden rounded-xl z-50',
+                'absolute top-full mt-2 w-48 overflow-hidden rounded-xl z-50',
                 'bg-[var(--bg-card)] border-2 border-[var(--border-color)]',
-                'shadow-lg backdrop-blur-md'
+                'shadow-lg backdrop-blur-md',
+                // Position from right, but on mobile add margin to prevent clipping
+                'right-0',
+                // On very small screens, ensure it doesn't go off screen
+                'max-w-[calc(100vw-1rem)]',
+                // Add small right margin on mobile to prevent edge clipping
+                'mr-2 sm:mr-0'
               )}
             >
               <div className="p-2">

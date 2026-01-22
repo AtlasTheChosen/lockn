@@ -38,12 +38,13 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        // Mobile: slide up from bottom, full width, rounded top corners
+        // Mobile: slide up from bottom, full width, rounded top corners with safe area padding
         'fixed inset-x-0 bottom-0 z-[101] grid w-full gap-4 border bg-background p-4 shadow-lg duration-200',
         'max-h-[90vh] overflow-y-auto',
         'rounded-t-2xl',
+        'pb-[max(1rem,env(safe-area-inset-bottom))]',
         // Desktop: centered modal with max-width
-        'sm:inset-auto sm:left-[50%] sm:top-[50%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:p-6',
+        'sm:inset-auto sm:left-[50%] sm:top-[50%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%] sm:rounded-2xl sm:p-6 sm:pb-6',
         // Animations
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
         // Mobile animations: slide up/down

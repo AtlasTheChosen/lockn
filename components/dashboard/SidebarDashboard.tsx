@@ -84,6 +84,7 @@ export default function SidebarDashboard({ user, profile, stacks, stats }: Sideb
         isOpen={showGenerationModal}
         onClose={() => setShowGenerationModal(false)}
         userId={user.id}
+        isPremium={profile?.is_premium ?? false}
       />
       <div className="min-h-screen bg-black text-white flex">
       <motion.aside

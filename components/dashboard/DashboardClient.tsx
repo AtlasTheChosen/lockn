@@ -57,7 +57,11 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
   };
 
   const incompleteStacks = stacks.filter((s) => !s.is_completed);
-  const canGenerate = profile?.is_premium || incompleteStacks.length < FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS;
+  // Free users: check total stacks (not just incomplete)
+  // Premium users: check incomplete stacks (backward compatibility)
+  const canGenerate = profile?.is_premium 
+    ? incompleteStacks.length < FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS
+    : stacks.length < FREE_TIER_LIMITS.MAX_TOTAL_STACKS;
   const generationsLeft = profile?.is_premium
     ? Infinity
     : FREE_TIER_LIMITS.DAILY_GENERATIONS - (profile?.daily_generations_count || 0);
@@ -291,8 +295,10 @@ export default function DashboardClient({ user, profile, stacks, stats }: Props)
                 <div>
                   <CardTitle className="text-orange-900">Stack Limit Reached</CardTitle>
                   <CardDescription className="text-orange-700">
-                    Free users can have up to {FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS} incomplete stacks.
-                    Complete existing stacks or upgrade to Premium for unlimited stacks.
+                    {profile?.is_premium 
+                      ? `You can have up to ${FREE_TIER_LIMITS.MAX_INCOMPLETE_STACKS} incomplete stacks. Complete or delete existing stacks.`
+                      : `Free users can have up to ${FREE_TIER_LIMITS.MAX_TOTAL_STACKS} stacks total. Delete a stack to create a new one, or upgrade to Premium for unlimited stacks.`
+                    }
                   </CardDescription>
                   <Link href="/pricing">
                     <Button size="sm" className="mt-3">

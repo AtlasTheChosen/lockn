@@ -86,8 +86,11 @@ export default function PricingPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Upgrade to Premium</h1>
-          <p className="text-xl text-slate-600">
+          <p className="text-xl text-slate-600 mb-2">
             Unlimited AI generations, unlimited stacks, and advanced features
+          </p>
+          <p className="text-lg text-slate-500">
+            Just $4.99/month - Cancel anytime
           </p>
         </div>
 
@@ -109,7 +112,11 @@ export default function PricingPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-600" />
-                  <span>Up to 5 incomplete stacks</span>
+                  <span>Up to 3 stacks total</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <span>5-card stacks only</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-600" />
@@ -119,12 +126,18 @@ export default function PricingPage() {
                   <Check className="h-5 w-5 text-green-600" />
                   <span>Spaced repetition algorithm</span>
                 </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <span>Tests, streaks, and social features</span>
+                </div>
               </div>
-              <Link href="/dashboard">
-                <Button variant="outline" className="w-full">
-                  Current Plan
-                </Button>
-              </Link>
+              <Button 
+                variant="outline" 
+                className="w-full opacity-60 cursor-not-allowed"
+                disabled
+              >
+                Current Plan
+              </Button>
             </CardContent>
           </Card>
 
@@ -141,7 +154,7 @@ export default function PricingPage() {
               </div>
               <CardDescription>Unlimited learning potential</CardDescription>
               <div className="pt-4">
-                <span className="text-4xl font-bold">$9.99</span>
+                <span className="text-4xl font-bold">$4.99</span>
                 <span className="text-slate-600">/month</span>
               </div>
             </CardHeader>
@@ -157,19 +170,24 @@ export default function PricingPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-600" />
+                  <span className="font-semibold">10, 25, or 50 card stacks</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-600" />
+                  <span className="font-semibold">Archive completed stacks</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Check className="h-5 w-5 text-green-600" />
                   <span>Advanced audio speeds (0.75x, 1.25x)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-600" />
                   <span>Priority support</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600" />
-                  <span>Grammar deep-dives (coming soon)</span>
-                </div>
               </div>
               <Button
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-700"
+                className="w-full font-bold"
+                style={{ backgroundColor: '#58cc02', color: 'white' }}
                 onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || '', 'monthly')}
                 disabled={loading === 'monthly'}
               >

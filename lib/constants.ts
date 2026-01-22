@@ -165,12 +165,13 @@ export const CARD_RATINGS = {
 
 export const FREE_TIER_LIMITS = {
   MAX_INCOMPLETE_STACKS: 5,
+  MAX_TOTAL_STACKS: 3,
   DAILY_GENERATIONS: 5,
 };
 
 export const PREMIUM_PRICING = {
   MONTHLY: {
-    amount: 9.99,
+    amount: 4.99,
     interval: 'month',
   },
   ANNUAL: {

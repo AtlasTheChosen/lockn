@@ -2,9 +2,10 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { AlertTriangle, HelpCircle, Calendar, Loader2, Flame, BookOpen, Zap } from 'lucide-react';
+import { AlertTriangle, HelpCircle, Calendar, Loader2, Flame, BookOpen, Zap, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 // Weekly stats import removed - only tracking longest streak and total cards now
@@ -66,11 +67,12 @@ interface DashboardMainProps {
   stacks: Stack[];
   stats: Stats | null;
   userName?: string;
+  isPremium?: boolean;
   onUpdate?: () => void;
   onShowTutorial?: () => void;
 }
 
-export default function DashboardMain({ stacks, stats, userName, onUpdate, onShowTutorial }: DashboardMainProps) {
+export default function DashboardMain({ stacks, stats, userName, isPremium = false, onUpdate, onShowTutorial }: DashboardMainProps) {
   const router = useRouter();
   const [deletingStackId, setDeletingStackId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -105,7 +107,11 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
       const isCompleted = testProgress === 100 || stack.status === 'completed';
       
       if (isCompleted) {
-        archived.push(stack);
+        // Only add to archive if premium
+        if (isPremium) {
+          archived.push(stack);
+        }
+        // Free users: don't show completed stacks at all
       } else {
         carousel.push(stack);
       }
@@ -119,7 +125,7 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
     });
     
     return { carouselStacks: carousel, archivedStacks: archived };
-  }, [stacks]);
+  }, [stacks, isPremium]);
 
   // Calculate daily cards for streak
   const cardsMasteredToday = stats?.cards_mastered_today ?? 0;
@@ -331,12 +337,26 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
       {/* Header */}
       <div className="mb-6 animate-fade-in">
-        <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mb-1">
-          Welcome back, {userName || 'Friend'}! 👋
-        </h1>
-        <p className="text-[var(--text-secondary)] font-medium text-sm sm:text-lg">
-          Keep up the great work learning {stacks[0]?.language || 'a new language'}
-        </p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="font-display text-2xl sm:text-3xl font-extrabold text-[var(--text-primary)] mb-1">
+              Welcome back, {userName || 'Friend'}! 👋
+            </h1>
+            <p className="text-[var(--text-secondary)] font-medium text-sm sm:text-lg">
+              Keep up the great work learning {stacks[0]?.language || 'a new language'}
+            </p>
+          </div>
+          {!isPremium && (
+            <Link href="/pricing">
+              <Button
+                className="bg-[#58cc02] text-white font-extrabold rounded-xl px-6 py-3 shadow-[0_4px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Upgrade to Premium
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Unified Streak & Progress Card */}
@@ -546,20 +566,22 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
         onGenerateMore={handleGenerateMore}
       />
 
-      {/* Archive/Vault Section (Completed Stacks) */}
-      <ArchiveVault 
-        stacks={archivedStacks.map(s => ({
-          id: s.id,
-          title: s.title,
-          language: s.language,
-          total_cards: s.total_cards,
-          cefr_level: s.cefr_level,
-          completion_date: s.completion_date || s.last_test_date,
-          test_notes: s.test_notes,
-        }))}
-        onUpdate={onUpdate}
-        className="animate-fade-in stagger-4"
-      />
+      {/* Archive/Vault Section (Completed Stacks) - Premium Only */}
+      {isPremium && (
+        <ArchiveVault 
+          stacks={archivedStacks.map(s => ({
+            id: s.id,
+            title: s.title,
+            language: s.language,
+            total_cards: s.total_cards,
+            cefr_level: s.cefr_level,
+            completion_date: s.completion_date || s.last_test_date,
+            test_notes: s.test_notes,
+          }))}
+          onUpdate={onUpdate}
+          className="animate-fade-in stagger-4"
+        />
+      )}
 
       {/* Stack Generation Modal */}
       {userId && (
@@ -567,6 +589,7 @@ export default function DashboardMain({ stacks, stats, userName, onUpdate, onSho
           isOpen={showGenerationModal}
           onClose={handleCloseGenerationModal}
           userId={userId}
+          isPremium={isPremium}
           sourceStack={generationSourceStack}
         />
       )}

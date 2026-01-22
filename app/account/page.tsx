@@ -719,7 +719,10 @@ export default function AccountSettingsPage() {
               )}
               {!profile?.is_premium && (
                 <Link href="/pricing" className="block mt-4">
-                  <Button className="w-full bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600">
+                  <Button 
+                    className="w-full"
+                    style={{ backgroundColor: 'var(--accent-green)', color: 'white' }}
+                  >
                     <Crown className="h-4 w-4 mr-2" />
                     Upgrade to Premium
                   </Button>
