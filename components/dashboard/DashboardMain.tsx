@@ -81,6 +81,8 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
   const [deletionCheck, setDeletionCheck] = useState<StackDeletionCheck | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [isCheckingDeletion, setIsCheckingDeletion] = useState(false);
+  // Track stacks that are being deleted (optimistic UI)
+  const [pendingDeletions, setPendingDeletions] = useState<Set<string>>(new Set());
   const supabase = createClient();
   
   // Generate More modal state
@@ -100,12 +102,15 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
   }, [supabase.auth]);
 
   // Separate stacks into carousel (unfinished) and archive (completed)
+  // Filter out pending deletions for smooth UI
   const { carouselStacks, archivedStacks } = useMemo(() => {
     const carousel: Stack[] = [];
     const archived: Stack[] = [];
     
-    stacks.forEach(stack => {
-      const testProgress = stack.test_progress ?? 0;
+    stacks
+      .filter(stack => !pendingDeletions.has(stack.id)) // Hide pending deletions
+      .forEach(stack => {
+        const testProgress = stack.test_progress ?? 0;
       const isCompleted = testProgress === 100 || stack.status === 'completed';
       
       if (isCompleted) {
@@ -252,43 +257,82 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
 
   const handleDeleteConfirm = async () => {
     if (!stackToDelete) return;
-    setDeletingStackId(stackToDelete.id);
+    
+    const stackId = stackToDelete.id;
+    const resetStreak = deletionCheck?.warningType === 'streak_reset';
+    const longestStreak = deletionCheck?.longestStreak || 0;
+    
+    // Optimistically remove from UI immediately
+    setPendingDeletions(prev => new Set(prev).add(stackId));
+    setDeletingStackId(stackId);
+    setShowDeleteDialog(false);
+    setStackToDelete(null);
+    setDeletionCheck(null);
 
+    // Perform deletion in background
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) {
         toast.error('Not authenticated');
+        // Restore stack on error
+        setPendingDeletions(prev => {
+          const next = new Set(prev);
+          next.delete(stackId);
+          return next;
+        });
         return;
       }
       
-      const resetStreak = deletionCheck?.warningType === 'streak_reset';
-      
       const result = await executeStackDeletion(
         session.user.id,
-        stackToDelete.id,
+        stackId,
         resetStreak
       );
       
       if (result.success) {
         if (resetStreak) {
-          toast.success(`Stack deleted. Streak reset. Longest: ${deletionCheck?.longestStreak} days preserved.`);
+          toast.success(`Stack deleted. Streak reset. Longest: ${longestStreak} days preserved.`);
         } else {
           toast.success('Stack deleted successfully');
         }
-        onUpdate?.();
+        
+        // Refresh data after a short delay to allow UI to settle
+        // Or wait for navigation away
+        setTimeout(() => {
+          onUpdate?.();
+        }, 500);
       } else {
+        // Restore stack on error
+        setPendingDeletions(prev => {
+          const next = new Set(prev);
+          next.delete(stackId);
+          return next;
+        });
         toast.error(result.message || 'Failed to delete stack');
       }
     } catch (error) {
       console.error('Stack deletion error:', error);
+      // Restore stack on error
+      setPendingDeletions(prev => {
+        const next = new Set(prev);
+        next.delete(stackId);
+        return next;
+      });
       toast.error('Failed to delete stack');
     } finally {
       setDeletingStackId(null);
-      setShowDeleteDialog(false);
-      setStackToDelete(null);
-      setDeletionCheck(null);
     }
   };
+  
+  // Clean up pending deletions when component unmounts or user navigates away
+  useEffect(() => {
+    return () => {
+      // If there are pending deletions when navigating away, refresh to sync
+      if (pendingDeletions.size > 0) {
+        onUpdate?.();
+      }
+    };
+  }, [pendingDeletions.size, onUpdate]);
   
   // Handle "Generate More" from existing stack
   const handleGenerateMore = async (stack: Stack, e: React.MouseEvent) => {

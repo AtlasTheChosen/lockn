@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, ChevronUp, Trash2, FileText, Check, Archive } from 'lucide-react';
@@ -63,41 +63,66 @@ export default function ArchiveVault({ stacks, onUpdate, className = '' }: Archi
   
   const handleDeleteConfirm = async () => {
     if (!stackToDelete) return;
-    setDeletingStackId(stackToDelete.id);
     
+    const stackId = stackToDelete.id;
+    
+    // Optimistically remove from UI immediately
+    setPendingDeletions(prev => new Set(prev).add(stackId));
+    setDeletingStackId(stackId);
+    setShowDeleteDialog(false);
+    setStackToDelete(null);
+
+    // Perform deletion in background
     try {
       // Completed stacks can be deleted without streak impact
       // Delete flashcards first
       await supabase
         .from('flashcards')
         .delete()
-        .eq('stack_id', stackToDelete.id);
+        .eq('stack_id', stackId);
       
       // Delete any test records
       await supabase
         .from('stack_tests')
         .delete()
-        .eq('stack_id', stackToDelete.id);
+        .eq('stack_id', stackId);
       
       // Delete the stack
       const { error } = await supabase
         .from('card_stacks')
         .delete()
-        .eq('id', stackToDelete.id);
+        .eq('id', stackId);
       
       if (error) throw error;
       
       toast.success('Stack deleted from archive');
-      onUpdate?.();
+      
+      // Refresh data after a short delay to allow UI to settle
+      setTimeout(() => {
+        onUpdate?.();
+      }, 500);
     } catch (error) {
       console.error('Delete error:', error);
+      // Restore stack on error
+      setPendingDeletions(prev => {
+        const next = new Set(prev);
+        next.delete(stackId);
+        return next;
+      });
       toast.error('Failed to delete stack');
     } finally {
       setDeletingStackId(null);
-      setShowDeleteDialog(false);
-      setStackToDelete(null);
     }
   };
+  
+  // Clean up pending deletions when component unmounts
+  useEffect(() => {
+    return () => {
+      if (pendingDeletions.size > 0) {
+        onUpdate?.();
+      }
+    };
+  }, [pendingDeletions.size, onUpdate]);
   
   if (stacks.length === 0) {
     return (
@@ -164,7 +189,9 @@ export default function ArchiveVault({ stacks, onUpdate, className = '' }: Archi
           >
             <div className="px-6 pb-6 border-t border-[var(--border-color)]">
               <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 pt-4">
-                {stacks.map((stack, index) => (
+                {stacks
+                  .filter(stack => !pendingDeletions.has(stack.id))
+                  .map((stack, index) => (
                   <motion.div
                     key={stack.id}
                     initial={{ opacity: 0, y: 20 }}

@@ -130,19 +130,47 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
   };
 
   const handleSuggestionClick = (suggestion: string) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:132',message:'handleSuggestionClick called',data:{suggestion,selectedLanguage,isLoggedIn,hasOnStartTrial:typeof onStartTrial==='function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
+    
     if (selectedLanguage) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:135',message:'selectedLanguage check passed',data:{selectedLanguage,selectedLevel,scriptPreference,isLoggedIn,selectedCardCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      
       localStorage.setItem('lockn-trial-language', selectedLanguage);
       localStorage.setItem('lockn-trial-level', selectedLevel);
       if (scriptPreference) {
         localStorage.setItem('lockn-script-preference', scriptPreference);
       }
       
-      if (isLoggedIn) {
-        localStorage.setItem('lockn-card-count', selectedCardCount.toString());
-        onStartTrial(suggestion, selectedLanguage, selectedLevel, selectedCardCount, scriptPreference || undefined);
-      } else {
-        onStartTrial(suggestion, selectedLanguage, selectedLevel, 3, scriptPreference || undefined);
+      try {
+        if (isLoggedIn) {
+          localStorage.setItem('lockn-card-count', selectedCardCount.toString());
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:145',message:'Calling onStartTrial (logged in)',data:{suggestion,selectedLanguage,selectedLevel,selectedCardCount,scriptPreference},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          onStartTrial(suggestion, selectedLanguage, selectedLevel, selectedCardCount, scriptPreference || undefined);
+        } else {
+          // #region agent log
+          fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:149',message:'Calling onStartTrial (guest)',data:{suggestion,selectedLanguage,selectedLevel,scriptPreference},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+          // #endregion
+          onStartTrial(suggestion, selectedLanguage, selectedLevel, 3, scriptPreference || undefined);
+        }
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:152',message:'onStartTrial call completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+        // #endregion
+      } catch (error) {
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:155',message:'Error in onStartTrial',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+        console.error('Error in handleSuggestionClick:', error);
       }
+    } else {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:160',message:'selectedLanguage check failed',data:{selectedLanguage},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
     }
   };
 
@@ -350,18 +378,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                     ))}
                   </div>
                   {!isPremium && (
-                    <div className="mt-3 flex flex-col items-center justify-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                      <Button
-                        onClick={() => setShowPremiumModal(true)}
-                        className="w-full font-bold rounded-xl px-6 py-3 text-sm"
-                        style={{ 
-                          backgroundColor: 'var(--accent-green)', 
-                          color: 'white',
-                          boxShadow: '0 3px 0 var(--accent-green-dark)'
-                        }}
-                      >
-                        Upgrade to Premium
-                      </Button>
+                    <div className="mt-3 flex flex-col items-center justify-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                       <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
                         Upgrade to Premium to create 10, 25, 50 card stacks
                       </p>
@@ -370,31 +387,28 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 </div>
               )}
               
-              {/* Premium Subscription Button - Show for guests and non-premium users on desktop */}
+              {/* Premium Subscription Info - Show for guests and non-premium users on desktop */}
               {(!isLoggedIn || !isPremium) && (
                 <div className="sm:col-span-3 md:col-span-3 mt-4 sm:mt-6">
                   <div className="flex flex-col sm:flex-row items-center justify-center gap-3 p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)' }}>
                     <p className="text-sm font-medium text-center" style={{ color: 'var(--text-primary)' }}>
-                      {!isLoggedIn ? 'Sign up to create custom stacks' : 'Unlock unlimited stacks and advanced features'}
+                      {!isLoggedIn 
+                        ? 'Sign up to create custom stacks. With Premium, you can generate more cards.' 
+                        : 'Unlock unlimited stacks and advanced features'}
                     </p>
-                    <Button
-                      onClick={() => {
-                        if (!isLoggedIn) {
-                          setShowAuthModal(true);
-                          setAuthModalMode('signup');
-                        } else {
-                          setShowPremiumModal(true);
-                        }
-                      }}
-                      className="font-bold rounded-xl px-6 py-3 text-sm whitespace-nowrap"
-                      style={{ 
-                        backgroundColor: 'var(--accent-green)', 
-                        color: 'white',
-                        boxShadow: '0 3px 0 var(--accent-green-dark)'
-                      }}
-                    >
-                      {!isLoggedIn ? 'Get Started Free' : 'Upgrade to Premium'}
-                    </Button>
+                    {isLoggedIn && (
+                      <Button
+                        onClick={() => setShowPremiumModal(true)}
+                        className="font-bold rounded-xl px-6 py-3 text-sm whitespace-nowrap"
+                        style={{ 
+                          backgroundColor: 'var(--accent-green)', 
+                          color: 'white',
+                          boxShadow: '0 3px 0 var(--accent-green-dark)'
+                        }}
+                      >
+                        Upgrade to Premium
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -450,23 +464,35 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             {SUGGESTIONS.map((suggestion, index) => (
-              <motion.button
+              <motion.div
                 key={suggestion.text}
-                onClick={() => handleSuggestionClick(suggestion.text)}
-                disabled={!selectedLanguage}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + index * 0.05 }}
-                className="p-3 sm:p-5 rounded-2xl text-center font-semibold text-sm sm:text-base hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-95"
-                style={{ 
-                  backgroundColor: 'var(--bg-card)', 
-                  border: '2px solid var(--border-color)', 
-                  color: 'var(--text-primary)' 
-                }}
               >
-                <span className="block text-xl sm:text-2xl mb-1">{suggestion.emoji}</span>
-                <span className="block leading-tight">{suggestion.text}</span>
-              </motion.button>
+                <button
+                  onClick={(e) => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:469',message:'Button onClick fired',data:{suggestion:suggestion.text,selectedLanguage,disabled:!selectedLanguage},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                    // #endregion
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (selectedLanguage) {
+                      handleSuggestionClick(suggestion.text);
+                    }
+                  }}
+                  disabled={!selectedLanguage}
+                  className="w-full p-3 sm:p-5 rounded-2xl text-center font-semibold text-sm sm:text-base hover:-translate-y-1 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-95"
+                  style={{ 
+                    backgroundColor: 'var(--bg-card)', 
+                    border: '2px solid var(--border-color)', 
+                    color: 'var(--text-primary)' 
+                  }}
+                >
+                  <span className="block text-xl sm:text-2xl mb-1">{suggestion.emoji}</span>
+                  <span className="block leading-tight">{suggestion.text}</span>
+                </button>
+              </motion.div>
             ))}
           </div>
         </motion.div>
