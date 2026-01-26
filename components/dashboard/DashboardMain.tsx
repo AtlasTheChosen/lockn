@@ -11,6 +11,7 @@ import { createClient } from '@/lib/supabase/client';
 // Weekly stats import removed - only tracking longest streak and total cards now
 import { isDeadlinePassed, STREAK_DAILY_REQUIREMENT, getStreakTimeRemaining, getTimeRemaining, isInGracePeriod } from '@/lib/streak';
 import { checkStackDeletion, executeStackDeletion, type StackDeletionCheck } from '@/lib/streak-system';
+import { FREE_TIER_LIMITS, PREMIUM_TIER_LIMITS } from '@/lib/constants';
 
 // Components
 import ProgressRing from './ProgressRing';
@@ -579,9 +580,32 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
 
       {/* Section Header with Create Button */}
       <div className="flex justify-between items-center mb-4 animate-fade-in stagger-4">
-        <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[var(--text-primary)]">
-          Your Learning Stacks
-        </h2>
+        <div className="flex items-center gap-3">
+          <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[var(--text-primary)]">
+            Your Learning Stacks
+          </h2>
+          {!isPremium ? (
+            <>
+              <span className="text-sm font-medium text-[var(--text-primary)]">
+                {stacks.filter(s => !pendingDeletions.has(s.id)).length}/{FREE_TIER_LIMITS.MAX_TOTAL_STACKS}
+              </span>
+              {stacks.filter(s => !pendingDeletions.has(s.id)).length >= FREE_TIER_LIMITS.MAX_TOTAL_STACKS && (
+                <span className="text-xs text-[var(--text-muted)] opacity-70">
+                  Upgrade to Premium to create unlimited stacks
+                </span>
+              )}
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-medium text-[var(--text-primary)]">
+                {stacks.filter(s => !pendingDeletions.has(s.id)).length}/∞
+              </span>
+              <span className="text-xs text-[var(--text-muted)] opacity-70">
+                {PREMIUM_TIER_LIMITS.MAX_DAILY_STACKS} per day max. Delete stacks to create more.
+              </span>
+            </>
+          )}
+        </div>
         <button
           onClick={() => router.push('/')}
           className="bg-[#58cc02] text-white font-extrabold rounded-xl px-6 py-3 shadow-[0_4px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"

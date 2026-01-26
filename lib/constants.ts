@@ -114,6 +114,72 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'id', name: 'Indonesian' },
 ];
 
+// Language flags/emojis mapped by language name
+export const LANGUAGE_FLAGS: Record<string, string> = {
+  'Spanish': '🇪🇸',
+  'French': '🇫🇷',
+  'German': '🇩🇪',
+  'Italian': '🇮🇹',
+  'Portuguese': '🇧🇷',
+  'Japanese': '🇯🇵',
+  'Korean': '🇰🇷',
+  'Chinese (Mandarin)': '🇨🇳',
+  'Arabic': '🇸🇦',
+  'Russian': '🇷🇺',
+  'Hindi': '🇮🇳',
+  'Turkish': '🇹🇷',
+  'English': '🇬🇧',
+  'Dutch': '🇳🇱',
+  'Polish': '🇵🇱',
+  'Swedish': '🇸🇪',
+  'Norwegian': '🇳🇴',
+  'Danish': '🇩🇰',
+  'Finnish': '🇫🇮',
+  'Greek': '🇬🇷',
+  'Hebrew': '🇮🇱',
+  'Thai': '🇹🇭',
+  'Vietnamese': '🇻🇳',
+  'Indonesian': '🇮🇩',
+};
+
+// Language flags/emojis mapped by language code
+export const LANGUAGE_FLAGS_BY_CODE: Record<string, string> = {
+  'es': '🇪🇸',
+  'fr': '🇫🇷',
+  'de': '🇩🇪',
+  'it': '🇮🇹',
+  'pt': '🇧🇷',
+  'ja': '🇯🇵',
+  'ko': '🇰🇷',
+  'zh': '🇨🇳',
+  'ar': '🇸🇦',
+  'ru': '🇷🇺',
+  'hi': '🇮🇳',
+  'tr': '🇹🇷',
+  'en': '🇬🇧',
+  'nl': '🇳🇱',
+  'pl': '🇵🇱',
+  'sv': '🇸🇪',
+  'no': '🇳🇴',
+  'da': '🇩🇰',
+  'fi': '🇫🇮',
+  'el': '🇬🇷',
+  'he': '🇮🇱',
+  'th': '🇹🇭',
+  'vi': '🇻🇳',
+  'id': '🇮🇩',
+};
+
+// Helper function to get language flag by name
+export const getLanguageFlag = (languageName: string): string => {
+  return LANGUAGE_FLAGS[languageName] || '🌍';
+};
+
+// Helper function to get language flag by code
+export const getLanguageFlagByCode = (languageCode: string): string => {
+  return LANGUAGE_FLAGS_BY_CODE[languageCode] || '🌍';
+};
+
 export const CEFR_LEVELS = [
   {
     code: 'A1',

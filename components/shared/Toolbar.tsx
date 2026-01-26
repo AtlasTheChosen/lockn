@@ -47,6 +47,7 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signup' | 'login'>('login');
+  const [authModalMessage, setAuthModalMessage] = useState<string | undefined>(undefined);
   const supabase = createClient();
 
   const handleLogout = () => {
@@ -112,8 +113,16 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
           <div className="hidden md:flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              // If not logged in and not on home page, show signup modal
+              // If not logged in and not on home page, show signup modal with custom message
               if (!user && item.href !== '/') {
+                const getCustomMessage = (href: string) => {
+                  if (href === '/dashboard') {
+                    return 'Sign in or create an account to access your dashboard';
+                  } else if (href === '/leaderboard') {
+                    return 'Sign in or create an account to see the leaderboard';
+                  }
+                  return undefined;
+                };
                 return (
                   <Button
                     key={item.label}
@@ -121,7 +130,10 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                     size="sm"
                     className="gap-2"
                     onClick={() => {
+                      const customMsg = getCustomMessage(item.href);
+                      console.log('[Toolbar] Setting custom message:', { href: item.href, message: customMsg });
                       setAuthModalMode('signup');
+                      setAuthModalMessage(customMsg);
                       setAuthModalOpen(true);
                     }}
                   >
@@ -241,17 +253,7 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                       setAuthModalOpen(true);
                     }}
                   >
-                    Login
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium"
-                    onClick={() => {
-                      setAuthModalMode('signup');
-                      setAuthModalOpen(true);
-                    }}
-                  >
-                    Sign Up
+                    Sign In
                   </Button>
                 </div>
                 {/* Mobile Menu Button */}
@@ -265,8 +267,13 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                 </Button>
                 <AuthModal
                   isOpen={authModalOpen}
-                  onClose={() => setAuthModalOpen(false)}
+                  onClose={() => {
+                    console.log('[Toolbar] Closing modal, clearing message');
+                    setAuthModalOpen(false);
+                    setAuthModalMessage(undefined);
+                  }}
                   initialMode={authModalMode}
+                  customMessage={authModalMessage}
                 />
               </>
             )}
@@ -279,16 +286,26 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
             <div className="flex flex-col gap-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
-                // If not logged in and not on home page, show auth modal
-                // If not logged in and not on home page, show signup modal
+                // If not logged in and not on home page, show auth modal with custom message
                 if (!user && item.href !== '/') {
+                  const getCustomMessage = (href: string) => {
+                    if (href === '/dashboard') {
+                      return 'Sign in or create an account to access your dashboard';
+                    } else if (href === '/leaderboard') {
+                      return 'Sign in or create an account to see the leaderboard';
+                    }
+                    return undefined;
+                  };
                   return (
                     <Button
                       key={item.label}
                       variant={isActive(item.href) ? 'default' : 'ghost'}
                       className="w-full justify-start gap-2"
                       onClick={() => {
+                        const customMsg = getCustomMessage(item.href);
+                        console.log('[Toolbar Mobile] Setting custom message:', { href: item.href, message: customMsg });
                         setAuthModalMode('signup');
+                        setAuthModalMessage(customMsg);
                         setAuthModalOpen(true);
                         setMobileMenuOpen(false);
                       }}
@@ -362,17 +379,7 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                       setMobileMenuOpen(false);
                     }}
                   >
-                    Login
-                  </Button>
-                  <Button
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium"
-                    onClick={() => {
-                      setAuthModalMode('signup');
-                      setAuthModalOpen(true);
-                      setMobileMenuOpen(false);
-                    }}
-                  >
-                    Sign Up
+                    Sign In
                   </Button>
                 </div>
               )}

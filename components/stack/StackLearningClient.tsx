@@ -22,7 +22,7 @@ import { useSpeech, TTSProvider, VoiceGender } from '@/hooks/use-speech';
 import { Input } from '@/components/ui/input';
 import type { CardStack, Flashcard, TestNote } from '@/lib/types';
 import Confetti from 'react-confetti';
-import { CARD_RATINGS, NON_LATIN_LANGUAGES, ROMANIZATION_NAMES } from '@/lib/constants';
+import { CARD_RATINGS, NON_LATIN_LANGUAGES, ROMANIZATION_NAMES, getLanguageFlag } from '@/lib/constants';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
 import { shouldResetWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
 import { isNewDay, getTodayDate, getTodayDateInTimezone, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
@@ -861,11 +861,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   };
 
   const getLanguageEmoji = (name: string) => {
-    const emojiMap: Record<string, string> = {
-      Spanish: '🇪🇸', French: '🇫🇷', German: '🇩🇪', Italian: '🇮🇹',
-      Japanese: '🇯🇵', Korean: '🇰🇷', Mandarin: '🇨🇳', Portuguese: '🇧🇷',
-    };
-    return emojiMap[name] || '🌍';
+    return getLanguageFlag(name);
   };
 
   if (!currentCard) {

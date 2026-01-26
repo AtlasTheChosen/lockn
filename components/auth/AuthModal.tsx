@@ -42,10 +42,18 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialMode?: 'login' | 'signup';
+  customMessage?: string;
 }
 
-export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, initialMode = 'signup', customMessage }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  
+  // Debug logging
+  useEffect(() => {
+    if (isOpen) {
+      console.log('[AuthModal] Modal opened with:', { initialMode, customMessage, mode });
+    }
+  }, [isOpen, initialMode, customMessage, mode]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -346,7 +354,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup' }: A
                   {mode === 'signup' ? 'Join LockN! ✨' : 'Welcome Back! 👋'}
                 </h2>
                 <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  {mode === 'signup' ? 'Create your free account to start learning' : 'Sign in to continue your journey'}
+                  {(() => {
+                    console.log('[AuthModal] Rendering message:', { customMessage, mode, hasCustom: !!customMessage });
+                    return customMessage ? customMessage : (mode === 'signup' ? 'Create your free account to start learning' : 'Sign in to continue your journey');
+                  })()}
                 </p>
               </>
             )}

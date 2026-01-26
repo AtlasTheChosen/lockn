@@ -402,13 +402,13 @@ WHAT COUNTS AS A DUPLICATE (ALL FORBIDDEN):
 EXISTING ${phrasesToExclude.length} PHRASES TO AVOID:
 ${phrasesToExclude.map((p: string) => `- "${p}"`).join('\n')}
 
-REQUIRED: Generate ${stackSize} COMPLETELY NEW phrases that:
+REQUIRED: Generate EXACTLY ${stackSize} COMPLETELY NEW phrases that:
 - Cover DIFFERENT aspects/moments of the scenario
 - Use DIFFERENT vocabulary words
 - Teach DIFFERENT grammatical structures
 - Are NOT paraphrases of any existing cards above
 
-If you cannot generate ${stackSize} unique phrases without duplicating, generate fewer cards rather than duplicating.`
+CRITICAL: You MUST generate exactly ${stackSize} cards. Do NOT generate fewer cards. If needed, explore different aspects, moments, or perspectives within the scenario to reach exactly ${stackSize} unique phrases.`
       : '';
 
     const completion = await openai.chat.completions.create({
@@ -455,7 +455,7 @@ Verify each phrase meets STRICT ${difficulty} requirements before including it.`
         },
         {
           role: 'user',
-          content: `Generate ${stackSize} flashcards for: "${scenario}" in ${targetLanguage} at CEFR ${difficulty} level.
+          content: `Generate EXACTLY ${stackSize} flashcards (not ${stackSize - 1}, not ${stackSize + 1}, but exactly ${stackSize}) for: "${scenario}" in ${targetLanguage} at CEFR ${difficulty} level.
 
 VERIFICATION CHECKLIST for ${difficulty}:
 - ✓ Vocabulary within ${difficulty} word count limits
@@ -488,25 +488,53 @@ Generate ONLY ${difficulty}-level phrases. If in doubt, err on the side of simpl
     try {
       parsed = JSON.parse(content);
     } catch (e) {
-      // Try to extract JSON from markdown code blocks or other formatting
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          parsed = JSON.parse(jsonMatch[0]);
-        } catch (parseError) {
-          console.error('Failed to parse extracted JSON:', parseError);
-          console.error('Content received:', content.substring(0, 500));
-          throw new Error(`Failed to parse AI response. Content preview: ${content.substring(0, 200)}`);
+      // Try to extract JSON from markdown code blocks (```json ... ``` or ``` ... ```)
+      let jsonContent = content;
+      
+      // Remove markdown code block markers
+      jsonContent = jsonContent.replace(/^```(?:json)?\s*/gm, '').replace(/\s*```$/gm, '').trim();
+      
+      // Try parsing the cleaned content
+      try {
+        parsed = JSON.parse(jsonContent);
+      } catch (e2) {
+        // If that fails, try to extract JSON object using regex (non-greedy match)
+        const jsonMatch = jsonContent.match(/\{[\s\S]*?\}/);
+        if (jsonMatch) {
+          try {
+            parsed = JSON.parse(jsonMatch[0]);
+          } catch (parseError) {
+            console.error('Failed to parse extracted JSON:', parseError);
+            console.error('Content received:', content.substring(0, 500));
+            throw new Error(`Failed to parse AI response. Content preview: ${content.substring(0, 200)}`);
+          }
+        } else {
+          console.error('No JSON found in response. Content:', content.substring(0, 500));
+          throw new Error(`Failed to parse AI response. No valid JSON found. Content preview: ${content.substring(0, 200)}`);
         }
-      } else {
-        console.error('No JSON found in response. Content:', content.substring(0, 500));
-        throw new Error(`Failed to parse AI response. No valid JSON found. Content preview: ${content.substring(0, 200)}`);
       }
     }
 
     if (!parsed.cards || !Array.isArray(parsed.cards)) {
       console.error('Invalid response format. Parsed:', parsed);
       throw new Error(`Invalid response format. Expected cards array, got: ${JSON.stringify(parsed).substring(0, 200)}`);
+    }
+
+    // Validate card count matches requested stackSize
+    const actualCount = parsed.cards.length;
+    if (actualCount !== stackSize) {
+      console.warn(`[API:generate-stack] Card count mismatch: requested ${stackSize}, got ${actualCount}`);
+      
+      if (actualCount < stackSize) {
+        // If we got fewer cards, we need to generate more
+        // For now, we'll pad with a note, but ideally we should retry
+        console.error(`[API:generate-stack] Received ${actualCount} cards but requested ${stackSize}. This should not happen.`);
+        throw new Error(`AI generated ${actualCount} cards instead of the requested ${stackSize}. Please try again.`);
+      } else {
+        // If we got more cards, trim to the exact count
+        console.warn(`[API:generate-stack] Received ${actualCount} cards, trimming to ${stackSize}`);
+        parsed.cards = parsed.cards.slice(0, stackSize);
+      }
     }
 
     DEBUG_SERVER.api('Creating stack in database');

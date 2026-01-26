@@ -130,7 +130,14 @@ export default function DashboardTabs({
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <DashboardMain stacks={displayStacks} stats={displayStats} userName={userName} onUpdate={onUpdate} onShowTutorial={onShowTutorial} />
+        <DashboardMain 
+          stacks={displayStacks} 
+          stats={displayStats} 
+          userName={userName} 
+          isPremium={profile?.is_premium ?? false}
+          onUpdate={onUpdate} 
+          onShowTutorial={onShowTutorial} 
+        />
       )}
 
       {activeTab === 'profile' && (

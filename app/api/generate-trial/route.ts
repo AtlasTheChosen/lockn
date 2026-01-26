@@ -296,6 +296,22 @@ Stay STRICTLY on the topic of: ${scenario}`,
       throw new Error('Invalid response format');
     }
 
+    // Validate card count matches requested stackSize
+    const actualCount = parsed.cards.length;
+    if (actualCount !== stackSize) {
+      console.warn(`[API:generate-trial] Card count mismatch: requested ${stackSize}, got ${actualCount}`);
+      
+      if (actualCount < stackSize) {
+        // If we got fewer cards, throw error
+        console.error(`[API:generate-trial] Received ${actualCount} cards but requested ${stackSize}. This should not happen.`);
+        throw new Error(`AI generated ${actualCount} cards instead of the requested ${stackSize}. Please try again.`);
+      } else {
+        // If we got more cards, trim to the exact count
+        console.warn(`[API:generate-trial] Received ${actualCount} cards, trimming to ${stackSize}`);
+        parsed.cards = parsed.cards.slice(0, stackSize);
+      }
+    }
+
     DEBUG_SERVER.timing('Total trial API time', apiStartTime);
     DEBUG_SERVER.api('Trial generation completed', { cardCount: parsed.cards.length });
 

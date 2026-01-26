@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Search, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript } from '@/lib/constants';
+import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript, LANGUAGE_FLAGS } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from '@/components/auth/AuthModal';
@@ -120,57 +120,29 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
         localStorage.setItem('lockn-script-preference', scriptPreference);
       }
       
+      // For logged-out users, always use 5 cards (the only option shown)
+      const cardCountToUse = isLoggedIn ? selectedCardCount : 5;
       if (isLoggedIn) {
         localStorage.setItem('lockn-card-count', selectedCardCount.toString());
-        onStartTrial(searchValue, selectedLanguage, selectedLevel, selectedCardCount, scriptPreference || undefined);
-      } else {
-        onStartTrial(searchValue, selectedLanguage, selectedLevel, 3, scriptPreference || undefined);
       }
+      onStartTrial(searchValue, selectedLanguage, selectedLevel, cardCountToUse, scriptPreference || undefined);
     }
   };
 
   const handleSuggestionClick = (suggestion: string) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:132',message:'handleSuggestionClick called',data:{suggestion,selectedLanguage,isLoggedIn,hasOnStartTrial:typeof onStartTrial==='function'},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
-    
     if (selectedLanguage) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:135',message:'selectedLanguage check passed',data:{selectedLanguage,selectedLevel,scriptPreference,isLoggedIn,selectedCardCount},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
-      
       localStorage.setItem('lockn-trial-language', selectedLanguage);
       localStorage.setItem('lockn-trial-level', selectedLevel);
       if (scriptPreference) {
         localStorage.setItem('lockn-script-preference', scriptPreference);
       }
       
-      try {
-        if (isLoggedIn) {
-          localStorage.setItem('lockn-card-count', selectedCardCount.toString());
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:145',message:'Calling onStartTrial (logged in)',data:{suggestion,selectedLanguage,selectedLevel,selectedCardCount,scriptPreference},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          onStartTrial(suggestion, selectedLanguage, selectedLevel, selectedCardCount, scriptPreference || undefined);
-        } else {
-          // #region agent log
-          fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:149',message:'Calling onStartTrial (guest)',data:{suggestion,selectedLanguage,selectedLevel,scriptPreference},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-          // #endregion
-          onStartTrial(suggestion, selectedLanguage, selectedLevel, 3, scriptPreference || undefined);
-        }
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:152',message:'onStartTrial call completed',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-        // #endregion
-      } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:155',message:'Error in onStartTrial',data:{error:error instanceof Error?error.message:String(error)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-        console.error('Error in handleSuggestionClick:', error);
+      // For logged-out users, always use 5 cards (the only option shown)
+      const cardCountToUse = isLoggedIn ? (selectedCardCount || 5) : 5;
+      if (isLoggedIn) {
+        localStorage.setItem('lockn-card-count', cardCountToUse.toString());
       }
-    } else {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:160',message:'selectedLanguage check failed',data:{selectedLanguage},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
+      onStartTrial(suggestion, selectedLanguage, selectedLevel, cardCountToUse, scriptPreference || undefined);
     }
   };
 
@@ -189,38 +161,39 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
     localStorage.setItem('lockn-card-count', count.toString());
   };
 
-  // #region agent log
-  useEffect(() => {
-    if (isLoggedIn) {
-      const optionsToShow = isPremium ? ALL_CARD_COUNT_OPTIONS : [5 as CardCount];
-      setTimeout(() => {
-        const cardButtons = document.querySelectorAll('[data-card-count]');
-        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:143',message:'Card options rendering',data:{isPremium,isLoggedIn,optionsToShow:Array.from(optionsToShow),renderedButtons:cardButtons.length},timestamp:Date.now(),sessionId:'debug-session',runId:'run2',hypothesisId:'B'})}).catch(()=>{});
-      }, 100);
-    }
-  }, [isPremium, isLoggedIn]);
-  // #endregion
 
   const getLanguageEmoji = (name: string) => {
-    const emojiMap: Record<string, string> = {
-      Spanish: '🇪🇸', French: '🇫🇷', German: '🇩🇪', Italian: '🇮🇹',
-      Japanese: '🇯🇵', Korean: '🇰🇷', Mandarin: '🇨🇳', Portuguese: '🇧🇷',
-      Russian: '🇷🇺', Arabic: '🇸🇦', Hindi: '🇮🇳', Dutch: '🇳🇱',
-    };
-    return emojiMap[name] || '🌍';
+    return LANGUAGE_FLAGS[name] || '🌍';
   };
 
   return (
     <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* TopNav in AppLayout handles all navigation - no duplicate header needed */}
-      <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-16">
+      <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-16 relative">
+        {/* Sign In Button - Only for logged out users on mobile/squeezed view */}
+        {!isLoggedIn && (
+          <div className="md:hidden absolute top-2 left-1/2 transform -translate-x-1/2 z-50">
+            <button
+              onClick={() => {
+                setAuthModalMode('login');
+                setShowAuthModal(true);
+              }}
+              className="text-sm font-normal transition-all active:opacity-70 opacity-50"
+              style={{ 
+                color: 'var(--text-muted)'
+              }}
+            >
+              Sign In
+            </button>
+          </div>
+        )}
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-6 sm:mb-8"
+            className="text-center mb-6 sm:mb-8 pt-12 md:pt-0"
           >
             <p className="text-base sm:text-lg mb-3 sm:mb-4 font-medium animate-fade-in" style={{ color: 'var(--text-secondary)' }}>
               Welcome! Tell us what you want to learn, and we'll create flashcards for you
@@ -240,7 +213,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                   boxShadow: '0 2px 8px rgba(255, 150, 0, 0.3)'
                 }}
               >
-                Ready to LockN?
+                Learn how this works
               </button>
             </div>
           </motion.div>
@@ -305,7 +278,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
             )}
 
             {/* Selectors Grid */}
-            <div className={`grid grid-cols-1 ${isLoggedIn ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4 sm:gap-6`}>
+            <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6`}>
               {/* Language Selector */}
               <div>
                 <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
@@ -348,70 +321,54 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 </Select>
               </div>
 
-              {/* Card Count - only for logged-in users */}
-              {isLoggedIn && (
-                <div>
-                  <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
-                    🎴 Cards {!isPremium && <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>(5 minimum)</span>}
-                  </label>
-                  <div className="flex gap-2">
-                    {(isPremium ? ALL_CARD_COUNT_OPTIONS : [5 as CardCount]).map((count) => (
-                      <Button
-                        key={count}
-                        type="button"
-                        data-card-count={count}
-                        onClick={() => {
-                          if (!isPremium && count !== 5) {
-                            setShowPremiumModal(true);
-                            return;
-                          }
-                          handleCardCountChange(count);
-                        }}
-                        className="flex-1 rounded-xl h-14 py-3 sm:py-4 font-semibold transition-all active:scale-95"
-                        style={selectedCardCount === count
-                          ? { backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }
-                          : { backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
+              {/* Card Count - show for all users, but only 5 for logged-out users */}
+              <div>
+                <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
+                  🎴 Cards {(!isLoggedIn || !isPremium) && <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>(5 minimum)</span>}
+                </label>
+                <div className="flex gap-2">
+                  {(isLoggedIn && isPremium ? ALL_CARD_COUNT_OPTIONS : [5 as CardCount]).map((count) => (
+                    <Button
+                      key={count}
+                      type="button"
+                      data-card-count={count}
+                      onClick={() => {
+                        if (!isLoggedIn) {
+                          // Logged-out users can only use 5 cards
+                          setSelectedCardCount(5);
+                          return;
                         }
-                      >
-                        {count}
-                      </Button>
-                    ))}
-                  </div>
-                  {!isPremium && (
-                    <div className="mt-3 flex flex-col items-center justify-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                      <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
-                        Upgrade to Premium to create 10, 25, 50 card stacks
-                      </p>
-                    </div>
-                  )}
+                        if (!isPremium && count !== 5) {
+                          setShowPremiumModal(true);
+                          return;
+                        }
+                        handleCardCountChange(count);
+                      }}
+                      className="flex-1 rounded-xl h-14 py-3 sm:py-4 font-semibold transition-all active:scale-95"
+                      style={selectedCardCount === count
+                        ? { backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }
+                        : { backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-secondary)' }
+                      }
+                    >
+                      {count}
+                    </Button>
+                  ))}
                 </div>
-              )}
-              
-              {/* Premium Subscription Info - Show for guests and non-premium users on desktop */}
-              {(!isLoggedIn || !isPremium) && (
-                <div className="sm:col-span-3 md:col-span-3 mt-4 sm:mt-6">
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)' }}>
-                    <p className="text-sm font-medium text-center" style={{ color: 'var(--text-primary)' }}>
-                      {!isLoggedIn 
-                        ? 'Sign up to create custom stacks. With Premium, you can generate more cards.' 
-                        : 'Unlock unlimited stacks and advanced features'}
+                {!isLoggedIn && (
+                  <div className="mt-3 flex flex-col items-center justify-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                    <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
+                      Sign up to create custom stacks with more card options
                     </p>
-                    {isLoggedIn && (
-                      <Button
-                        onClick={() => setShowPremiumModal(true)}
-                        className="font-bold rounded-xl px-6 py-3 text-sm whitespace-nowrap"
-                        style={{ 
-                          backgroundColor: 'var(--accent-green)', 
-                          color: 'white',
-                          boxShadow: '0 3px 0 var(--accent-green-dark)'
-                        }}
-                      >
-                        Upgrade to Premium
-                      </Button>
-                    )}
                   </div>
-                </div>
-              )}
+                )}
+                {isLoggedIn && !isPremium && (
+                  <div className="mt-3 flex flex-col items-center justify-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                    <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
+                      Upgrade to Premium to create 10, 25, 50 card stacks
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
             
             {/* Script/Alphabet Selector - shown only for languages with multiple writing systems */}
@@ -472,9 +429,6 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
               >
                 <button
                   onClick={(e) => {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CommandLanding.tsx:469',message:'Button onClick fired',data:{suggestion:suggestion.text,selectedLanguage,disabled:!selectedLanguage},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
-                    // #endregion
                     e.preventDefault();
                     e.stopPropagation();
                     if (selectedLanguage) {

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Trophy, Clock, Snowflake, ChevronRight, ChevronLeft, X, Sparkles, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -60,26 +60,20 @@ const STEPS = [
 
 export default function StreakTutorial({ onComplete, onSkip }: StreakTutorialProps) {
   const [currentStep, setCurrentStep] = useState(0);
-  const [dragDirection, setDragDirection] = useState(0);
   const step = STEPS[currentStep];
   const isLastStep = currentStep === STEPS.length - 1;
   const isFirstStep = currentStep === 0;
-
-  // Motion values for drag tracking
-  const x = useMotionValue(0);
 
   const handleNext = () => {
     if (isLastStep) {
       onComplete();
     } else {
-      x.set(0); // Reset drag position before transition
       setCurrentStep(prev => prev + 1);
     }
   };
 
   const handlePrev = () => {
     if (currentStep > 0) {
-      x.set(0); // Reset drag position before transition
       setCurrentStep(prev => prev - 1);
     }
   };
@@ -89,31 +83,6 @@ export default function StreakTutorial({ onComplete, onSkip }: StreakTutorialPro
       onSkip();
     } else {
       onComplete();
-    }
-  };
-
-  const handleDragEnd = (event: any, info: any) => {
-    const threshold = 100; // Minimum drag distance to trigger navigation
-    const velocity = info.velocity.x;
-
-    // Determine direction based on drag distance and velocity
-    if (info.offset.x > threshold || velocity > 500) {
-      // Swipe right - go to previous step
-      if (!isFirstStep) {
-        handlePrev();
-      } else {
-        x.set(0); // Reset if can't go back
-      }
-    } else if (info.offset.x < -threshold || velocity < -500) {
-      // Swipe left - go to next step
-      if (!isLastStep) {
-        handleNext();
-      } else {
-        x.set(0); // Reset if can't go forward
-      }
-    } else {
-      // Snap back if didn't meet threshold
-      x.set(0);
     }
   };
 
@@ -143,20 +112,6 @@ export default function StreakTutorial({ onComplete, onSkip }: StreakTutorialPro
             exit={{ opacity: 0, x: -50 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className={`${step.bgColor} rounded-3xl p-8 shadow-2xl`}
-            drag="x"
-            dragConstraints={{ left: isFirstStep ? 0 : -200, right: isLastStep ? 0 : 200 }}
-            dragElastic={0.3}
-            onDrag={(event, info) => {
-              // Track drag position for visual feedback
-              x.set(info.offset.x);
-            }}
-            onDragEnd={handleDragEnd}
-            style={{ 
-              x: x,
-              cursor: 'grab'
-            }}
-            whileDrag={{ cursor: 'grabbing', scale: 0.98 }}
-            onAnimationComplete={() => x.set(0)}
           >
             {/* Animated Icon */}
             <div className="flex justify-center mb-6">

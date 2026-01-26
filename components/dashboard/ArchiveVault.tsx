@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import { getLanguageFlag } from '@/lib/constants';
 
 interface ArchivedStack {
   id: string;
@@ -39,11 +40,7 @@ export default function ArchiveVault({ stacks, onUpdate, className = '' }: Archi
   const supabase = createClient();
   
   const getLanguageEmoji = (name: string) => {
-    const emojiMap: Record<string, string> = {
-      Spanish: '🇪🇸', French: '🇫🇷', German: '🇩🇪', Italian: '🇮🇹',
-      Japanese: '🇯🇵', Korean: '🇰🇷', Mandarin: '🇨🇳', Portuguese: '🇧🇷',
-    };
-    return emojiMap[name] || '🌍';
+    return getLanguageFlag(name);
   };
   
   const capitalizeTitle = (title: string) => {

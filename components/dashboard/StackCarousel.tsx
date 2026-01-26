@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress-simple';
 import { ChevronLeft, ChevronRight, Plus, ArrowRight, Clock, Lock, Snowflake, Trash2, BookOpen } from 'lucide-react';
 import BirdMascot from './BirdMascot';
+import { getLanguageFlag } from '@/lib/constants';
 
 interface Stack {
   id: string;
@@ -115,11 +116,7 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId, 
   };
 
   const getLanguageEmoji = (name: string) => {
-    const emojiMap: Record<string, string> = {
-      Spanish: '🇪🇸', French: '🇫🇷', German: '🇩🇪', Italian: '🇮🇹',
-      Japanese: '🇯🇵', Korean: '🇰🇷', Mandarin: '🇨🇳', Portuguese: '🇧🇷',
-    };
-    return emojiMap[name] || '🌍';
+    return getLanguageFlag(name);
   };
 
   const getStatusBadge = (stack: Stack) => {

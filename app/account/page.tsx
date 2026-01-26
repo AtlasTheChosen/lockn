@@ -362,15 +362,15 @@ export default function AccountSettingsPage() {
                   <Skeleton className="h-24 bg-slate-700" />
                 </CardContent>
               </Card>
-            )          )}
+            ))}
+          </div>
         </div>
-      </div>
 
-      {/* Premium Modal */}
-      <PremiumModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
-    </div>
-  );
-}
+        {/* Premium Modal */}
+        <PremiumModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
+      </div>
+    );
+  }
 
   if (error) {
     return (
@@ -713,14 +713,38 @@ export default function AccountSettingsPage() {
                 </Badge>
               </div>
               {profile?.is_premium && profile?.subscription_status === 'active' && (
-                <Button
-                  onClick={handleCancelSubscription}
-                  variant="outline"
-                  className="w-full mt-4 border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Cancel Subscription
-                </Button>
+                <div className="space-y-3 mt-4">
+                  <Button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch('/api/stripe/create-portal-session', {
+                          method: 'POST',
+                        });
+                        const data = await res.json();
+                        if (data.url) {
+                          window.location.href = data.url;
+                        } else {
+                          alert(data.error || 'Failed to open subscription portal');
+                        }
+                      } catch (err) {
+                        alert('Failed to open subscription portal');
+                      }
+                    }}
+                    className="w-full"
+                    style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
+                  >
+                    <CreditCard className="h-4 w-4 mr-2" />
+                    Manage Subscription
+                  </Button>
+                  <Button
+                    onClick={handleCancelSubscription}
+                    variant="outline"
+                    className="w-full border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancel Subscription
+                  </Button>
+                </div>
               )}
               {!profile?.is_premium && (
                 <Button 

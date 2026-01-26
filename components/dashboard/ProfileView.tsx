@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import type { UserProfile } from '@/lib/types';
 import { getAvatarUrl } from '@/lib/avatars';
+import { LANGUAGE_FLAGS_BY_CODE } from '@/lib/constants';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   es: 'Spanish',
@@ -40,26 +41,7 @@ const LANGUAGE_NAMES: Record<string, string> = {
   he: 'Hebrew',
 };
 
-const LANGUAGE_EMOJIS: Record<string, string> = {
-  es: '🇪🇸',
-  fr: '🇫🇷',
-  de: '🇩🇪',
-  it: '🇮🇹',
-  pt: '🇧🇷',
-  ja: '🇯🇵',
-  ko: '🇰🇷',
-  zh: '🇨🇳',
-  ru: '🇷🇺',
-  ar: '🇸🇦',
-  hi: '🇮🇳',
-  nl: '🇳🇱',
-  sv: '🇸🇪',
-  pl: '🇵🇱',
-  tr: '🇹🇷',
-  vi: '🇻🇳',
-  th: '🇹🇭',
-  he: '🇮🇱',
-};
+const LANGUAGE_EMOJIS = LANGUAGE_FLAGS_BY_CODE;
 
 interface Props {
   profile: UserProfile;

@@ -88,10 +88,11 @@ export default function LandingPage() {
               isInappropriate: true,
             });
           } else if (data.error?.includes('parse') || data.error?.includes('JSON')) {
+            // Parse errors are usually API issues, not content issues
             setErrorInfo({
-              title: 'Inappropriate Content',
-              message: 'Please enter a different topic for language learning.',
-              isInappropriate: true,
+              title: 'Generation Failed',
+              message: 'The AI response could not be processed. Please try again with a different topic.',
+              isInappropriate: false,
             });
           } else {
             setErrorInfo({
@@ -100,7 +101,7 @@ export default function LandingPage() {
             });
           }
           setAppState('error');
-          throw new Error(data.error || 'Failed to generate cards');
+          return; // Don't throw - let the error state be displayed
         }
         
         router.push(`/stack/${data.stackId}`);
@@ -169,8 +170,21 @@ export default function LandingPage() {
       setGeneratedCards(formattedCards);
       setAppState('trial');
     } catch (error: any) {
-      if (appState !== 'error') {
-        setAppState('command');
+      // Only reset to command if we're not already showing an error
+      // Use a timeout to ensure state has updated
+      setTimeout(() => {
+        if (appState !== 'error' && !errorInfo) {
+          setAppState('command');
+        }
+      }, 0);
+      
+      // If we don't have error info set, set a generic error
+      if (!errorInfo) {
+        setErrorInfo({
+          title: 'Generation Failed',
+          message: error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.',
+        });
+        setAppState('error');
       }
     }
   };
