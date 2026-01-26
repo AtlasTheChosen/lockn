@@ -5,26 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import AchievementBadges from '@/components/social/AchievementBadges';
 import { 
   Loader2, 
   Check, 
   AlertCircle, 
   Globe, 
   X, 
-  Eye,
-  EyeOff,
-  Trophy,
   User
 } from 'lucide-react';
-import type { UserProfile, Badge as BadgeType } from '@/lib/types';
+import type { UserProfile } from '@/lib/types';
 import { AVATAR_COUNT, getAvatarUrl } from '@/lib/avatars';
 import { PROFILE_UPDATED_EVENT } from '@/components/layout/AppLayout';
 import { containsInappropriateContent } from '@/lib/content-filter';
 import { createClient } from '@/lib/supabase/client';
-import PublicProfileModal from '@/components/dashboard/PublicProfileModal';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -64,13 +58,10 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   const [originalAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(0));
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(0));
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [profilePublic, setProfilePublic] = useState(profile.profile_public ?? true);
   const [languagesLearning, setLanguagesLearning] = useState<string[]>(profile.languages_learning || []);
-  const [badges, setBadges] = useState<BadgeType[]>(profile.badges || []);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
-  const [showPublicProfile, setShowPublicProfile] = useState(false);
 
   // Check if display name can be changed (once per month)
   const canChangeDisplayName = () => {
@@ -92,14 +83,8 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   const isDisplayNameChanged = displayName !== originalDisplayName;
   const isAvatarChanged = avatarUrl !== originalAvatarUrl;
   const hasChanges = isDisplayNameChanged || isAvatarChanged || 
-    profilePublic !== (profile.profile_public ?? true) ||
     JSON.stringify(languagesLearning) !== JSON.stringify(profile.languages_learning || []);
 
-  useEffect(() => {
-    if (profile.badges) {
-      setBadges(profile.badges);
-    }
-  }, [profile.badges]);
 
   // Sync avatar when profile prop changes (e.g., after auto-assignment)
   useEffect(() => {
@@ -206,7 +191,6 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
 
       // Build update object with all changes
       const updateData: any = {
-        profile_public: profilePublic,
         languages_learning: languagesLearning,
       };
 
@@ -324,14 +308,6 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
           <div>
             <p className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>{displayName || 'Your Name'}</p>
             <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>{profile.email}</p>
-            <Button 
-              variant="link" 
-              onClick={() => setShowPublicProfile(true)}
-              className="p-0 h-auto mt-2 font-semibold" 
-              style={{ color: 'var(--accent-green)' }}
-            >
-              View public profile →
-            </Button>
           </div>
         </div>
 
@@ -499,54 +475,7 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
         )}
       </div>
 
-      {/* Achievement Badges */}
-      <div className="rounded-3xl p-6 animate-fade-in stagger-3" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
-        <div className="flex items-center gap-2 mb-2">
-          <Trophy className="h-5 w-5" style={{ color: 'var(--accent-yellow)' }} />
-          <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>My Achievements</h3>
-        </div>
-        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Badges you've earned through your learning journey</p>
-        <AchievementBadges badges={badges} showAll size="lg" />
-      </div>
 
-      {/* Privacy */}
-      <div className="rounded-3xl p-6 animate-fade-in stagger-4" style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--border-color)' }}>
-        <h3 className="font-display text-xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>Privacy</h3>
-        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Control who can see your profile</p>
-        
-        <div className="flex items-center justify-between rounded-2xl p-4" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-          <div className="flex items-center gap-4">
-            {profilePublic ? (
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'rgba(88, 204, 2, 0.2)' }}>
-                <Eye className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
-              </div>
-            ) : (
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
-                <EyeOff className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
-              </div>
-            )}
-            <div>
-              <Label className="font-semibold" style={{ color: 'var(--text-primary)' }}>Public Profile</Label>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                {profilePublic
-                  ? 'Anyone can view your profile and stats'
-                  : 'Only friends can view your profile'}
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={profilePublic}
-            onCheckedChange={setProfilePublic}
-          />
-        </div>
-      </div>
-
-      {/* Public Profile Modal */}
-      <PublicProfileModal
-        userId={profile.id}
-        isOpen={showPublicProfile}
-        onClose={() => setShowPublicProfile(false)}
-      />
     </div>
   );
 }
