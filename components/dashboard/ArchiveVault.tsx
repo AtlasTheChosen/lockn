@@ -34,6 +34,7 @@ export default function ArchiveVault({ stacks, onUpdate, className = '' }: Archi
   const [stackToDelete, setStackToDelete] = useState<ArchivedStack | null>(null);
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [selectedStackNotes, setSelectedStackNotes] = useState<ArchivedStack | null>(null);
+  const [pendingDeletions, setPendingDeletions] = useState<Set<string>>(new Set());
   
   const supabase = createClient();
   
