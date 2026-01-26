@@ -131,14 +131,21 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                     variant={isActive(item.href) ? 'default' : 'ghost'}
                     size="sm"
                     className="gap-2"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       const customMsg = getCustomMessage(item.href);
-                      console.log('[Toolbar] Setting custom message:', { href: item.href, message: customMsg });
-                      // Store in ref for immediate access, then update state
+                      console.log('[Toolbar] Button clicked:', { href: item.href, message: customMsg });
+                      
+                      // Set ref and state BEFORE opening modal
                       authModalMessageRef.current = customMsg;
                       setAuthModalMessage(customMsg);
                       setAuthModalMode('signup');
-                      setAuthModalOpen(true);
+                      
+                      // Force a small delay to ensure state is set, then open modal
+                      requestAnimationFrame(() => {
+                        console.log('[Toolbar] Opening modal with message:', authModalMessageRef.current);
+                        setAuthModalOpen(true);
+                      });
                     }}
                   >
                     <Icon className="h-4 w-4" />
@@ -312,15 +319,22 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                       key={item.label}
                       variant={isActive(item.href) ? 'default' : 'ghost'}
                       className="w-full justify-start gap-2"
-                      onClick={() => {
+                      onClick={(e) => {
+                        e.preventDefault();
                         const customMsg = getCustomMessage(item.href);
-                        console.log('[Toolbar Mobile] Setting custom message:', { href: item.href, message: customMsg });
-                        // Store in ref for immediate access, then update state
+                        console.log('[Toolbar Mobile] Button clicked:', { href: item.href, message: customMsg });
+                        
+                        // Set ref and state BEFORE opening modal
                         authModalMessageRef.current = customMsg;
                         setAuthModalMessage(customMsg);
                         setAuthModalMode('signup');
                         setMobileMenuOpen(false);
-                        setAuthModalOpen(true);
+                        
+                        // Force a small delay to ensure state is set, then open modal
+                        requestAnimationFrame(() => {
+                          console.log('[Toolbar Mobile] Opening modal with message:', authModalMessageRef.current);
+                          setAuthModalOpen(true);
+                        });
                       }}
                     >
                       <Icon className="h-4 w-4" />

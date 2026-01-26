@@ -47,13 +47,27 @@ interface AuthModalProps {
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'signup', customMessage }: AuthModalProps) {
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  const [storedMessage, setStoredMessage] = useState<string | undefined>(undefined);
+  
+  // Capture customMessage when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      // When modal opens, immediately capture the customMessage
+      if (customMessage) {
+        setStoredMessage(customMessage);
+        console.log('[AuthModal] Modal opened, captured message:', customMessage);
+      } else {
+        setStoredMessage(undefined);
+      }
+    }
+  }, [isOpen, customMessage]);
   
   // Debug logging
   useEffect(() => {
     if (isOpen) {
-      console.log('[AuthModal] Modal opened with:', { initialMode, customMessage, mode });
+      console.log('[AuthModal] Modal opened with:', { initialMode, customMessage, storedMessage, mode });
     }
-  }, [isOpen, initialMode, customMessage, mode]);
+  }, [isOpen, initialMode, customMessage, storedMessage, mode]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -355,8 +369,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                 </h2>
                 <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                   {(() => {
-                    console.log('[AuthModal] Rendering message:', { customMessage, mode, hasCustom: !!customMessage });
-                    return customMessage ? customMessage : (mode === 'signup' ? 'Create your free account to start learning' : 'Sign in to continue your journey');
+                    // Use storedMessage (captured when modal opened) or current customMessage prop
+                    const messageToShow = storedMessage || customMessage;
+                    console.log('[AuthModal] Rendering message:', { customMessage, storedMessage, messageToShow, mode, hasCustom: !!messageToShow });
+                    return messageToShow || (mode === 'signup' ? 'Create your free account to start learning' : 'Sign in to continue your journey');
                   })()}
                 </p>
               </>

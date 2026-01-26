@@ -108,7 +108,7 @@ export default function LandingPage() {
         return;
       }
 
-      // Guest user
+      // Guest user - always use 5 cards
       const response = await fetch('/api/generate-trial', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,7 +116,7 @@ export default function LandingPage() {
           scenario,
           targetLanguage: language,
           nativeLanguage: 'English',
-          stackSize: 10,
+          stackSize: cardCount || 5,
           difficulty: level,
           scriptPreference,
         }),

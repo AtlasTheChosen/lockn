@@ -53,21 +53,12 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
     
     if (savedLang) setSelectedLanguage(savedLang);
     if (savedLevel) setSelectedLevel(savedLevel);
-    if (savedCardCount) {
-      const count = parseInt(savedCardCount, 10);
-      if (ALL_CARD_COUNT_OPTIONS.includes(count as CardCount)) {
-        setSelectedCardCount(count as CardCount);
-      } else {
-        setSelectedCardCount(5);
-      }
-    } else {
-      setSelectedCardCount(5);
-    }
-
+    
     const checkAuth = async () => {
       const supabase = createClient();
       const { data: { session } } = await supabase.auth.getSession();
-      setIsLoggedIn(!!session);
+      const loggedIn = !!session;
+      setIsLoggedIn(loggedIn);
       
       if (session?.user) {
         // Fetch premium status
@@ -82,6 +73,21 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
           console.error('Error fetching premium status:', error);
           setIsPremium(false);
         }
+      }
+      
+      // Set card count based on login status
+      // Logged-out users always get 5 cards
+      if (!loggedIn) {
+        setSelectedCardCount(5);
+      } else if (savedCardCount) {
+        const count = parseInt(savedCardCount, 10);
+        if (ALL_CARD_COUNT_OPTIONS.includes(count as CardCount)) {
+          setSelectedCardCount(count as CardCount);
+        } else {
+          setSelectedCardCount(5);
+        }
+      } else {
+        setSelectedCardCount(5);
       }
     };
     checkAuth();
@@ -120,11 +126,12 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
         localStorage.setItem('lockn-script-preference', scriptPreference);
       }
       
-      // For logged-out users, always use 5 cards (the only option shown)
+      // For logged-out users, ALWAYS use 5 cards regardless of selectedCardCount
       const cardCountToUse = isLoggedIn ? selectedCardCount : 5;
       if (isLoggedIn) {
         localStorage.setItem('lockn-card-count', selectedCardCount.toString());
       }
+      console.log('[CommandLanding] handleSubmit:', { isLoggedIn, selectedCardCount, cardCountToUse });
       onStartTrial(searchValue, selectedLanguage, selectedLevel, cardCountToUse, scriptPreference || undefined);
     }
   };
@@ -137,11 +144,12 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
         localStorage.setItem('lockn-script-preference', scriptPreference);
       }
       
-      // For logged-out users, always use 5 cards (the only option shown)
-      const cardCountToUse = isLoggedIn ? (selectedCardCount || 5) : 5;
+      // For logged-out users, ALWAYS use 5 cards regardless of selectedCardCount
+      const cardCountToUse = isLoggedIn ? selectedCardCount : 5;
       if (isLoggedIn) {
         localStorage.setItem('lockn-card-count', cardCountToUse.toString());
       }
+      console.log('[CommandLanding] handleSuggestionClick:', { isLoggedIn, selectedCardCount, cardCountToUse, suggestion });
       onStartTrial(suggestion, selectedLanguage, selectedLevel, cardCountToUse, scriptPreference || undefined);
     }
   };
