@@ -1954,6 +1954,13 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
 
             // Check for new badges after test completion
             try {
+              // Fetch updated stats to get current streak values
+              const { data: updatedStats } = await supabase
+                .from('user_stats')
+                .select('current_streak, longest_streak')
+                .eq('user_id', stack.user_id)
+                .single();
+              
               const { data: profile } = await supabase
                 .from('user_profiles')
                 .select('badges, is_premium, languages_learning')
@@ -1963,10 +1970,10 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
               if (profile) {
                 const badgeStats = buildBadgeStats(
                   {
-                    current_streak: newStreak,
-                    longest_streak: newLongestStreak,
+                    current_streak: updatedStats?.current_streak || testResult.newStreak,
+                    longest_streak: updatedStats?.longest_streak || testResult.newStreak,
                     total_cards_mastered: newTotalMastered,
-                    cards_mastered_today: newDailyCards,
+                    cards_mastered_today: testResult.cardsMasteredToday,
                   },
                   {
                     tests_completed: newTestsCompleted,
