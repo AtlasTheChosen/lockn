@@ -25,7 +25,7 @@ import Confetti from 'react-confetti';
 import { CARD_RATINGS, NON_LATIN_LANGUAGES, ROMANIZATION_NAMES } from '@/lib/constants';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
 import { shouldResetWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
-import { isNewDay, getTodayDate, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
+import { isNewDay, getTodayDate, getTodayDateInTimezone, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
 import { useBadgeChecker, buildBadgeStats } from '@/hooks/useBadgeChecker';
 import type { Badge as BadgeType } from '@/lib/types';
 import {
