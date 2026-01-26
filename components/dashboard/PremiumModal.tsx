@@ -62,7 +62,7 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
       const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
       if (stripeKey) {
         const stripe = await loadStripe(stripeKey);
-        if (stripe) {
+        if (stripe && sessionId) {
           await stripe.redirectToCheckout({ sessionId });
         }
       }
@@ -208,8 +208,8 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
               <Button
                 className="w-full font-bold text-sm py-2"
                 onClick={() => {
-                  onClose();
                   handleCheckout();
+                  onClose();
                 }}
                 disabled={loading}
                 style={{ 

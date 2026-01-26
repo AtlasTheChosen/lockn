@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
@@ -48,6 +48,7 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signup' | 'login'>('login');
   const [authModalMessage, setAuthModalMessage] = useState<string | undefined>(undefined);
+  const authModalMessageRef = useRef<string | undefined>(undefined);
   const supabase = createClient();
 
   const handleLogout = () => {
@@ -132,8 +133,10 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                     onClick={() => {
                       const customMsg = getCustomMessage(item.href);
                       console.log('[Toolbar] Setting custom message:', { href: item.href, message: customMsg });
-                      setAuthModalMode('signup');
+                      // Store in ref for immediate access, then update state
+                      authModalMessageRef.current = customMsg;
                       setAuthModalMessage(customMsg);
+                      setAuthModalMode('signup');
                       setAuthModalOpen(true);
                     }}
                   >
@@ -271,9 +274,10 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                     console.log('[Toolbar] Closing modal, clearing message');
                     setAuthModalOpen(false);
                     setAuthModalMessage(undefined);
+                    authModalMessageRef.current = undefined;
                   }}
                   initialMode={authModalMode}
-                  customMessage={authModalMessage}
+                  customMessage={authModalMessageRef.current || authModalMessage}
                 />
               </>
             )}
@@ -304,10 +308,12 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                       onClick={() => {
                         const customMsg = getCustomMessage(item.href);
                         console.log('[Toolbar Mobile] Setting custom message:', { href: item.href, message: customMsg });
-                        setAuthModalMode('signup');
+                        // Store in ref for immediate access, then update state
+                        authModalMessageRef.current = customMsg;
                         setAuthModalMessage(customMsg);
-                        setAuthModalOpen(true);
+                        setAuthModalMode('signup');
                         setMobileMenuOpen(false);
+                        setAuthModalOpen(true);
                       }}
                     >
                       <Icon className="h-4 w-4" />

@@ -362,9 +362,20 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                   </div>
                 )}
                 {isLoggedIn && !isPremium && (
-                  <div className="mt-3 flex flex-col items-center justify-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                  <div className="mt-3 flex flex-col items-center justify-center gap-2">
+                    <Button
+                      onClick={() => setShowPremiumModal(true)}
+                      className="w-full font-bold rounded-xl px-4 py-2 text-sm"
+                      style={{ 
+                        backgroundColor: 'var(--accent-green)', 
+                        color: 'white',
+                        boxShadow: '0 3px 0 var(--accent-green-dark)'
+                      }}
+                    >
+                      Upgrade to Premium
+                    </Button>
                     <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
-                      Upgrade to Premium to create 10, 25, 50 card stacks
+                      Unlock 10, 25, 50 card stacks
                     </p>
                   </div>
                 )}
