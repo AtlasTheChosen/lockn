@@ -172,7 +172,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
       <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-16 relative">
         {/* Sign In Button - Only for logged out users on mobile/squeezed view */}
         {!isLoggedIn && (
-          <div className="md:hidden absolute top-2 left-1/2 transform -translate-x-1/2 z-50 mb-2">
+          <div className="md:hidden absolute top-2 left-1/2 transform -translate-x-1/2 z-50">
             <button
               onClick={() => {
                 setAuthModalMode('login');
@@ -193,12 +193,12 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-6 sm:mb-8 pt-12 md:pt-0"
+            className="text-center mb-6 sm:mb-8 pt-4 md:pt-0"
           >
             <p className="text-base sm:text-lg mb-3 sm:mb-4 font-medium animate-fade-in" style={{ color: 'var(--text-secondary)' }}>
               Welcome!
             </p>
-            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight gradient-text-warm animate-fade-in stagger-1 mb-6 sm:mb-8">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight gradient-text-warm animate-fade-in stagger-1 mb-12 sm:mb-14 md:mb-20 pb-3 md:pb-6">
               What subject would you like to turn into language learning flashcards?
             </h1>
             <div className="flex justify-center mb-4 sm:mb-6">

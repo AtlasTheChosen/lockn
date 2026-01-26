@@ -29,7 +29,10 @@ import {
   X,
   HelpCircle,
   MessageSquare,
-  Accessibility
+  Accessibility,
+  Shield,
+  Users,
+  UserX
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -79,6 +82,12 @@ export default function AccountSettingsPage() {
   );
   const [savingNotifications, setSavingNotifications] = useState(false);
   
+  // Friend request privacy state
+  const [friendRequestPrivacy, setFriendRequestPrivacy] = useState<'everyone' | 'friends_of_friends' | 'nobody'>(
+    (sessionProfile as any)?.friend_request_privacy || 'everyone'
+  );
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  
   // Feedback state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackText, setFeedbackText] = useState('');
@@ -90,6 +99,8 @@ export default function AccountSettingsPage() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [savingAccessibility, setSavingAccessibility] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [canceling, setCanceling] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!sessionUser) return;
@@ -239,10 +250,7 @@ export default function AccountSettingsPage() {
   const handleCancelSubscription = async () => {
     if (!sessionUser) return;
 
-    if (!confirm('Are you sure you want to cancel your subscription? You will retain access until the end of your billing period.')) {
-      return;
-    }
-
+    setCanceling(true);
     try {
       const response = await fetch('/api/account/cancel-subscription', {
         method: 'POST',
@@ -250,14 +258,24 @@ export default function AccountSettingsPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        alert(data.error || 'Failed to cancel subscription');
+        setSaveMessage({ type: 'error', text: data.error || 'Failed to cancel subscription' });
+        setCanceling(false);
+        setShowCancelDialog(false);
         return;
       }
 
-      alert('Subscription canceled. You will retain access until ' + new Date(data.cancelDate).toLocaleDateString());
+      setSaveMessage({ 
+        type: 'success', 
+        text: `Subscription canceled. You will retain access until ${new Date(data.cancelDate).toLocaleDateString()}` 
+      });
+      setShowCancelDialog(false);
       loadData(); // Reload to show updated subscription status
+      setTimeout(() => setSaveMessage(null), 5000);
     } catch (err: any) {
-      alert(err.message || 'Failed to cancel subscription');
+      setSaveMessage({ type: 'error', text: err.message || 'Failed to cancel subscription' });
+      setShowCancelDialog(false);
+    } finally {
+      setCanceling(false);
     }
   };
 
@@ -284,6 +302,28 @@ export default function AccountSettingsPage() {
       setSaveMessage({ type: 'error', text: err.message || 'Failed to save notifications' });
     } finally {
       setSavingNotifications(false);
+    }
+  };
+
+  const handleSavePrivacy = async () => {
+    if (!sessionUser) return;
+
+    setSavingPrivacy(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({ friend_request_privacy: friendRequestPrivacy })
+        .eq('id', sessionUser.id);
+
+      if (error) throw error;
+
+      setSaveMessage({ type: 'success', text: 'Privacy settings saved!' });
+      setTimeout(() => setSaveMessage(null), 3000);
+    } catch (err: any) {
+      setSaveMessage({ type: 'error', text: err.message || 'Failed to save privacy settings' });
+    } finally {
+      setSavingPrivacy(false);
     }
   };
 
@@ -550,6 +590,84 @@ export default function AccountSettingsPage() {
             </CardContent>
           </Card>
 
+          {/* Friend Request Privacy */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Friend Request Privacy
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                Control who can send you friend requests
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div 
+                className={`flex items-center justify-between rounded-lg p-4 cursor-pointer transition-all ${friendRequestPrivacy === 'everyone' ? 'ring-2 ring-green-500' : ''}`}
+                style={{ backgroundColor: friendRequestPrivacy === 'everyone' ? 'rgba(88, 204, 2, 0.15)' : 'rgba(100, 116, 139, 0.3)' }}
+                onClick={() => setFriendRequestPrivacy('everyone')}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-green-400" />
+                  <div>
+                    <Label className="text-slate-300 font-semibold cursor-pointer">Everyone</Label>
+                    <p className="text-sm text-slate-400">Anyone can send you friend requests</p>
+                  </div>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 ${friendRequestPrivacy === 'everyone' ? 'bg-green-500 border-green-500' : 'border-slate-500'}`} />
+              </div>
+              
+              <div 
+                className={`flex items-center justify-between rounded-lg p-4 cursor-pointer transition-all ${friendRequestPrivacy === 'friends_of_friends' ? 'ring-2 ring-blue-500' : ''}`}
+                style={{ backgroundColor: friendRequestPrivacy === 'friends_of_friends' ? 'rgba(28, 176, 246, 0.15)' : 'rgba(100, 116, 139, 0.3)' }}
+                onClick={() => setFriendRequestPrivacy('friends_of_friends')}
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-blue-400" />
+                  <div>
+                    <Label className="text-slate-300 font-semibold cursor-pointer">Friends of Friends</Label>
+                    <p className="text-sm text-slate-400">Only people who share a mutual friend</p>
+                  </div>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 ${friendRequestPrivacy === 'friends_of_friends' ? 'bg-blue-500 border-blue-500' : 'border-slate-500'}`} />
+              </div>
+              
+              <div 
+                className={`flex items-center justify-between rounded-lg p-4 cursor-pointer transition-all ${friendRequestPrivacy === 'nobody' ? 'ring-2 ring-orange-500' : ''}`}
+                style={{ backgroundColor: friendRequestPrivacy === 'nobody' ? 'rgba(255, 150, 0, 0.15)' : 'rgba(100, 116, 139, 0.3)' }}
+                onClick={() => setFriendRequestPrivacy('nobody')}
+              >
+                <div className="flex items-center gap-3">
+                  <UserX className="h-5 w-5 text-orange-400" />
+                  <div>
+                    <Label className="text-slate-300 font-semibold cursor-pointer">No One</Label>
+                    <p className="text-sm text-slate-400">Disable all friend requests</p>
+                  </div>
+                </div>
+                <div className={`w-5 h-5 rounded-full border-2 ${friendRequestPrivacy === 'nobody' ? 'bg-orange-500 border-orange-500' : 'border-slate-500'}`} />
+              </div>
+              
+              <Button
+                onClick={handleSavePrivacy}
+                disabled={savingPrivacy}
+                className="w-full mt-4"
+                style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
+              >
+                {savingPrivacy ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Privacy Settings
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* Password Change Section */}
           <Card className="bg-slate-800 border-slate-700">
             <CardHeader>
@@ -690,30 +808,141 @@ export default function AccountSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Save message for subscription actions */}
+              {saveMessage && (
+                <div
+                  className={`p-3 rounded-lg ${
+                    saveMessage.type === 'success'
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  }`}
+                >
+                  {saveMessage.text}
+                </div>
+              )}
+
               <div className="flex justify-between items-center py-2 border-b border-slate-700">
                 <span className="text-slate-400">Plan</span>
                 <Badge className={profile?.is_premium 
-                  ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black' 
+                  ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-semibold' 
                   : 'bg-slate-600'}>
                   {profile?.is_premium ? 'Premium' : 'Free'}
                 </Badge>
               </div>
-              {profile?.is_premium && profile?.subscription_end_date && (
-                <div className="flex justify-between items-center py-2 border-b border-slate-700">
-                  <span className="text-slate-400">Renews On</span>
-                  <span className="text-white">{formatDate(profile.subscription_end_date)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-center py-2">
+
+              {/* Subscription Status with enhanced display */}
+              <div className="flex justify-between items-center py-2 border-b border-slate-700">
                 <span className="text-slate-400">Status</span>
-                <Badge className={profile?.subscription_status === 'active' 
-                  ? 'bg-green-500/20 text-green-400' 
-                  : 'bg-slate-600'}>
-                  {profile?.subscription_status || 'Free Tier'}
+                <Badge className={
+                  profile?.subscription_status === 'active' && !profile?.subscription_cancel_at
+                    ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
+                    : (profile?.subscription_status === 'canceled' || profile?.subscription_cancel_at)
+                    ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
+                    : 'bg-slate-600'
+                }>
+                  {profile?.subscription_status === 'active' && !profile?.subscription_cancel_at
+                    ? 'Active' 
+                    : (profile?.subscription_status === 'canceled' || profile?.subscription_cancel_at)
+                    ? 'Canceling'
+                    : 'Free Tier'}
                 </Badge>
               </div>
-              {profile?.is_premium && profile?.subscription_status === 'active' && (
+
+              {/* Renewal/End Date Display */}
+              {profile?.is_premium && profile?.subscription_end_date && (
+                <div className="flex justify-between items-center py-2 border-b border-slate-700">
+                  <span className="text-slate-400">
+                    {profile?.subscription_status === 'canceled' || profile?.subscription_cancel_at
+                      ? 'Access Until'
+                      : 'Renews On'}
+                  </span>
+                  <span className="text-white font-semibold">{formatDate(profile.subscription_end_date)}</span>
+                </div>
+              )}
+
+              {/* Helpful messaging */}
+              {profile?.is_premium && profile?.subscription_status === 'active' && !profile?.subscription_cancel_at && (
+                <p className="text-xs text-slate-500 pt-2">
+                  Your subscription will automatically renew. Cancel anytime to stop future charges.
+                </p>
+              )}
+              {(profile?.subscription_status === 'canceled' || profile?.subscription_cancel_at) && (
+                <p className="text-xs text-yellow-400 pt-2">
+                  Your subscription will end on {formatDate(profile?.subscription_end_date || null)}. You'll retain full access until then.
+                </p>
+              )}
+
+              {/* Subscription Management Actions */}
+              {profile?.is_premium && (profile?.subscription_status === 'active' || profile?.subscription_cancel_at) && (
                 <div className="space-y-3 mt-4">
+                  {/* Primary: Cancel Subscription */}
+                  <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-full border-orange-500/50 text-orange-400 hover:bg-orange-500/20 hover:border-orange-500 font-semibold"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel Subscription
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="bg-slate-900 border-slate-700">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle className="text-white">Cancel Subscription?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-slate-400 space-y-3">
+                          <p>Are you sure you want to cancel your Premium subscription?</p>
+                          <div className="bg-slate-800/50 rounded-lg p-3 space-y-2 border border-slate-700">
+                            <div className="flex justify-between">
+                              <span className="text-slate-400">Current Plan:</span>
+                              <span className="text-white font-semibold">Premium</span>
+                            </div>
+                            {profile?.subscription_end_date && (
+                              <>
+                                <div className="flex justify-between">
+                                  <span className="text-slate-400">Next Renewal:</span>
+                                  <span className="text-white">{formatDate(profile.subscription_end_date)}</span>
+                                </div>
+                                <div className="flex justify-between pt-2 border-t border-slate-700">
+                                  <span className="text-slate-400">Access Until:</span>
+                                  <span className="text-green-400 font-semibold">{formatDate(profile.subscription_end_date)}</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-300 pt-2">
+                            You'll retain full Premium access until the end of your billing period. No charges will be made after that date.
+                          </p>
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel 
+                          className="bg-slate-800 text-white border-slate-700"
+                          disabled={canceling}
+                        >
+                          Keep Subscription
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleCancelSubscription}
+                          disabled={canceling}
+                          className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {canceling ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Canceling...
+                            </>
+                          ) : (
+                            <>
+                              <X className="h-4 w-4 mr-2" />
+                              Yes, Cancel Subscription
+                            </>
+                          )}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  {/* Secondary: Manage Subscription (Stripe Portal) */}
                   <Button
                     onClick={async () => {
                       try {
@@ -724,26 +953,23 @@ export default function AccountSettingsPage() {
                         if (data.url) {
                           window.location.href = data.url;
                         } else {
-                          alert(data.error || 'Failed to open subscription portal');
+                          setSaveMessage({ type: 'error', text: data.error || 'Failed to open subscription portal' });
+                          setTimeout(() => setSaveMessage(null), 3000);
                         }
                       } catch (err) {
-                        alert('Failed to open subscription portal');
+                        setSaveMessage({ type: 'error', text: 'Failed to open subscription portal' });
+                        setTimeout(() => setSaveMessage(null), 3000);
                       }
                     }}
-                    className="w-full"
-                    style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
+                    variant="outline"
+                    className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
                   >
                     <CreditCard className="h-4 w-4 mr-2" />
-                    Manage Subscription
+                    Manage Subscription (Stripe Portal)
                   </Button>
-                  <Button
-                    onClick={handleCancelSubscription}
-                    variant="outline"
-                    className="w-full border-orange-500/30 text-orange-400 hover:bg-orange-500/10"
-                  >
-                    <X className="h-4 w-4 mr-2" />
-                    Cancel Subscription
-                  </Button>
+                  <p className="text-xs text-slate-500 text-center">
+                    Opens Stripe's billing portal for advanced subscription management
+                  </p>
                 </div>
               )}
               {!profile?.is_premium && (

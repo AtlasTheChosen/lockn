@@ -62,22 +62,29 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
 
       const monthlyPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || '';
       const annualPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL || '';
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:65',message:'Price ID selection',data:{billingInterval,monthlyPriceId,annualPriceId,hasMonthly:!!monthlyPriceId,hasAnnual:!!annualPriceId},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
+      // #endregion
+
+      // Check if annual is selected but annual price ID is missing
+      if (billingInterval === 'annual' && !annualPriceId) {
+        console.error('Annual price ID is not configured');
+        alert('Annual subscription is not available. The annual price ID (NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL) is not configured. Please select monthly or contact support.');
+        setLoading(false);
+        return;
+      }
+
+      // Select the appropriate price ID
       const priceId = billingInterval === 'annual' ? annualPriceId : monthlyPriceId;
       
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:65',message:'Price ID selection',data:{billingInterval,monthlyPriceId,annualPriceId,selectedPriceId:priceId,hasMonthly:!!monthlyPriceId,hasAnnual:!!annualPriceId},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:75',message:'Selected price ID',data:{billingInterval,selectedPriceId:priceId,hasPriceId:!!priceId},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
       // #endregion
 
       if (!priceId) {
         console.error(`Stripe ${billingInterval} price ID is not configured`);
         alert(`Payment configuration error: ${billingInterval} price ID is missing. Please contact support.`);
-        setLoading(false);
-        return;
-      }
-
-      if (billingInterval === 'annual' && !annualPriceId) {
-        console.error('Annual price ID is not configured');
-        alert('Annual subscription is not available. Please select monthly or contact support.');
         setLoading(false);
         return;
       }

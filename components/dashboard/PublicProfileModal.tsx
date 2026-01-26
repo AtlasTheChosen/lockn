@@ -49,6 +49,11 @@ export default function PublicProfileModal({ userId, isOpen, onClose }: PublicPr
   const [friendshipId, setFriendshipId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [canSendRequest, setCanSendRequest] = useState(true);
+  const [requestBlockReason, setRequestBlockReason] = useState<string | null>(null);
+  const [requestsRemaining, setRequestsRemaining] = useState<number | null>(null);
+
+  const DAILY_REQUEST_LIMIT = 10;
 
   const supabase = createClient();
 
@@ -64,10 +69,10 @@ export default function PublicProfileModal({ userId, isOpen, onClose }: PublicPr
         setFriendshipStatus('self');
       }
 
-      // Fetch user profile
+      // Fetch user profile including friend request privacy setting
       const { data: profileData, error: profileError } = await supabase
         .from('user_profiles')
-        .select('id, display_name, avatar_url, badges, languages_learning, profile_public, created_at')
+        .select('id, display_name, avatar_url, badges, languages_learning, profile_public, friend_request_privacy, created_at')
         .eq('id', userId)
         .maybeSingle();
 
@@ -120,6 +125,69 @@ export default function PublicProfileModal({ userId, isOpen, onClose }: PublicPr
           setFriendshipId(friendshipData.id);
           setFriendshipStatus(friendshipData.status);
         }
+
+        // Check if we can send friend request based on target's privacy settings
+        const privacySetting = profileData.friend_request_privacy || 'everyone';
+        
+        if (privacySetting === 'nobody') {
+          setCanSendRequest(false);
+          setRequestBlockReason('This user is not accepting friend requests');
+        } else if (privacySetting === 'friends_of_friends') {
+          // Check if we have mutual friends
+          const { data: mutualFriends } = await supabase
+            .from('friendships')
+            .select('friend_id, user_id')
+            .eq('status', 'accepted')
+            .or(`user_id.eq.${sessionUser.id},friend_id.eq.${sessionUser.id}`);
+
+          const myFriendIds = new Set(
+            (mutualFriends || []).map(f => 
+              f.user_id === sessionUser.id ? f.friend_id : f.user_id
+            )
+          );
+
+          // Check if target user is friends with any of my friends
+          const { data: targetFriends } = await supabase
+            .from('friendships')
+            .select('friend_id, user_id')
+            .eq('status', 'accepted')
+            .or(`user_id.eq.${userId},friend_id.eq.${userId}`);
+
+          const targetFriendIds = new Set(
+            (targetFriends || []).map(f => 
+              f.user_id === userId ? f.friend_id : f.user_id
+            )
+          );
+
+          const hasMutualFriend = [...myFriendIds].some(id => targetFriendIds.has(id));
+          
+          if (!hasMutualFriend) {
+            setCanSendRequest(false);
+            setRequestBlockReason('This user only accepts requests from friends of friends');
+          }
+        }
+
+        // Check sender's rate limit
+        const today = new Date().toISOString().split('T')[0];
+        const { data: senderStats } = await supabase
+          .from('user_stats')
+          .select('friend_requests_sent_today, friend_request_reset_date')
+          .eq('user_id', sessionUser.id)
+          .maybeSingle();
+
+        if (senderStats) {
+          const resetDate = senderStats.friend_request_reset_date;
+          const sentToday = resetDate === today ? (senderStats.friend_requests_sent_today || 0) : 0;
+          
+          setRequestsRemaining(DAILY_REQUEST_LIMIT - sentToday);
+          
+          if (sentToday >= DAILY_REQUEST_LIMIT) {
+            setCanSendRequest(false);
+            setRequestBlockReason(`Daily limit reached (${DAILY_REQUEST_LIMIT} requests/day)`);
+          }
+        } else {
+          setRequestsRemaining(DAILY_REQUEST_LIMIT);
+        }
       }
     } catch (err: any) {
       console.error('Error loading profile:', err);
@@ -137,11 +205,35 @@ export default function PublicProfileModal({ userId, isOpen, onClose }: PublicPr
 
   const handleSendFriendRequest = async () => {
     if (!sessionUser) return;
+    if (!canSendRequest) {
+      setMessage({ type: 'error', text: requestBlockReason || 'Cannot send request' });
+      return;
+    }
 
     try {
       setActionLoading(true);
       setMessage(null);
 
+      const today = new Date().toISOString().split('T')[0];
+
+      // Double-check rate limit
+      const { data: senderStats } = await supabase
+        .from('user_stats')
+        .select('friend_requests_sent_today, friend_request_reset_date')
+        .eq('user_id', sessionUser.id)
+        .maybeSingle();
+
+      const resetDate = senderStats?.friend_request_reset_date;
+      const sentToday = resetDate === today ? (senderStats?.friend_requests_sent_today || 0) : 0;
+
+      if (sentToday >= DAILY_REQUEST_LIMIT) {
+        setMessage({ type: 'error', text: `Daily limit reached (${DAILY_REQUEST_LIMIT} requests/day)` });
+        setCanSendRequest(false);
+        setRequestBlockReason(`Daily limit reached (${DAILY_REQUEST_LIMIT} requests/day)`);
+        return;
+      }
+
+      // Send the friend request
       const { error } = await supabase.from('friendships').insert({
         user_id: sessionUser.id,
         friend_id: userId,
@@ -150,6 +242,17 @@ export default function PublicProfileModal({ userId, isOpen, onClose }: PublicPr
 
       if (error) throw error;
 
+      // Increment the rate limit counter
+      const newCount = sentToday + 1;
+      await supabase
+        .from('user_stats')
+        .update({
+          friend_requests_sent_today: newCount,
+          friend_request_reset_date: today,
+        })
+        .eq('user_id', sessionUser.id);
+
+      setRequestsRemaining(DAILY_REQUEST_LIMIT - newCount);
       setMessage({ type: 'success', text: 'Friend request sent!' });
       setFriendshipStatus('pending');
     } catch (err: any) {
@@ -369,19 +472,29 @@ export default function PublicProfileModal({ userId, isOpen, onClose }: PublicPr
                   <div className="pt-4" style={{ borderTop: '1px solid var(--border-color)' }}>
                     <div className="flex flex-wrap gap-3 justify-center">
                       {friendshipStatus === 'none' && (
-                        <Button
-                          onClick={handleSendFriendRequest}
-                          disabled={actionLoading}
-                          className="text-white font-bold rounded-2xl px-6"
-                          style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
-                        >
-                          {actionLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          ) : (
-                            <UserPlus className="h-4 w-4 mr-2" />
-                          )}
-                          Add Friend
-                        </Button>
+                        canSendRequest ? (
+                          <Button
+                            onClick={handleSendFriendRequest}
+                            disabled={actionLoading}
+                            className="text-white font-bold rounded-2xl px-6"
+                            style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
+                          >
+                            {actionLoading ? (
+                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            ) : (
+                              <UserPlus className="h-4 w-4 mr-2" />
+                            )}
+                            Add Friend
+                            {requestsRemaining !== null && requestsRemaining < DAILY_REQUEST_LIMIT && (
+                              <span className="ml-2 text-xs opacity-75">({requestsRemaining} left today)</span>
+                            )}
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-medium" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+                            <Shield className="h-4 w-4" />
+                            {requestBlockReason}
+                          </div>
+                        )
                       )}
 
                       {friendshipStatus === 'pending' && (

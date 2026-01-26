@@ -7,6 +7,10 @@
     {
       "path": "/api/check-streaks",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cleanup-friend-requests",
+      "schedule": "0 4 * * *"
     }
   ]
 }

@@ -1,3 +1,5 @@
+export type FriendRequestPrivacy = 'everyone' | 'friends_of_friends' | 'nobody';
+
 export interface UserProfile {
   id: string;
   email: string;
@@ -14,12 +16,14 @@ export interface UserProfile {
     friend_requests: boolean;
     streak_reminders: boolean;
   };
+  friend_request_privacy?: FriendRequestPrivacy;
   has_seen_streak_tutorial?: boolean;
   is_premium: boolean;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   subscription_status: string | null;
   subscription_end_date: string | null;
+  subscription_cancel_at?: string | null;
   daily_generations_count: number;
   daily_generations_reset_at: string;
   is_admin: boolean;
@@ -145,6 +149,9 @@ export interface UserStats {
   perfect_test_streak: number;
   daily_goal_streak: number;
   ice_breaker_count: number;
+  // Friend request rate limiting
+  friend_requests_sent_today: number;
+  friend_request_reset_date: string | null;
   created_at: string;
   updated_at: string;
 }
