@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Check, Crown, Zap, Infinity, Archive, Volume2, Headphones, Loader2 } from 'lucide-react';
+import { Check, Crown, Zap, Infinity, Archive, Headphones, Loader2 } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import { createClient } from '@/lib/supabase/client';
 import { loadStripe } from '@stripe/stripe-js';
@@ -195,10 +195,6 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                 <div className="flex items-center gap-2">
                   <Archive className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
                   <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Archive completed stacks</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Volume2 className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                  <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Advanced audio speeds (0.75x, 1.25x)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Headphones className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />

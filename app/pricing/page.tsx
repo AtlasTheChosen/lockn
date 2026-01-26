@@ -167,10 +167,6 @@ export default function PricingPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
-                  <span style={{ color: 'var(--text-primary)' }}>Advanced audio speeds (0.75x, 1.25x)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
                   <span style={{ color: 'var(--text-primary)' }}>Priority support</span>
                 </div>
               </div>
