@@ -769,8 +769,6 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       
       setCardsMasteredToday(downgradeResult.cardsMasteredToday);
     }
-    
-    setCardsMasteredToday(downgradeResult.cardsMasteredToday);
 
     // Update total stats
     const { data: userStats } = await supabase
