@@ -26,6 +26,7 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [supabase, setSupabase] = useState<any>(null);
+  const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -34,41 +35,139 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
   }, []);
 
   const handleCheckout = async () => {
-    if (!supabase) return;
+    if (!supabase) {
+      console.error('Supabase client not initialized');
+      return;
+    }
 
     setLoading(true);
 
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:36',message:'handleCheckout started',data:{hasSupabase:!!supabase,billingInterval},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
+      // #endregion
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:45',message:'User fetched',data:{hasUser:!!user,userId:user?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
 
       if (!user) {
         router.push('/');
         return;
       }
 
+      const monthlyPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || '';
+      const annualPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL || '';
+      const priceId = billingInterval === 'annual' ? annualPriceId : monthlyPriceId;
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:65',message:'Price ID selection',data:{billingInterval,monthlyPriceId,annualPriceId,selectedPriceId:priceId,hasMonthly:!!monthlyPriceId,hasAnnual:!!annualPriceId},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
+      // #endregion
+
+      if (!priceId) {
+        console.error(`Stripe ${billingInterval} price ID is not configured`);
+        alert(`Payment configuration error: ${billingInterval} price ID is missing. Please contact support.`);
+        setLoading(false);
+        return;
+      }
+
+      if (billingInterval === 'annual' && !annualPriceId) {
+        console.error('Annual price ID is not configured');
+        alert('Annual subscription is not available. Please select monthly or contact support.');
+        setLoading(false);
+        return;
+      }
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:65',message:'Fetching checkout session',data:{priceId,userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:85',message:'Sending checkout request',data:{priceId,billingInterval,userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
+      // #endregion
+
       const res = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || '',
+          priceId,
           userId: user.id,
+          billingInterval, // Pass billing interval for logging/debugging
         }),
       });
 
-      const { sessionId } = await res.json();
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:78',message:'Checkout API response',data:{status:res.status,ok:res.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Checkout API error:', errorData);
+        alert(`Failed to start checkout: ${errorData.error || 'Unknown error'}`);
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json();
+      const { sessionId, error } = data;
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:90',message:'Checkout session data',data:{hasSessionId:!!sessionId,hasError:!!error,error},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
+
+      if (error || !sessionId) {
+        console.error('No session ID returned:', error || 'Missing sessionId');
+        alert(`Failed to create checkout session: ${error || 'Missing session ID'}`);
+        setLoading(false);
+        return;
+      }
 
       const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-      if (stripeKey) {
-        const stripe = await loadStripe(stripeKey);
-        if (stripe && sessionId) {
-          await stripe.redirectToCheckout({ sessionId });
-        }
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:100',message:'Stripe key check',data:{hasStripeKey:!!stripeKey},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+
+      if (!stripeKey) {
+        console.error('Stripe publishable key is not configured');
+        alert('Payment configuration error. Please contact support.');
+        setLoading(false);
+        return;
       }
-    } catch (error) {
+
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:110',message:'Loading Stripe and redirecting',data:{sessionId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
+
+      const stripe = await loadStripe(stripeKey);
+      if (stripe && sessionId) {
+        const { error: redirectError } = await stripe.redirectToCheckout({ sessionId });
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:115',message:'Stripe redirect result',data:{hasRedirectError:!!redirectError,redirectError:redirectError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'D'})}).catch(()=>{});
+        // #endregion
+
+        if (redirectError) {
+          console.error('Stripe redirect error:', redirectError);
+          alert(`Failed to redirect to checkout: ${redirectError.message}`);
+          setLoading(false);
+        }
+        // If successful, redirect will happen and component will unmount
+      } else {
+        console.error('Failed to load Stripe or missing sessionId');
+        alert('Failed to initialize payment. Please try again.');
+        setLoading(false);
+      }
+    } catch (error: any) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:125',message:'Checkout exception caught',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       console.error('Checkout error:', error);
-    } finally {
+      alert(`An error occurred: ${error?.message || 'Unknown error'}`);
       setLoading(false);
     }
   };
@@ -172,10 +271,69 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                 <Crown className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
                 <CardTitle className="text-xl" style={{ color: 'var(--text-primary)' }}>Premium</CardTitle>
               </div>
-              <CardDescription className="text-sm" style={{ color: 'var(--text-secondary)' }}>Unlimited learning potential</CardDescription>
-              <div className="pt-2">
-                <span className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>$4.99</span>
-                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>/month</span>
+              <CardDescription className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+                Choose your billing cycle below, then proceed to checkout
+              </CardDescription>
+              
+              {/* Billing Interval Toggle - Always visible for user selection */}
+              <div className="flex items-center justify-center gap-3 p-2 bg-[var(--bg-secondary)] rounded-lg mb-3">
+                <button
+                  onClick={() => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:267',message:'Monthly button clicked',data:{currentInterval:billingInterval},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'J'})}).catch(()=>{});
+                    // #endregion
+                    setBillingInterval('monthly');
+                  }}
+                  className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex-1 ${
+                    billingInterval === 'monthly'
+                      ? 'bg-[var(--accent-green)] text-white shadow-md'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  onClick={() => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:280',message:'Annual button clicked',data:{currentInterval:billingInterval},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'J'})}).catch(()=>{});
+                    // #endregion
+                    setBillingInterval('annual');
+                  }}
+                  className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all relative flex-1 ${
+                    billingInterval === 'annual'
+                      ? 'bg-[var(--accent-green)] text-white shadow-md'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
+                  }`}
+                >
+                  Annual
+                  <span className="absolute -top-1 -right-1 bg-[var(--accent-orange)] text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+                    Save 17%
+                  </span>
+                </button>
+              </div>
+
+              {/* Dynamic Pricing Display */}
+              <div className="pt-2 text-center border-t border-[var(--border-color)] pb-3">
+                {billingInterval === 'monthly' ? (
+                  <>
+                    <span className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>$4.99</span>
+                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>/month</span>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Billed monthly • Cancel anytime
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>$49.90</span>
+                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>/year</span>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Just $4.16/month (billed annually)
+                    </p>
+                    <p className="text-xs mt-0.5 font-semibold" style={{ color: 'var(--accent-green)' }}>
+                      Save $10.88 per year!
+                    </p>
+                  </>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-3 pt-0">
@@ -203,10 +361,7 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
               </div>
               <Button
                 className="w-full font-bold text-sm py-2"
-                onClick={() => {
-                  handleCheckout();
-                  onClose();
-                }}
+                onClick={handleCheckout}
                 disabled={loading}
                 style={{ 
                   backgroundColor: 'var(--accent-green)', 

@@ -771,17 +771,15 @@ export default function AccountSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button
-                variant="outline"
-                className="w-full justify-start border-slate-700 text-white hover:bg-slate-700"
-                onClick={() => {
-                  // Open help/FAQ - could be a modal or page
-                  window.open('https://help.lockn.app', '_blank');
-                }}
-              >
-                <HelpCircle className="h-4 w-4 mr-2" />
-                Help Center / FAQ
-              </Button>
+              <Link href="/help">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start border-slate-700 text-white hover:bg-slate-700"
+                >
+                  <HelpCircle className="h-4 w-4 mr-2" />
+                  Help Center / FAQ
+                </Button>
+              </Link>
               <Button
                 variant="outline"
                 className="w-full justify-start border-slate-700 text-white hover:bg-slate-700"

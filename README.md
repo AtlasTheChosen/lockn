@@ -121,7 +121,8 @@ OPENAI_API_KEY=your_openai_api_key
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_publishable_key
 STRIPE_SECRET_KEY=your_stripe_secret_key
 STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
-STRIPE_PRICE_ID_MONTHLY=your_monthly_price_id
+NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY=your_monthly_price_id
+NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL=your_annual_price_id
 
 # App Configuration
 NEXT_PUBLIC_APP_URL=http://localhost:3000

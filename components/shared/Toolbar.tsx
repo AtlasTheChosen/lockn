@@ -26,6 +26,7 @@ import {
   Menu,
   X,
   Shield,
+  HelpCircle,
 } from 'lucide-react';
 import ThemeSelector from '@/components/dashboard/ThemeSelector';
 import Logo from '@/components/ui/Logo';
@@ -215,18 +216,24 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator style={{ backgroundColor: 'var(--border-color)' }} />
-                    <Link href="/account">
-                      <DropdownMenuItem className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
+                    <DropdownMenuItem asChild className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
+                      <Link href="/account">
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
-                      </DropdownMenuItem>
-                    </Link>
-                    <Link href="/profile">
-                      <DropdownMenuItem className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
+                      <Link href="/profile">
                         <UserIcon className="mr-2 h-4 w-4" />
                         <span>Profile Settings</span>
-                      </DropdownMenuItem>
-                    </Link>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="rounded-xl" style={{ color: 'var(--text-primary)' }}>
+                      <Link href="/help">
+                        <HelpCircle className="mr-2 h-4 w-4" />
+                        <span>Help Center / FAQ</span>
+                      </Link>
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator style={{ backgroundColor: 'var(--border-color)' }} />
                     <DropdownMenuItem onClick={handleLogout} className="rounded-xl" style={{ color: 'var(--accent-red)' }}>
                       <LogOut className="mr-2 h-4 w-4" />
@@ -363,6 +370,12 @@ export default function Toolbar({ user, profile }: ToolbarProps) {
                     <Button variant="ghost" className="w-full justify-start gap-2">
                       <UserIcon className="h-4 w-4" />
                       Profile Settings
+                    </Button>
+                  </Link>
+                  <Link href="/help" onClick={() => setMobileMenuOpen(false)}>
+                    <Button variant="ghost" className="w-full justify-start gap-2">
+                      <HelpCircle className="h-4 w-4" />
+                      Help Center / FAQ
                     </Button>
                   </Link>
                   <Button

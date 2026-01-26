@@ -15,6 +15,7 @@ export const dynamic = 'force-dynamic';
 export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [supabase, setSupabase] = useState<any>(null);
+  const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
   const router = useRouter();
 
   useEffect(() => {
@@ -89,8 +90,36 @@ export default function PricingPage() {
           <p className="text-xl mb-2" style={{ color: 'var(--text-secondary)' }}>
             Unlimited AI generations, unlimited stacks, and advanced features
           </p>
+          
+          {/* Billing Interval Toggle */}
+          <div className="flex items-center justify-center gap-2 p-2 bg-[var(--bg-secondary)] rounded-lg mb-4 max-w-xs mx-auto">
+            <button
+              onClick={() => setBillingInterval('monthly')}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                billingInterval === 'monthly'
+                  ? 'bg-[var(--accent-green)] text-white'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              Monthly
+            </button>
+            <button
+              onClick={() => setBillingInterval('annual')}
+              className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all relative ${
+                billingInterval === 'annual'
+                  ? 'bg-[var(--accent-green)] text-white'
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+              }`}
+            >
+              Annual
+              <span className="absolute -top-1 -right-1 bg-[var(--accent-orange)] text-white text-xs px-1.5 py-0.5 rounded-full">
+                Save 17%
+              </span>
+            </button>
+          </div>
+          
           <p className="text-lg" style={{ color: 'var(--text-muted)' }}>
-            Just $4.99/month - Cancel anytime
+            {billingInterval === 'monthly' ? '$4.99/month' : '$49.90/year ($4.16/month)'} - Cancel anytime
           </p>
         </div>
 
@@ -142,9 +171,21 @@ export default function PricingPage() {
                 <CardTitle className="text-2xl" style={{ color: 'var(--text-primary)' }}>Premium</CardTitle>
               </div>
               <CardDescription style={{ color: 'var(--text-secondary)' }}>Unlimited learning potential</CardDescription>
-              <div className="pt-4">
-                <span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>$4.99</span>
-                <span style={{ color: 'var(--text-secondary)' }}>/month</span>
+              <div className="pt-4 text-center">
+                {billingInterval === 'monthly' ? (
+                  <>
+                    <span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>$4.99</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>/month</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-4xl font-bold" style={{ color: 'var(--text-primary)' }}>$49.90</span>
+                    <span style={{ color: 'var(--text-secondary)' }}>/year</span>
+                    <p className="text-sm mt-1" style={{ color: 'var(--text-muted)' }}>
+                      Just $4.16/month (billed annually)
+                    </p>
+                  </>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -173,10 +214,15 @@ export default function PricingPage() {
               <Button
                 className="w-full font-bold"
                 style={{ backgroundColor: 'var(--accent-green)', color: 'white', boxShadow: '0 3px 0 var(--accent-green-dark)' }}
-                onClick={() => handleCheckout(process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || '', 'monthly')}
-                disabled={loading === 'monthly'}
+                onClick={() => {
+                  const priceId = billingInterval === 'annual'
+                    ? (process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL || '')
+                    : (process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || '');
+                  handleCheckout(priceId, billingInterval);
+                }}
+                disabled={loading === billingInterval}
               >
-                {loading === 'monthly' ? (
+                {loading === billingInterval ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     Processing...

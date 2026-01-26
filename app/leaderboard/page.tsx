@@ -9,6 +9,7 @@ import { AlertCircle, RefreshCw, Calendar, Target, ArrowLeft, Flame, Snowflake, 
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout';
+import PublicProfileModal from '@/components/dashboard/PublicProfileModal';
 
 interface LeaderboardUser {
   id: string;
@@ -34,6 +35,8 @@ export default function LeaderboardPage() {
   const [users, setUsers] = useState<LeaderboardUser[]>([]);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('current_streak');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const loadLeaderboardData = useCallback(async (isInitialLoad = false) => {
     try {
@@ -315,7 +318,7 @@ export default function LeaderboardPage() {
                 return (
                   <motion.div
                     key={user.id}
-                    className="rounded-[20px] p-5 flex items-center gap-5 cursor-default"
+                    className="rounded-[20px] p-5 flex items-center gap-5 cursor-pointer"
                     style={{ 
                       backgroundColor: 'var(--bg-card)', 
                       boxShadow: 'var(--shadow-sm)',
@@ -331,6 +334,10 @@ export default function LeaderboardPage() {
                       damping: 20
                     }}
                     whileHover={{ x: 8, boxShadow: 'var(--shadow-md)' }}
+                    onClick={() => {
+                      setSelectedUserId(user.id);
+                      setIsProfileModalOpen(true);
+                    }}
                   >
                   {/* Rank Badge */}
                     <motion.div 
@@ -411,6 +418,18 @@ export default function LeaderboardPage() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Public Profile Modal */}
+      {selectedUserId && (
+        <PublicProfileModal
+          userId={selectedUserId}
+          isOpen={isProfileModalOpen}
+          onClose={() => {
+            setIsProfileModalOpen(false);
+            setSelectedUserId(null);
+          }}
+        />
+      )}
     </AppLayout>
   );
 }
