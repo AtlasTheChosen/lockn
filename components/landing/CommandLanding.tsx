@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { Search, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript, LANGUAGE_FLAGS } from '@/lib/constants';
+import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript, getFlagUrl } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from '@/components/auth/AuthModal';
@@ -162,9 +162,15 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
   };
 
 
-  const getLanguageEmoji = (name: string) => {
-    return LANGUAGE_FLAGS[name] || '🌍';
-  };
+  // Returns a flag image element for the language
+  const FlagImage = ({ name, size = 20 }: { name: string; size?: number }) => (
+    <img 
+      src={getFlagUrl(name, size)} 
+      alt={`${name} flag`}
+      className="inline-block rounded-sm"
+      style={{ width: size, height: Math.round(size * 0.75) }}
+    />
+  );
 
   return (
     <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
@@ -198,7 +204,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
             <p className="text-base sm:text-lg mb-3 sm:mb-4 font-medium animate-fade-in" style={{ color: 'var(--text-secondary)' }}>
               Welcome!
             </p>
-            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight gradient-text-warm animate-fade-in stagger-1 mb-12 sm:mb-14 md:mb-20 pb-3 md:pb-6">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight gradient-text-warm animate-fade-in stagger-1 mb-5 sm:mb-6 md:mb-8 pb-2 md:pb-4">
               What subject would you like to turn into language learning flashcards?
             </h1>
             <div className="flex justify-center mb-4 sm:mb-6">
@@ -286,14 +292,18 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 </label>
                 <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
                   <SelectTrigger className="w-full rounded-2xl h-14 py-3 sm:py-4 font-semibold focus:ring-0" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}>
-                    <SelectValue>
-                      {selectedLanguage} {getLanguageEmoji(selectedLanguage)}
-                    </SelectValue>
+                    <span className="flex items-center gap-2">
+                      <FlagImage name={selectedLanguage} size={20} />
+                      <span>{selectedLanguage}</span>
+                    </span>
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl max-h-[50vh]" style={{ backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)' }}>
                     {SUPPORTED_LANGUAGES.map((lang) => (
                       <SelectItem key={lang.code} value={lang.name} className="rounded-xl font-medium py-3">
-                        {lang.name} {getLanguageEmoji(lang.name)}
+                        <span className="flex items-center gap-2">
+                          <FlagImage name={lang.name} size={20} />
+                          <span>{lang.name}</span>
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -324,7 +334,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
               {/* Card Count - show for all users, but only 5 for logged-out users */}
               <div>
                 <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
-                  🎴 Cards {(!isLoggedIn || !isPremium) && <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>(5 minimum)</span>}
+                  🎴 Cards {(!isLoggedIn || !isPremium) && <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>(5 card maximum)</span>}
                 </label>
                 <div className="flex gap-2">
                   {(isLoggedIn && isPremium ? ALL_CARD_COUNT_OPTIONS : [5 as CardCount]).map((count) => (

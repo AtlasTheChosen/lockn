@@ -12,7 +12,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { X, Loader2, Sparkles, MessageSquare, AlertTriangle, CreditCard, RefreshCw, Crown } from 'lucide-react';
 import PremiumModal from './PremiumModal';
-import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript, getLanguageFlagByCode } from '@/lib/constants';
+import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript, getFlagUrlByCode } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 import { DEBUG } from '@/lib/debug';
 import { toast } from 'sonner';
@@ -398,7 +398,7 @@ export default function StackGenerationModal({ isOpen, onClose, userId, isPremiu
                       : { backgroundColor: 'var(--bg-secondary)', borderColor: 'var(--border-color)', color: 'var(--text-secondary)' }
                     }
                   >
-                    {getLanguageFlagByCode(lang.code)} {lang.name}
+                    <img src={getFlagUrlByCode(lang.code, 20)} alt={`${lang.name} flag`} className="inline-block rounded-sm mr-2" style={{ width: 20, height: 15 }} /> {lang.name}
                   </Button>
                 ))}
               </div>

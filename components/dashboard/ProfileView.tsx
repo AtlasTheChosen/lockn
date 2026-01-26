@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import type { UserProfile } from '@/lib/types';
 import { getAvatarUrl } from '@/lib/avatars';
-import { LANGUAGE_FLAGS_BY_CODE } from '@/lib/constants';
+import { getFlagUrlByCode } from '@/lib/constants';
 
 const LANGUAGE_NAMES: Record<string, string> = {
   es: 'Spanish',
@@ -41,7 +41,15 @@ const LANGUAGE_NAMES: Record<string, string> = {
   he: 'Hebrew',
 };
 
-const LANGUAGE_EMOJIS = LANGUAGE_FLAGS_BY_CODE;
+// Flag image helper
+const FlagImg = ({ code, size = 14 }: { code: string; size?: number }) => (
+  <img 
+    src={getFlagUrlByCode(code, size)} 
+    alt={`${code} flag`}
+    className="inline-block rounded-sm"
+    style={{ width: size, height: Math.round(size * 0.75) }}
+  />
+);
 
 interface Props {
   profile: UserProfile;
@@ -110,7 +118,7 @@ export default function ProfileView({ profile, stats }: Props) {
                     className="px-2 py-1 text-xs font-semibold rounded-lg"
                     style={{ backgroundColor: 'rgba(88, 204, 2, 0.2)', color: 'var(--accent-green)' }}
                   >
-                    {LANGUAGE_EMOJIS[lang] || '🌐'} {LANGUAGE_NAMES[lang] || lang}
+                    <FlagImg code={lang} size={14} /> {LANGUAGE_NAMES[lang] || lang}
                   </span>
                 ))}
               </div>

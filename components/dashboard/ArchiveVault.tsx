@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
-import { getLanguageFlag } from '@/lib/constants';
+import { getFlagUrl } from '@/lib/constants';
 
 interface ArchivedStack {
   id: string;
@@ -39,9 +39,15 @@ export default function ArchiveVault({ stacks, onUpdate, className = '' }: Archi
   
   const supabase = createClient();
   
-  const getLanguageEmoji = (name: string) => {
-    return getLanguageFlag(name);
-  };
+  // Flag image component
+  const FlagImage = ({ name, size = 16 }: { name: string; size?: number }) => (
+    <img 
+      src={getFlagUrl(name, size)} 
+      alt={`${name} flag`}
+      className="inline-block rounded-sm"
+      style={{ width: size, height: Math.round(size * 0.75) }}
+    />
+  );
   
   const capitalizeTitle = (title: string) => {
     return title.split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
@@ -241,7 +247,7 @@ export default function ArchiveVault({ stacks, onUpdate, className = '' }: Archi
                     
                     {/* Meta */}
                     <div className="flex items-center justify-between text-sm text-[var(--text-secondary)]">
-                      <span>{getLanguageEmoji(stack.language)} {stack.language}</span>
+                      <span className="flex items-center gap-1.5"><FlagImage name={stack.language} size={16} /> {stack.language}</span>
                       <span>{stack.total_cards} cards</span>
                     </div>
                 

@@ -101,6 +101,10 @@ export default function AccountSettingsPage() {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [canceling, setCanceling] = useState(false);
+  const [showChangePlanDialog, setShowChangePlanDialog] = useState(false);
+  const [changingPlan, setChangingPlan] = useState(false);
+  const [targetBillingInterval, setTargetBillingInterval] = useState<'monthly' | 'annual' | null>(null);
+  const [showManageSubscription, setShowManageSubscription] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!sessionUser) return;
@@ -276,6 +280,47 @@ export default function AccountSettingsPage() {
       setShowCancelDialog(false);
     } finally {
       setCanceling(false);
+    }
+  };
+
+  const handleChangePlan = async () => {
+    if (!sessionUser || !targetBillingInterval) return;
+
+    setChangingPlan(true);
+    try {
+      const response = await fetch('/api/account/change-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ billingInterval: targetBillingInterval }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        setSaveMessage({ type: 'error', text: data.error || 'Failed to change plan' });
+        setChangingPlan(false);
+        setShowChangePlanDialog(false);
+        return;
+      }
+
+      const prorationText = data.prorationAmount !== undefined && data.prorationAmount !== 0
+        ? data.prorationAmount > 0
+          ? ` You've been charged $${Math.abs(data.prorationAmount).toFixed(2)}.`
+          : ` You've been credited $${Math.abs(data.prorationAmount).toFixed(2)}.`
+        : '';
+
+      setSaveMessage({ 
+        type: 'success', 
+        text: `Plan changed to ${targetBillingInterval === 'annual' ? 'Annual' : 'Monthly'} successfully!${prorationText}` 
+      });
+      setShowChangePlanDialog(false);
+      setTargetBillingInterval(null);
+      loadData(); // Reload to show updated subscription status
+      setTimeout(() => setSaveMessage(null), 5000);
+    } catch (err: any) {
+      setSaveMessage({ type: 'error', text: err.message || 'Failed to change plan' });
+      setShowChangePlanDialog(false);
+    } finally {
+      setChangingPlan(false);
     }
   };
 
@@ -823,24 +868,31 @@ export default function AccountSettingsPage() {
 
               <div className="flex justify-between items-center py-2 border-b border-slate-700">
                 <span className="text-slate-400">Plan</span>
-                <Badge className={profile?.is_premium 
-                  ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-semibold' 
-                  : 'bg-slate-600'}>
-                  {profile?.is_premium ? 'Premium' : 'Free'}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  <Badge className={profile?.is_premium 
+                    ? 'bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-semibold' 
+                    : 'bg-slate-600'}>
+                    {profile?.is_premium ? 'Premium' : 'Free'}
+                  </Badge>
+                  {profile?.is_premium && profile?.billing_interval && (
+                    <span className="text-sm text-slate-400">
+                      ({profile.billing_interval === 'annual' ? 'Annual' : 'Monthly'})
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Subscription Status with enhanced display */}
               <div className="flex justify-between items-center py-2 border-b border-slate-700">
                 <span className="text-slate-400">Status</span>
                 <Badge className={
-                  profile?.subscription_status === 'active' && !profile?.subscription_cancel_at
+                  profile?.is_premium && (profile?.subscription_status === 'active' || !profile?.subscription_status) && !profile?.subscription_cancel_at
                     ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
                     : (profile?.subscription_status === 'canceled' || profile?.subscription_cancel_at)
                     ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30'
                     : 'bg-slate-600'
                 }>
-                  {profile?.subscription_status === 'active' && !profile?.subscription_cancel_at
+                  {profile?.is_premium && !profile?.subscription_cancel_at
                     ? 'Active' 
                     : (profile?.subscription_status === 'canceled' || profile?.subscription_cancel_at)
                     ? 'Canceling'
@@ -861,7 +913,7 @@ export default function AccountSettingsPage() {
               )}
 
               {/* Helpful messaging */}
-              {profile?.is_premium && profile?.subscription_status === 'active' && !profile?.subscription_cancel_at && (
+              {profile?.is_premium && profile?.subscription_status === 'active' && (
                 <p className="text-xs text-slate-500 pt-2">
                   Your subscription will automatically renew. Cancel anytime to stop future charges.
                 </p>
@@ -872,106 +924,236 @@ export default function AccountSettingsPage() {
                 </p>
               )}
 
-              {/* Subscription Management Actions */}
-              {profile?.is_premium && (profile?.subscription_status === 'active' || profile?.subscription_cancel_at) && (
-                <div className="space-y-3 mt-4">
-                  {/* Primary: Cancel Subscription */}
-                  <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className="w-full border-orange-500/50 text-orange-400 hover:bg-orange-500/20 hover:border-orange-500 font-semibold"
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Cancel Subscription
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent className="bg-slate-900 border-slate-700">
-                      <AlertDialogHeader>
-                        <AlertDialogTitle className="text-white">Cancel Subscription?</AlertDialogTitle>
-                        <AlertDialogDescription className="text-slate-400 space-y-3">
-                          <p>Are you sure you want to cancel your Premium subscription?</p>
-                          <div className="bg-slate-800/50 rounded-lg p-3 space-y-2 border border-slate-700">
-                            <div className="flex justify-between">
-                              <span className="text-slate-400">Current Plan:</span>
-                              <span className="text-white font-semibold">Premium</span>
-                            </div>
-                            {profile?.subscription_end_date && (
-                              <>
-                                <div className="flex justify-between">
-                                  <span className="text-slate-400">Next Renewal:</span>
-                                  <span className="text-white">{formatDate(profile.subscription_end_date)}</span>
-                                </div>
-                                <div className="flex justify-between pt-2 border-t border-slate-700">
-                                  <span className="text-slate-400">Access Until:</span>
-                                  <span className="text-green-400 font-semibold">{formatDate(profile.subscription_end_date)}</span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                          <p className="text-sm text-slate-300 pt-2">
-                            You'll retain full Premium access until the end of your billing period. No charges will be made after that date.
-                          </p>
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel 
-                          className="bg-slate-800 text-white border-slate-700"
-                          disabled={canceling}
-                        >
-                          Keep Subscription
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleCancelSubscription}
-                          disabled={canceling}
-                          className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {canceling ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                              Canceling...
-                            </>
-                          ) : (
-                            <>
-                              <X className="h-4 w-4 mr-2" />
-                              Yes, Cancel Subscription
-                            </>
-                          )}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-
-                  {/* Secondary: Manage Subscription (Stripe Portal) */}
+              {/* Manage Subscription Button & Section */}
+              {profile?.is_premium && (
+                <div className="mt-4 space-y-4">
                   <Button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch('/api/stripe/create-portal-session', {
-                          method: 'POST',
-                        });
-                        const data = await res.json();
-                        if (data.url) {
-                          window.location.href = data.url;
-                        } else {
-                          setSaveMessage({ type: 'error', text: data.error || 'Failed to open subscription portal' });
-                          setTimeout(() => setSaveMessage(null), 3000);
-                        }
-                      } catch (err) {
-                        setSaveMessage({ type: 'error', text: 'Failed to open subscription portal' });
-                        setTimeout(() => setSaveMessage(null), 3000);
-                      }
-                    }}
-                    variant="outline"
-                    className="w-full border-slate-600 text-slate-300 hover:bg-slate-700 hover:text-white"
+                    onClick={() => setShowManageSubscription(!showManageSubscription)}
+                    className="w-full"
+                    style={{ backgroundColor: 'var(--accent-blue)', color: 'white', boxShadow: '0 3px 0 #1899d6' }}
                   >
                     <CreditCard className="h-4 w-4 mr-2" />
-                    Manage Subscription (Stripe Portal)
+                    Manage Subscription
                   </Button>
-                  <p className="text-xs text-slate-500 text-center">
-                    Opens Stripe's billing portal for advanced subscription management
-                  </p>
+
+                  {showManageSubscription && (
+                    <div className="p-4 bg-slate-700/30 rounded-xl border border-slate-600 space-y-4 animate-in slide-in-from-top-2 duration-200">
+                      {/* Plan Details */}
+                      {profile?.billing_interval && (
+                        <div className="pb-4 border-b border-slate-600">
+                          <p className="text-sm font-semibold text-white mb-2">Current Plan</p>
+                          <p className="text-slate-400 text-sm">
+                            {profile.billing_interval === 'annual' 
+                              ? 'Annual ($49.90/year - $4.16/month)'
+                              : 'Monthly ($4.99/month)'}
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Switch Billing Interval */}
+                      {profile?.subscription_status === 'active' && profile?.billing_interval && !profile?.subscription_cancel_at && (
+                        <div className="pb-4 border-b border-slate-600">
+                          <p className="text-sm font-semibold text-white mb-2">Change Billing</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const newInterval = profile.billing_interval === 'annual' ? 'monthly' : 'annual';
+                              setTargetBillingInterval(newInterval);
+                              setShowChangePlanDialog(true);
+                            }}
+                            className="w-full border-slate-500 text-slate-300 hover:bg-slate-600 hover:text-white"
+                          >
+                            Switch to {profile.billing_interval === 'annual' ? 'Monthly ($4.99/mo)' : 'Annual ($49.90/yr - Save 17%)'}
+                          </Button>
+                          <p className="text-xs text-slate-500 mt-2">
+                            You'll be charged or credited the prorated amount immediately.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Cancel Subscription */}
+                      {profile?.subscription_status === 'active' && !profile?.subscription_cancel_at && (
+                        <div className="pb-4 border-b border-slate-600">
+                          <p className="text-sm font-semibold text-white mb-2">Cancel Subscription</p>
+                          <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full border-orange-500/50 text-orange-400 hover:bg-orange-500/20 hover:border-orange-500"
+                              >
+                                <X className="h-4 w-4 mr-2" />
+                                Cancel Subscription
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent className="bg-slate-900 border-slate-700">
+                              <AlertDialogHeader>
+                                <AlertDialogTitle className="text-white">Cancel Subscription?</AlertDialogTitle>
+                                <AlertDialogDescription className="text-slate-400 space-y-3">
+                                  <p>Are you sure you want to cancel your Premium subscription?</p>
+                                  <div className="bg-slate-800/50 rounded-lg p-3 space-y-2 border border-slate-700">
+                                    <div className="flex justify-between">
+                                      <span className="text-slate-400">Current Plan:</span>
+                                      <span className="text-white font-semibold">Premium</span>
+                                    </div>
+                                    {profile?.subscription_end_date && (
+                                      <>
+                                        <div className="flex justify-between">
+                                          <span className="text-slate-400">Next Renewal:</span>
+                                          <span className="text-white">{formatDate(profile.subscription_end_date)}</span>
+                                        </div>
+                                        <div className="flex justify-between pt-2 border-t border-slate-700">
+                                          <span className="text-slate-400">Access Until:</span>
+                                          <span className="text-green-400 font-semibold">{formatDate(profile.subscription_end_date)}</span>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-slate-300 pt-2">
+                                    You'll retain full Premium access until the end of your billing period. No charges will be made after that date.
+                                  </p>
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel 
+                                  className="bg-slate-800 text-white border-slate-700"
+                                  disabled={canceling}
+                                >
+                                  Keep Subscription
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={handleCancelSubscription}
+                                  disabled={canceling}
+                                  className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {canceling ? (
+                                    <>
+                                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                      Canceling...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <X className="h-4 w-4 mr-2" />
+                                      Yes, Cancel Subscription
+                                    </>
+                                  )}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                          <p className="text-xs text-slate-500 mt-2">
+                            You'll keep Premium access until your billing period ends.
+                          </p>
+                        </div>
+                      )}
+
+                      {/* Stripe Portal Link */}
+                      <div>
+                        <p className="text-sm font-semibold text-white mb-2">Billing Portal</p>
+                        <Button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch('/api/stripe/create-portal-session', {
+                                method: 'POST',
+                              });
+                              const data = await res.json();
+                              if (data.url) {
+                                window.location.href = data.url;
+                              } else {
+                                setSaveMessage({ type: 'error', text: data.error || 'Failed to open subscription portal' });
+                                setTimeout(() => setSaveMessage(null), 3000);
+                              }
+                            } catch (err) {
+                              setSaveMessage({ type: 'error', text: 'Failed to open subscription portal' });
+                              setTimeout(() => setSaveMessage(null), 3000);
+                            }
+                          }}
+                          variant="outline"
+                          size="sm"
+                          className="w-full border-slate-500 text-slate-300 hover:bg-slate-600 hover:text-white"
+                        >
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Open Stripe Billing Portal
+                        </Button>
+                        <p className="text-xs text-slate-500 mt-2">
+                          View invoices, update payment method, and more.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Change Plan Confirmation Dialog */}
+              {targetBillingInterval && (
+                <AlertDialog open={showChangePlanDialog} onOpenChange={setShowChangePlanDialog}>
+                  <AlertDialogContent className="bg-slate-900 border-slate-700">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle className="text-white">
+                        Switch to {targetBillingInterval === 'annual' ? 'Annual' : 'Monthly'} Plan?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="text-slate-400 space-y-3">
+                        <p>
+                          You're about to switch from {profile?.billing_interval === 'annual' ? 'Annual' : 'Monthly'} to {targetBillingInterval === 'annual' ? 'Annual' : 'Monthly'} billing.
+                        </p>
+                        <div className="bg-slate-800/50 rounded-lg p-3 space-y-2 border border-slate-700">
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">Current Plan:</span>
+                            <span className="text-white font-semibold">
+                              {profile?.billing_interval === 'annual' 
+                                ? 'Annual ($49.90/year)'
+                                : 'Monthly ($4.99/month)'}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-slate-400">New Plan:</span>
+                            <span className="text-green-400 font-semibold">
+                              {targetBillingInterval === 'annual' 
+                                ? 'Annual ($49.90/year)'
+                                : 'Monthly ($4.99/month)'}
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-sm text-slate-300 pt-2">
+                          Stripe will calculate the prorated amount based on the remaining time in your current billing period. 
+                          {targetBillingInterval === 'annual' 
+                            ? ' You\'ll be charged the difference immediately.'
+                            : ' You\'ll receive a credit for the difference.'}
+                        </p>
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel 
+                        className="bg-slate-800 text-white border-slate-700"
+                        disabled={changingPlan}
+                        onClick={() => {
+                          setTargetBillingInterval(null);
+                        }}
+                      >
+                        Cancel
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleChangePlan}
+                        disabled={changingPlan}
+                        className="bg-[var(--accent-green)] hover:bg-[var(--accent-green-dark)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {changingPlan ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Changing Plan...
+                          </>
+                        ) : (
+                          <>
+                            Switch to {targetBillingInterval === 'annual' ? 'Annual' : 'Monthly'}
+                          </>
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+
               {!profile?.is_premium && (
                 <Button 
                   onClick={() => setShowPremiumModal(true)}
@@ -1221,6 +1403,9 @@ export default function AccountSettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Premium Modal */}
+      <PremiumModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
     </div>
   );
 }

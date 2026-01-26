@@ -114,7 +114,63 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'id', name: 'Indonesian' },
 ];
 
-// Language flags/emojis mapped by language name
+// Language to country code mapping for flag images
+export const LANGUAGE_COUNTRY_CODES: Record<string, string> = {
+  'Spanish': 'es',
+  'French': 'fr',
+  'German': 'de',
+  'Italian': 'it',
+  'Portuguese': 'br',
+  'Japanese': 'jp',
+  'Korean': 'kr',
+  'Chinese (Mandarin)': 'cn',
+  'Arabic': 'sa',
+  'Russian': 'ru',
+  'Hindi': 'in',
+  'Turkish': 'tr',
+  'English': 'gb',
+  'Dutch': 'nl',
+  'Polish': 'pl',
+  'Swedish': 'se',
+  'Norwegian': 'no',
+  'Danish': 'dk',
+  'Finnish': 'fi',
+  'Greek': 'gr',
+  'Hebrew': 'il',
+  'Thai': 'th',
+  'Vietnamese': 'vn',
+  'Indonesian': 'id',
+};
+
+// Language code to country code mapping
+export const LANG_CODE_TO_COUNTRY: Record<string, string> = {
+  'es': 'es',
+  'fr': 'fr',
+  'de': 'de',
+  'it': 'it',
+  'pt': 'br',
+  'ja': 'jp',
+  'ko': 'kr',
+  'zh': 'cn',
+  'ar': 'sa',
+  'ru': 'ru',
+  'hi': 'in',
+  'tr': 'tr',
+  'en': 'gb',
+  'nl': 'nl',
+  'pl': 'pl',
+  'sv': 'se',
+  'no': 'no',
+  'da': 'dk',
+  'fi': 'fi',
+  'el': 'gr',
+  'he': 'il',
+  'th': 'th',
+  'vi': 'vn',
+  'id': 'id',
+};
+
+// Legacy emoji maps (kept for backwards compatibility, but won't render on Windows)
 export const LANGUAGE_FLAGS: Record<string, string> = {
   'Spanish': '🇪🇸',
   'French': '🇫🇷',
@@ -170,12 +226,23 @@ export const LANGUAGE_FLAGS_BY_CODE: Record<string, string> = {
   'id': '🇮🇩',
 };
 
-// Helper function to get language flag by name
+// Helper function to get flag image URL by language name
+export const getFlagUrl = (languageName: string, size: number = 24): string => {
+  const countryCode = LANGUAGE_COUNTRY_CODES[languageName] || 'xx';
+  return `https://flagcdn.com/w${size}/${countryCode}.png`;
+};
+
+// Helper function to get flag image URL by language code
+export const getFlagUrlByCode = (langCode: string, size: number = 24): string => {
+  const countryCode = LANG_CODE_TO_COUNTRY[langCode] || 'xx';
+  return `https://flagcdn.com/w${size}/${countryCode}.png`;
+};
+
+// Legacy helper functions (for backwards compatibility)
 export const getLanguageFlag = (languageName: string): string => {
   return LANGUAGE_FLAGS[languageName] || '🌍';
 };
 
-// Helper function to get language flag by code
 export const getLanguageFlagByCode = (languageCode: string): string => {
   return LANGUAGE_FLAGS_BY_CODE[languageCode] || '🌍';
 };
@@ -184,32 +251,32 @@ export const CEFR_LEVELS = [
   {
     code: 'A1',
     name: 'A1 (Beginner)',
-    description: 'Basic phrases, present tense, simple vocabulary'
+    description: 'Beginner'
   },
   {
     code: 'A2',
     name: 'A2 (Elementary)',
-    description: 'Simple sentences, basic past tense, everyday expressions'
+    description: 'Elementary'
   },
   {
     code: 'B1',
     name: 'B1 (Intermediate)',
-    description: 'Connectors, multiple tenses, handling common situations'
+    description: 'Intermediate'
   },
   {
     code: 'B2',
     name: 'B2 (Upper Intermediate)',
-    description: 'Complex sentences, nuanced expressions, abstract topics'
+    description: 'Upper Intermediate'
   },
   {
     code: 'C1',
     name: 'C1 (Advanced)',
-    description: 'Sophisticated language, idioms, implicit meaning'
+    description: 'Advanced'
   },
   {
     code: 'C2',
     name: 'C2 (Proficient)',
-    description: 'Native-like fluency, advanced idioms, subtle distinctions'
+    description: 'Proficient'
   },
 ];
 

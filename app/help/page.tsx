@@ -39,21 +39,6 @@ const FAQ_ITEMS: FAQItem[] = [
   // Getting Started
   {
     category: 'getting-started',
-    question: 'How do I create my first flashcard stack?',
-    answer: 'On the home page, enter any topic or scenario you want to learn (e.g., "ordering coffee in Paris" or "job interview in Spanish"). Select your target language, difficulty level, and card count. Click "Create Magic!" and LockN will generate personalized flashcards for you!'
-  },
-  {
-    category: 'getting-started',
-    question: 'Do I need to create an account to use LockN?',
-    answer: 'You can try LockN without an account! Guest users can generate 3-card trial stacks. To save your progress, create unlimited stacks, and access all features, sign up for a free account. Premium accounts unlock even more options like 10, 25, and 50-card stacks.'
-  },
-  {
-    category: 'getting-started',
-    question: 'What languages does LockN support?',
-    answer: 'LockN supports 24 languages including Spanish, French, German, Italian, Portuguese, Japanese, Korean, Chinese (Mandarin), Arabic, Russian, Hindi, Turkish, English, Dutch, Polish, Swedish, Norwegian, Danish, Finnish, Greek, Hebrew, Thai, Vietnamese, and Indonesian. More languages are being added regularly!'
-  },
-  {
-    category: 'getting-started',
     question: 'What are CEFR levels and which should I choose?',
     answer: 'CEFR (Common European Framework of Reference) levels indicate your proficiency: A1 (Beginner), A2 (Elementary), B1 (Intermediate), B2 (Upper Intermediate), C1 (Advanced), C2 (Proficient). Choose the level that matches your current ability. LockN will generate content appropriate for that level.'
   },
@@ -71,31 +56,11 @@ const FAQ_ITEMS: FAQItem[] = [
   },
   {
     category: 'premium',
-    question: 'How do I upgrade to Premium?',
-    answer: 'Click the "Upgrade to Premium" button on your dashboard or in the account settings. You\'ll be redirected to our secure checkout powered by Stripe. We accept all major credit cards, Apple Pay, Google Pay, and more.'
-  },
-  {
-    category: 'premium',
-    question: 'Can I cancel my Premium subscription?',
-    answer: 'Yes! You can cancel anytime from your Account Settings page. Your Premium access will continue until the end of your current billing period. No questions asked - cancel whenever you want.'
-  },
-  {
-    category: 'premium',
     question: 'What happens to my data if I cancel Premium?',
     answer: 'All your stacks, progress, and data remain accessible. You\'ll revert to the free tier limits (up to 3 stacks total, 5-card stacks only). You can always upgrade again later to regain Premium features.'
   },
-  {
-    category: 'premium',
-    question: 'Do you offer refunds?',
-    answer: 'We offer a satisfaction guarantee. If you\'re not happy with Premium within the first 7 days, contact support for a full refund. After that, refunds are handled on a case-by-case basis.'
-  },
   
   // Learning & Features
-  {
-    category: 'learning',
-    question: 'How do I study my flashcards?',
-    answer: 'Open any stack from your dashboard and click "Start Learning". You\'ll see the target phrase in your chosen language. Try to recall the translation, then reveal the answer. Rate how well you knew it to help LockN optimize your review schedule.'
-  },
   {
     category: 'learning',
     question: 'What does "mastering" a card mean?',
@@ -108,18 +73,8 @@ const FAQ_ITEMS: FAQItem[] = [
   },
   {
     category: 'learning',
-    question: 'How does the audio pronunciation work?',
-    answer: 'Each flashcard includes audio pronunciation using high-quality text-to-speech. Click the speaker icon to hear the phrase. Premium users can adjust playback speed (0.75x for slower, 1.25x for faster).'
-  },
-  {
-    category: 'learning',
     question: 'What are character breakdowns and romanization?',
     answer: 'For non-Latin scripts (Japanese, Chinese, Korean, Arabic, etc.), LockN provides character-by-character breakdowns showing how each symbol sounds, plus romanization (phonetic spelling in Latin letters) to help you learn pronunciation.'
-  },
-  {
-    category: 'learning',
-    question: 'Can I archive completed stacks?',
-    answer: 'Premium users can archive stacks they\'ve completed. Archived stacks are moved to your Archive Vault, keeping your active dashboard clean while preserving your learning history.'
   },
   {
     category: 'learning',
@@ -130,28 +85,8 @@ const FAQ_ITEMS: FAQItem[] = [
   // Social & Friends
   {
     category: 'social',
-    question: 'How do I add friends?',
-    answer: 'Go to the Social tab on your dashboard. You can search for users by display name, send friend requests, and see friend suggestions. Once connected, you can view each other\'s profiles and compete on leaderboards!'
-  },
-  {
-    category: 'social',
     question: 'What information is visible on my public profile?',
     answer: 'Your public profile shows your display name, languages you\'re learning, current streak, cards learned this week, total cards mastered, best streak, and achievements. Your email is never shown publicly.'
-  },
-  {
-    category: 'social',
-    question: 'Can I make my profile private?',
-    answer: 'Yes! Go to Profile Settings to control your privacy. Private profiles are only visible to your friends. Public profiles can be viewed by anyone.'
-  },
-  {
-    category: 'social',
-    question: 'How do leaderboards work?',
-    answer: 'Leaderboards rank users by their current streak, total cards mastered, and weekly progress. You can compete with friends or see global rankings. Climb the ranks by maintaining your streak and mastering more cards!'
-  },
-  {
-    category: 'social',
-    question: 'What are achievements and badges?',
-    answer: 'Achievements are badges you earn for milestones like maintaining streaks, mastering cards, and completing challenges. View your achievements on your profile tab. They\'re a fun way to track your learning progress!'
   },
   
   // Technical Support
@@ -163,32 +98,7 @@ const FAQ_ITEMS: FAQItem[] = [
   {
     category: 'technical',
     question: 'I\'m not getting the exact number of cards I requested. Why?',
-    answer: 'LockN now ensures you get exactly the number of cards you request. If you see fewer cards, the AI may have had trouble generating unique content for that topic. Try a different scenario or contact support if it happens repeatedly.'
-  },
-  {
-    category: 'technical',
-    question: 'Can I use LockN on mobile?',
-    answer: 'Yes! LockN is fully responsive and works great on mobile devices. The interface adapts to your screen size. You can study flashcards, maintain streaks, and access all features from your phone or tablet.'
-  },
-  {
-    category: 'technical',
-    question: 'How do I change my password?',
-    answer: 'Go to Account Settings and click "Change Password". Enter your current password and your new password twice. Make sure your new password is strong and secure.'
-  },
-  {
-    category: 'technical',
-    question: 'How do I delete my account?',
-    answer: 'Go to Account Settings and scroll to the "Danger Zone". Click "Delete Account" and confirm. This permanently deletes all your data including stacks, progress, and profile. This action cannot be undone.'
-  },
-  {
-    category: 'technical',
-    question: 'I forgot my password. How do I reset it?',
-    answer: 'On the login page, click "Forgot password?" and enter your email. You\'ll receive a password reset link. Click the link in the email to set a new password.'
-  },
-  {
-    category: 'technical',
-    question: 'How do I change my display name?',
-    answer: 'Go to Profile Settings. You can change your display name once every 30 days. This helps prevent abuse while still allowing flexibility. Your display name is shown on your profile and in social features.'
+    answer: 'LockN ensures you get exactly the number of cards you request. If you see fewer cards, the AI may have had trouble generating unique content for that topic. Try a different scenario or contact support if it happens repeatedly.'
   },
   {
     category: 'technical',

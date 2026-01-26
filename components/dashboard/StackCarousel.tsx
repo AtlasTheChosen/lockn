@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress-simple';
 import { ChevronLeft, ChevronRight, Plus, ArrowRight, Clock, Lock, Snowflake, Trash2, BookOpen } from 'lucide-react';
 import BirdMascot from './BirdMascot';
-import { getLanguageFlag } from '@/lib/constants';
+import { getFlagUrl } from '@/lib/constants';
 
 interface Stack {
   id: string;
@@ -115,9 +115,15 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId, 
     return title.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   };
 
-  const getLanguageEmoji = (name: string) => {
-    return getLanguageFlag(name);
-  };
+  // Flag image component
+  const FlagImage = ({ name, size = 16 }: { name: string; size?: number }) => (
+    <img 
+      src={getFlagUrl(name, size)} 
+      alt={`${name} flag`}
+      className="inline-block rounded-sm"
+      style={{ width: size, height: Math.round(size * 0.75) }}
+    />
+  );
 
   const getStatusBadge = (stack: Stack) => {
     const progress = getProgress(stack);
@@ -250,8 +256,8 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId, 
                   {/* Header */}
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex gap-1.5 flex-wrap">
-                      <span className="px-2 py-1 text-white rounded-lg text-xs font-bold" style={{ background: 'linear-gradient(to right, var(--accent-blue), var(--accent-green))' }}>
-                        {getLanguageEmoji(stack.language)} {stack.language}
+                      <span className="px-2 py-1 text-white rounded-lg text-xs font-bold flex items-center gap-1.5" style={{ background: 'linear-gradient(to right, var(--accent-blue), var(--accent-green))' }}>
+                        <FlagImage name={stack.language} size={14} /> {stack.language}
                       </span>
                       {stack.contributed_to_streak && stack.status !== 'completed' && (
                         <span className="px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1" style={{ backgroundColor: 'rgba(251, 146, 60, 0.2)', color: 'var(--accent-orange)' }} title="Contributing to streak">

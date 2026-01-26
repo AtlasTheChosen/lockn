@@ -22,7 +22,7 @@ import { useSpeech, TTSProvider, VoiceGender } from '@/hooks/use-speech';
 import { Input } from '@/components/ui/input';
 import type { CardStack, Flashcard, TestNote } from '@/lib/types';
 import Confetti from 'react-confetti';
-import { CARD_RATINGS, NON_LATIN_LANGUAGES, ROMANIZATION_NAMES, getLanguageFlag } from '@/lib/constants';
+import { CARD_RATINGS, NON_LATIN_LANGUAGES, ROMANIZATION_NAMES, getFlagUrl } from '@/lib/constants';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
 import { shouldResetWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
 import { isNewDay, getTodayDate, getTodayDateInTimezone, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
@@ -860,9 +860,15 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     return title.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   };
 
-  const getLanguageEmoji = (name: string) => {
-    return getLanguageFlag(name);
-  };
+  // Flag image component
+  const FlagImage = ({ name, size = 16 }: { name: string; size?: number }) => (
+    <img 
+      src={getFlagUrl(name, size)} 
+      alt={`${name} flag`}
+      className="inline-block rounded-sm"
+      style={{ width: size, height: Math.round(size * 0.75) }}
+    />
+  );
 
   if (!currentCard) {
     return (
@@ -1000,8 +1006,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         <div className="w-full max-w-2xl">
           {/* Stack Title */}
           <div className="text-center mb-4 sm:mb-6">
-            <h2 className="font-display text-xl sm:text-2xl font-semibold" style={{ color: 'var(--text-primary)' }}>
-              {capitalizeTitle(stack.title)} {getLanguageEmoji(stack.target_language)}
+            <h2 className="font-display text-xl sm:text-2xl font-semibold flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+              {capitalizeTitle(stack.title)} <FlagImage name={stack.target_language} size={20} />
             </h2>
           </div>
 

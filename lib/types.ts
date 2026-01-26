@@ -24,6 +24,7 @@ export interface UserProfile {
   subscription_status: string | null;
   subscription_end_date: string | null;
   subscription_cancel_at?: string | null;
+  billing_interval?: 'monthly' | 'annual' | null;
   daily_generations_count: number;
   daily_generations_reset_at: string;
   is_admin: boolean;
