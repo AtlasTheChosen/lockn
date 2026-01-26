@@ -113,6 +113,7 @@ export interface Flashcard {
   audio_url?: string; // Cached TTS audio URL from Supabase Storage
   audio_hash?: string; // Hash for audio cache lookup
   grammar_breakdown?: GrammarBreakdown; // Cached AI grammar analysis
+  contributed_to_streak_date?: string | null; // Date when this card contributed to daily streak
 }
 
 export interface UserStats {

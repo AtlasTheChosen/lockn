@@ -22,7 +22,7 @@ export default function Logo({ size = '2xl', className = '' }: LogoProps) {
   return (
     <Image
       src="/images/Friendly robot with glowing eyes.png"
-      alt="Lockn Robot Logo"
+      alt="LockN Robot Logo"
       width={pixelSize}
       height={pixelSize}
       className={`object-contain rounded-lg ${className}`}

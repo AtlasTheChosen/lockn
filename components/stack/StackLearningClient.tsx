@@ -31,6 +31,7 @@ import type { Badge as BadgeType } from '@/lib/types';
 import {
   checkAndHandleStreakExpiration,
   processCardMasteryChange,
+  processTestCompletionCards,
   checkAndTriggerTest,
   completeTest,
   checkCardDowngradeImpact,
@@ -65,8 +66,6 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
   const [wordTranslations, setWordTranslations] = useState<Record<string, any>>({});
   const [mistakes, setMistakes] = useState<any[]>([]);
   
-  // Streak system v2 - track stacks contributing to current 5-card cycle
-  const [stacksContributedThisSession] = useState<Set<string>>(new Set());
   
   // Test mode state
   const [testMode, setTestMode] = useState(false);
@@ -461,12 +460,24 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         .eq('user_id', stack.user_id)
         .single();
 
-      if (userStats) {
+      if (userStats && currentCard) {
+        // Fetch streak date to check if card contributed
+        const { data: statsWithDate } = await supabase
+          .from('user_stats')
+          .select('last_mastery_date, timezone')
+          .eq('user_id', stack.user_id)
+          .single();
+        
+        const timezone = statsWithDate?.timezone || 'UTC';
+        const streakDate = statsWithDate?.last_mastery_date || getTodayDateInTimezone(timezone);
+        
         const impact = await checkCardDowngradeImpact(
           stack.user_id,
+          currentCard.id,
           userStats.cards_mastered_today || 0,
           userStats.streak_awarded_today || false,
-          userStats.streak_countdown_starts || null
+          userStats.streak_countdown_starts || null,
+          streakDate
         );
 
         // Show warning if downgrade would break streak OR if it would revert progress
@@ -522,18 +533,15 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     const isNowMastered = rating >= CARD_RATINGS.KINDA_KNOW;
     
     // Only process mastery changes (not neutral rating changes)
-    if (wasNotMasteredBefore && isNowMastered) {
+    if (wasNotMasteredBefore && isNowMastered && currentCard) {
       try {
-        // Track this stack as contributing to the current 5-card cycle
-        stacksContributedThisSession.add(stack.id);
-        
         // Process mastery change with new streak system
         const masteryResult = await processCardMasteryChange(
           stack.user_id,
           stack.id,
+          currentCard.id,
           oldRating,
-          rating,
-          stacksContributedThisSession
+          rating
         );
         
         // Update local state for exit warning
@@ -541,8 +549,6 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
         
         if (masteryResult.streakIncremented) {
           console.log('Streak incremented to:', masteryResult.newStreak);
-          // Clear the session tracking for next cycle
-          stacksContributedThisSession.clear();
         }
         
         // Also update weekly stats counter
@@ -588,15 +594,15 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     }
 
     // Handle card downgrade from mastered to not mastered
-    if (wasMasteredBefore && isNowNotMastered) {
+    if (wasMasteredBefore && isNowNotMastered && currentCard) {
       try {
         // Decrement cards_mastered_today via streak system
         const downgradeResult = await processCardMasteryChange(
           stack.user_id,
           stack.id,
+          currentCard.id,
           oldRating,
-          rating,
-          stacksContributedThisSession
+          rating
         );
         
         // Update local state for exit warning
@@ -752,13 +758,17 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       .eq('id', stack.id);
 
     // Process downgrade via streak system (will decrement streak)
-    const downgradeResult = await processCardMasteryChange(
-      stack.user_id,
-      stack.id,
-      oldRating,
-      rating,
-      stacksContributedThisSession
-    );
+    if (currentCard) {
+      const downgradeResult = await processCardMasteryChange(
+        stack.user_id,
+        stack.id,
+        currentCard.id,
+        oldRating,
+        rating
+      );
+      
+      setCardsMasteredToday(downgradeResult.cardsMasteredToday);
+    }
     
     setCardsMasteredToday(downgradeResult.cardsMasteredToday);
 
@@ -1867,9 +1877,22 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
 
       if (passedCount > 0) {
         try {
+          // Get passed card IDs
+          const passedCardIds = testResults
+            .filter(r => r.passed)
+            .map(r => r.cardId);
+          
+          // Process test completion cards through streak system
+          const testResult = await processTestCompletionCards(
+            stack.user_id,
+            stack.id,
+            passedCardIds
+          );
+          
+          // Fetch user stats for other updates
           const { data: userStats } = await supabase
             .from('user_stats')
-            .select('current_week_cards, current_week_start, cards_mastered_today, last_mastery_date, current_streak, longest_streak, streak_frozen, streak_frozen_stacks, total_cards_mastered, tests_completed, perfect_test_streak, daily_goal_streak, ice_breaker_count')
+            .select('current_week_cards, current_week_start, total_cards_mastered, streak_frozen, streak_frozen_stacks, tests_completed, perfect_test_streak, daily_goal_streak, ice_breaker_count, cards_mastered_today')
             .eq('user_id', stack.user_id)
             .single();
 
@@ -1887,22 +1910,6 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
             const cardsToAdd = Math.min(passedCount, WEEKLY_CARD_CAP - newWeekCards);
             newWeekCards += cardsToAdd;
 
-            const today = getTodayDate();
-            const needsReset = isNewDay(userStats.last_mastery_date);
-            let newDailyCards = needsReset ? passedCount : (userStats.cards_mastered_today || 0) + passedCount;
-            let newStreak = userStats.current_streak || 0;
-            let newLongestStreak = userStats.longest_streak || 0;
-
-            if (!userStats.streak_frozen) {
-              const previousDaily = needsReset ? 0 : (userStats.cards_mastered_today || 0);
-              if (previousDaily < STREAK_DAILY_REQUIREMENT && newDailyCards >= STREAK_DAILY_REQUIREMENT) {
-                newStreak += 1;
-                if (newStreak > newLongestStreak) {
-                  newLongestStreak = newStreak;
-                }
-              }
-            }
-
             const frozenStacks = (userStats.streak_frozen_stacks || []).filter((id: string) => id !== stack.id);
             const shouldUnfreeze = frozenStacks.length === 0;
             const wasStreakFrozen = userStats.streak_frozen && userStats.streak_frozen_stacks?.includes(stack.id);
@@ -1915,8 +1922,8 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
               : 0; // Reset if not perfect
             
             // Daily goal streak: increment if we just hit the daily goal today
-            const previousDaily = needsReset ? 0 : (userStats.cards_mastered_today || 0);
-            const justMetDailyGoal = previousDaily < STREAK_DAILY_REQUIREMENT && newDailyCards >= STREAK_DAILY_REQUIREMENT;
+            const previousDaily = userStats.cards_mastered_today || 0;
+            const justMetDailyGoal = previousDaily < STREAK_DAILY_REQUIREMENT && testResult.cardsMasteredToday >= STREAK_DAILY_REQUIREMENT;
             const newDailyGoalStreak = justMetDailyGoal 
               ? (userStats.daily_goal_streak || 0) + 1 
               : (userStats.daily_goal_streak || 0);
@@ -1932,11 +1939,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                 current_week_cards: newWeekCards,
                 current_week_start: newWeekStart,
                 total_cards_mastered: newTotalMastered,
-                cards_mastered_today: newDailyCards,
-                last_mastery_date: today,
-                current_streak: newStreak,
-                longest_streak: newLongestStreak,
-                last_activity_date: today,
+                last_activity_date: getTodayDate(),
                 last_card_learned_at: new Date().toISOString(),
                 streak_frozen_stacks: frozenStacks,
                 streak_frozen: shouldUnfreeze ? false : userStats.streak_frozen,

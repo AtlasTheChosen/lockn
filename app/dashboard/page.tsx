@@ -11,7 +11,7 @@ import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import DisplayNameModal from '@/components/auth/DisplayNameModal';
 import { AppLayout } from '@/components/layout';
-import { isDeadlinePassed, STREAK_DAILY_REQUIREMENT, getTodayDate } from '@/lib/streak';
+import { isDeadlinePassed, STREAK_DAILY_REQUIREMENT, getTodayDate, getTodayDateInTimezone, isNewDayInTimezone } from '@/lib/streak';
 import { useBadgeChecker, buildBadgeStats } from '@/hooks/useBadgeChecker';
 import { Badge } from '@/lib/types';
 
@@ -338,10 +338,11 @@ export default function DashboardPage() {
       // Check if streak should be reset (new day and didn't meet yesterday's requirement)
       // Note: This applies even when frozen - missing daily cards resets streak to 0
       if (stats && accessToken) {
-        const today = getTodayDate();
-        const lastActiveDate = stats.last_mastery_date || stats.daily_cards_date;
+        const timezone = stats.timezone || 'UTC';
+        const today = getTodayDateInTimezone(timezone);
+        const needsReset = isNewDayInTimezone(stats.last_mastery_date, timezone);
         
-        if (lastActiveDate && lastActiveDate !== today) {
+        if (needsReset) {
           const yesterdayCards = stats.cards_mastered_today || 0;
           
           const updates = yesterdayCards < STREAK_DAILY_REQUIREMENT

@@ -87,7 +87,7 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
           <div className="flex items-center justify-center gap-2 mb-1">
             <Logo size="sm" />
             <span className="font-display text-xl font-semibold" style={{ color: 'var(--accent-green)' }}>
-              Lockn
+              LockN
             </span>
           </div>
           <DialogTitle className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>

@@ -53,7 +53,7 @@ function getMessage(state: BirdState, cardsMasteredToday: number, dailyRequireme
   
   switch (state) {
     case 'idle':
-      return "Let's learn some cards!";
+      return "Ready to LockN?";
     case 'perking':
       return `${remaining} more to hit your goal!`;
     case 'excited':
@@ -136,7 +136,7 @@ export default function BirdMascot({
       >
         <Image
           src="/images/Friendly robot with glowing eyes.png"
-          alt="Lockn Robot Mascot"
+          alt="LockN Robot Mascot"
           width={pixelSize}
           height={pixelSize}
           className="object-contain drop-shadow-lg"

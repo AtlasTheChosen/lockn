@@ -162,13 +162,13 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId, 
           Continue Learning <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" style={{ color: 'var(--accent-green)' }} />
         </h2>
         <motion.div
-          className="rounded-3xl p-8 sm:p-12 text-center"
+          className="rounded-3xl text-center min-h-[400px] flex items-center justify-center"
           style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-sm)' }}
           initial={{ scale: 0.95 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.1, type: 'spring', stiffness: 200, damping: 20 }}
         >
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center py-8 px-8 sm:px-12">
             <BirdMascot 
               state="idle" 
               size="lg" 

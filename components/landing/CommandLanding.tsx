@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import Link from 'next/link';
 import { Search, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +9,7 @@ import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, g
 import { checkContentAppropriateness } from '@/lib/content-filter';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from '@/components/auth/AuthModal';
+import PremiumModal from '@/components/dashboard/PremiumModal';
 
 interface CommandLandingProps {
   onStartTrial: (scenario: string, language: string, level: string, cardCount?: number, scriptPreference?: string) => void;
@@ -40,6 +40,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
   const [isPremium, setIsPremium] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
   
   // Check if current language has script options
   const showScriptSelector = hasScriptOptions(selectedLanguage);
@@ -194,10 +195,10 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
             className="text-center mb-6 sm:mb-8"
           >
             <p className="text-base sm:text-lg mb-3 sm:mb-4 font-medium animate-fade-in" style={{ color: 'var(--text-secondary)' }}>
-              Hey there, language champion!
+              Welcome! Tell us what you want to learn, and we'll create flashcards for you
             </p>
             <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight gradient-text-warm animate-fade-in stagger-1 mb-4 sm:mb-3">
-              What do you want to talk about today?
+              What subject would you like to turn into flashcards?
             </h1>
             <div className="flex justify-center mb-4 sm:mb-6">
               <button
@@ -211,7 +212,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                   boxShadow: '0 2px 8px rgba(255, 150, 0, 0.3)'
                 }}
               >
-                Learn how this works
+                Ready to LockN?
               </button>
             </div>
           </motion.div>
@@ -323,17 +324,17 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
               {isLoggedIn && (
                 <div>
                   <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
-                    🎴 Cards
+                    🎴 Cards {!isPremium && <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>(5 minimum)</span>}
                   </label>
                   <div className="flex gap-2">
                     {(isPremium ? ALL_CARD_COUNT_OPTIONS : [5 as CardCount]).map((count) => (
                       <Button
                         key={count}
                         type="button"
+                        data-card-count={count}
                         onClick={() => {
                           if (!isPremium && count !== 5) {
-                            setShowAuthModal(true);
-                            setAuthModalMode('signup');
+                            setShowPremiumModal(true);
                             return;
                           }
                           handleCardCountChange(count);
@@ -350,18 +351,51 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                   </div>
                   {!isPremium && (
                     <div className="mt-3 flex flex-col items-center justify-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                      <Link href="/pricing" className="w-full">
-                        <Button
-                          className="w-full bg-[#58cc02] text-white font-bold rounded-xl px-6 py-3 text-sm shadow-[0_3px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"
-                        >
-                          Upgrade to Premium
-                        </Button>
-                      </Link>
+                      <Button
+                        onClick={() => setShowPremiumModal(true)}
+                        className="w-full font-bold rounded-xl px-6 py-3 text-sm"
+                        style={{ 
+                          backgroundColor: 'var(--accent-green)', 
+                          color: 'white',
+                          boxShadow: '0 3px 0 var(--accent-green-dark)'
+                        }}
+                      >
+                        Upgrade to Premium
+                      </Button>
                       <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
                         Upgrade to Premium to create 10, 25, 50 card stacks
                       </p>
                     </div>
                   )}
+                </div>
+              )}
+              
+              {/* Premium Subscription Button - Show for guests and non-premium users on desktop */}
+              {(!isLoggedIn || !isPremium) && (
+                <div className="sm:col-span-3 md:col-span-3 mt-4 sm:mt-6">
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3 p-4 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)' }}>
+                    <p className="text-sm font-medium text-center" style={{ color: 'var(--text-primary)' }}>
+                      {!isLoggedIn ? 'Sign up to create custom stacks' : 'Unlock unlimited stacks and advanced features'}
+                    </p>
+                    <Button
+                      onClick={() => {
+                        if (!isLoggedIn) {
+                          setShowAuthModal(true);
+                          setAuthModalMode('signup');
+                        } else {
+                          setShowPremiumModal(true);
+                        }
+                      }}
+                      className="font-bold rounded-xl px-6 py-3 text-sm whitespace-nowrap"
+                      style={{ 
+                        backgroundColor: 'var(--accent-green)', 
+                        color: 'white',
+                        boxShadow: '0 3px 0 var(--accent-green-dark)'
+                      }}
+                    >
+                      {!isLoggedIn ? 'Get Started Free' : 'Upgrade to Premium'}
+                    </Button>
+                  </div>
                 </div>
               )}
             </div>
@@ -445,6 +479,9 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
         onClose={() => setShowAuthModal(false)} 
         initialMode={authModalMode}
       />
+      
+      {/* Premium Modal */}
+      <PremiumModal isOpen={showPremiumModal} onClose={() => setShowPremiumModal(false)} />
     </div>
   );
 }

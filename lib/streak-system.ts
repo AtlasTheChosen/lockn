@@ -98,6 +98,12 @@ export async function checkAndHandleStreakExpiration(
       .update({ contributed_to_streak: false })
       .eq('user_id', userId);
     
+    // Clear all card contribution flags
+    await supabase
+      .from('flashcards')
+      .update({ contributed_to_streak_date: null })
+      .eq('user_id', userId);
+    
     // Mark all pending tests as legacy (can_unfreeze_streak = false)
     await supabase
       .from('stack_tests')
@@ -131,19 +137,48 @@ export interface CardDowngradeImpact {
  * NEW LOCKING LOGIC:
  * - Before midnight (countdown hasn't started): Cards can be freely downgraded
  * - After midnight (countdown has started): Cards are LOCKED, downgrading triggers penalty
+ * - Only cards that actually contributed to the streak are locked
  * 
  * @param userId - User ID
+ * @param cardId - ID of the card being downgraded
  * @param currentCardsMasteredToday - Current count of cards mastered today
  * @param streakAwardedToday - Whether streak was awarded today
  * @param countdownStartsAt - When countdown begins (midnight of the day streak was earned)
+ * @param streakDate - The date when the streak was earned (for checking if card contributed)
  * @returns Impact assessment with warning message if applicable
  */
 export async function checkCardDowngradeImpact(
   userId: string,
+  cardId: string,
   currentCardsMasteredToday: number,
   streakAwardedToday: boolean,
-  countdownStartsAt: string | null
+  countdownStartsAt: string | null,
+  streakDate?: string | null
 ): Promise<CardDowngradeImpact> {
+  const supabase = createClient();
+  
+  // Check if this specific card contributed to the streak
+  let cardContributed = false;
+  if (cardId) {
+    const { data: card } = await supabase
+      .from('flashcards')
+      .select('contributed_to_streak_date')
+      .eq('id', cardId)
+      .eq('user_id', userId)
+      .single();
+    
+    if (card?.contributed_to_streak_date) {
+      // Check if the card contributed on the streak date (or today if streak was just earned)
+      const checkDate = streakDate || getTodayDateInTimezone('UTC');
+      cardContributed = card.contributed_to_streak_date === checkDate;
+    }
+  }
+  
+  // If this card didn't contribute, downgrading it won't affect the streak
+  if (!cardContributed) {
+    return { wouldBreakStreak: false, cardsAreLocked: false, warning: null };
+  }
+  
   // Check if cards are locked (past countdown start time = past midnight)
   const cardsLocked = areCardsLocked(countdownStartsAt);
   
@@ -198,16 +233,16 @@ export interface CardMasteryChangeResult {
  * 
  * @param userId - User ID
  * @param stackId - Stack ID the card belongs to
+ * @param cardId - ID of the card being updated
  * @param oldRating - Previous rating (1-5)
  * @param newRating - New rating (1-5)
- * @param stacksContributedThisSession - Track stacks that contributed in current session
  */
 export async function processCardMasteryChange(
   userId: string,
   stackId: string,
+  cardId: string,
   oldRating: number,
-  newRating: number,
-  stacksContributedThisSession: Set<string> = new Set()
+  newRating: number
 ): Promise<CardMasteryChangeResult> {
   const supabase = createClient();
   
@@ -247,12 +282,36 @@ export async function processCardMasteryChange(
   let streakAwardedToday = needsReset ? false : (stats.streak_awarded_today || false);
   const stacksLocked: string[] = [];
   
-  // Track which stacks contributed this cycle
+  // Track card mastery changes
   if (wasNotMastered && isNowMastered) {
     cardsMasteredToday += 1;
-    stacksContributedThisSession.add(stackId);
+    
+    // Mark stack as contributed immediately (not just at threshold)
+    await supabase
+      .from('card_stacks')
+      .update({ contributed_to_streak: true })
+      .eq('id', stackId)
+      .eq('user_id', userId);
+    
+    // Mark this specific card as contributing to today's streak
+    if (cardId) {
+      await supabase
+        .from('flashcards')
+        .update({ contributed_to_streak_date: today })
+        .eq('id', cardId)
+        .eq('user_id', userId);
+    }
   } else if (wasMastered && isNowNotMastered) {
     cardsMasteredToday = Math.max(0, cardsMasteredToday - 1);
+    
+    // Clear card contribution flag if downgraded
+    if (cardId) {
+      await supabase
+        .from('flashcards')
+        .update({ contributed_to_streak_date: null })
+        .eq('id', cardId)
+        .eq('user_id', userId);
+    }
   }
   
   // Check if we've reached the 5-card threshold
@@ -292,15 +351,15 @@ export async function processCardMasteryChange(
       streak_deadline: actualDeadline.toISOString(),
     };
     
-    // Mark stacks as contributed (but NOT locked yet - locking happens at midnight)
-    if (stacksContributedThisSession.size > 0) {
-      const stackIds = Array.from(stacksContributedThisSession);
-      await supabase
-        .from('card_stacks')
-        .update({ contributed_to_streak: true })
-        .eq('user_id', userId)
-        .in('id', stackIds);
-      
+    // Query all stacks that contributed today to mark them as locked
+    const { data: contributingStacks } = await supabase
+      .from('card_stacks')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('contributed_to_streak', true);
+    
+    if (contributingStacks && contributingStacks.length > 0) {
+      const stackIds = contributingStacks.map(s => s.id);
       stacksLocked.push(...stackIds);
     }
   }
@@ -337,6 +396,12 @@ export async function processCardMasteryChange(
         .from('card_stacks')
         .update({ contributed_to_streak: false })
         .eq('user_id', userId);
+      
+      // Clear card contribution flags for all cards
+      await supabase
+        .from('flashcards')
+        .update({ contributed_to_streak_date: null })
+        .eq('user_id', userId);
     }
   }
   
@@ -360,6 +425,129 @@ export async function processCardMasteryChange(
     stacksLocked,
     countdownStartsAt: finalCountdownStarts || null,
     cardsAreLocked: cardsCurrentlyLocked,
+  };
+}
+
+// ============================================================
+// BATCH CARD PROCESSING FOR TEST COMPLETION
+// ============================================================
+
+/**
+ * Process multiple cards from test completion.
+ * This ensures test cards are properly counted toward daily streak.
+ * 
+ * @param userId - User ID
+ * @param stackId - Stack ID
+ * @param passedCardIds - Array of card IDs that passed the test
+ * @returns Result with updated counts and streak status
+ */
+export async function processTestCompletionCards(
+  userId: string,
+  stackId: string,
+  passedCardIds: string[]
+): Promise<{
+  cardsMasteredToday: number;
+  streakIncremented: boolean;
+  newStreak: number;
+}> {
+  if (passedCardIds.length === 0) {
+    return {
+      cardsMasteredToday: 0,
+      streakIncremented: false,
+      newStreak: 0,
+    };
+  }
+
+  const supabase = createClient();
+  
+  // Fetch current user stats
+  const { data: stats, error: statsError } = await supabase
+    .from('user_stats')
+    .select('*')
+    .eq('user_id', userId)
+    .single();
+  
+  if (statsError || !stats) {
+    console.error('Failed to fetch user stats for test completion:', statsError);
+    return {
+      cardsMasteredToday: 0,
+      streakIncremented: false,
+      newStreak: 0,
+    };
+  }
+
+  const timezone = stats.timezone || 'UTC';
+  const today = getTodayDateInTimezone(timezone);
+  const needsReset = isNewDayInTimezone(stats.last_mastery_date, timezone);
+  
+  let cardsMasteredToday = needsReset ? 0 : (stats.cards_mastered_today || 0);
+  let currentStreak = stats.current_streak || 0;
+  let longestStreak = stats.longest_streak || 0;
+  let streakIncremented = false;
+  
+  // Add passed cards to daily count
+  cardsMasteredToday += passedCardIds.length;
+  
+  // Mark stack as contributed
+  await supabase
+    .from('card_stacks')
+    .update({ contributed_to_streak: true })
+    .eq('id', stackId)
+    .eq('user_id', userId);
+  
+  // Mark all passed cards as contributing to today's streak
+  await supabase
+    .from('flashcards')
+    .update({ contributed_to_streak_date: today })
+    .eq('user_id', userId)
+    .in('id', passedCardIds);
+  
+  // Check if we've reached the 5-card threshold
+  const prevCount = needsReset ? 0 : (stats.cards_mastered_today || 0);
+  const crossedThreshold = prevCount < STREAK_DAILY_REQUIREMENT && cardsMasteredToday >= STREAK_DAILY_REQUIREMENT;
+  
+  let updateData: Partial<UserStats> = {
+    cards_mastered_today: cardsMasteredToday,
+    last_mastery_date: today,
+    last_activity_date: today,
+    ...(needsReset ? { streak_awarded_today: false } : {}),
+  };
+  
+  if (crossedThreshold) {
+    // Only increment if not frozen
+    if (!stats.streak_frozen) {
+      currentStreak += 1;
+      streakIncremented = true;
+      
+      if (currentStreak > longestStreak) {
+        longestStreak = currentStreak;
+      }
+    }
+    
+    // Calculate new deadlines
+    const { countdownStartsAt, displayDeadline, actualDeadline } = calculateStreakDeadlines(timezone);
+    
+    updateData = {
+      ...updateData,
+      current_streak: currentStreak,
+      longest_streak: longestStreak,
+      streak_awarded_today: true,
+      streak_countdown_starts: countdownStartsAt.toISOString(),
+      display_deadline: displayDeadline.toISOString(),
+      streak_deadline: actualDeadline.toISOString(),
+    };
+  }
+  
+  // Update user stats
+  await supabase
+    .from('user_stats')
+    .update(updateData)
+    .eq('user_id', userId);
+  
+  return {
+    cardsMasteredToday: updateData.cards_mastered_today || cardsMasteredToday,
+    streakIncremented,
+    newStreak: currentStreak,
   };
 }
 
@@ -851,6 +1039,12 @@ export async function executeStackDeletion(
     await supabase
       .from('card_stacks')
       .update({ contributed_to_streak: false })
+      .eq('user_id', userId);
+    
+    // Clear all card contribution flags
+    await supabase
+      .from('flashcards')
+      .update({ contributed_to_streak_date: null })
       .eq('user_id', userId);
     
     // Mark all tests as legacy

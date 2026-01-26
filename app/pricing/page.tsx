@@ -74,7 +74,7 @@ export default function PricingPage() {
           <div className="flex justify-between items-center h-16">
             <Link href="/dashboard" className="flex items-center gap-2">
               <Sparkles className="h-6 w-6" style={{ color: 'var(--accent-green)' }} />
-              <span className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Lockn</span>
+              <span className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>LockN</span>
             </Link>
             <Link href="/dashboard">
               <Button variant="ghost" style={{ color: 'var(--text-secondary)' }}>Back to Dashboard</Button>

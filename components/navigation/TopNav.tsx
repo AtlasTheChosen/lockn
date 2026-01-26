@@ -245,7 +245,7 @@ export default function TopNav({
       <Link href="/" className="flex items-center gap-2 flex-shrink-0">
         <div className="flex items-center gap-2">
           <Logo size="md" />
-          <span className="font-display text-xl lg:text-2xl font-semibold text-[#58cc02]">Lockn</span>
+          <span className="font-display text-xl lg:text-2xl font-semibold text-[#58cc02]">LockN</span>
         </div>
       </Link>
 
