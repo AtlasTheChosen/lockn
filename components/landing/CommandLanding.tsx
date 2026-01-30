@@ -184,7 +184,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
     <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg-primary)' }}>
       {/* TopNav in AppLayout handles all navigation - no duplicate header needed */}
       <div className="px-4 sm:px-6 md:px-8 py-6 sm:py-8 md:py-16 relative">
-        {/* Sign In Button - Only for logged out users on mobile/squeezed view */}
+        {/* Sign In - only for logged out users on mobile */}
         {!isLoggedIn && (
           <div className="md:hidden absolute top-2 left-1/2 transform -translate-x-1/2 z-50">
             <button
@@ -192,10 +192,8 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 setAuthModalMode('login');
                 setShowAuthModal(true);
               }}
-              className="text-sm font-normal transition-all active:opacity-70 opacity-50"
-              style={{ 
-                color: 'var(--text-muted)'
-              }}
+              className="text-sm font-normal transition-all active:opacity-70"
+              style={{ color: 'var(--text-muted)' }}
             >
               Sign In
             </button>
@@ -272,15 +270,17 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 type="button"
                 onClick={() => handleSubmit()}
                 disabled={!searchValue.trim() || !selectedLanguage}
-                className="w-full sm:w-auto text-white font-bold rounded-2xl px-8 py-4 min-h-[56px] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-[0.98] touch-manipulation"
+                className={`w-full sm:w-auto font-bold rounded-2xl px-8 py-4 min-h-[56px] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-[0.98] touch-manipulation text-white ${searchValue.trim() && selectedLanguage ? 'magic-button-create' : ''}`}
                 style={{
-                  backgroundColor: 'var(--accent-green)',
-                  boxShadow: '0 4px 0 var(--accent-green-dark)',
                   WebkitTapHighlightColor: 'transparent',
                   WebkitAppearance: 'none',
                   appearance: 'none',
                   transform: 'translateZ(0)',
                   backfaceVisibility: 'hidden' as const,
+                  ...(searchValue.trim() && selectedLanguage ? {} : {
+                    backgroundColor: 'var(--accent-green)',
+                    boxShadow: '0 4px 0 var(--accent-green-dark)',
+                  }),
                 }}
               >
                 Create Magic! 🎨

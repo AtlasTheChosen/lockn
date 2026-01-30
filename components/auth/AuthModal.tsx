@@ -305,23 +305,27 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-[101] flex items-end sm:items-center justify-center p-4 sm:p-4"
         style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+        onClick={onClose}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Sign in or sign up"
       >
-        {/* Backdrop */}
+        {/* Shaded backdrop - tap/click outside to close */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-          onClick={onClose}
+          className="absolute inset-0 bg-black/70 backdrop-blur-md"
+          aria-hidden="true"
         />
 
-        {/* Modal */}
+        {/* Modal - stop propagation so tapping inside doesn't close */}
         <motion.div
           initial={{ opacity: 0, y: 100 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 100 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full sm:max-w-md rounded-3xl p-6 sm:p-8 shadow-talka-lg overflow-hidden overflow-y-auto"
+          className="relative z-10 w-full sm:max-w-md rounded-3xl p-6 sm:p-8 shadow-talka-lg overflow-hidden overflow-y-auto"
           style={{ 
             backgroundColor: 'var(--bg-card)', 
             border: '1px solid var(--border-color)',
@@ -329,6 +333,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
             marginTop: 'auto',
             marginBottom: 'auto'
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Close Button */}
           <button

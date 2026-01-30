@@ -537,3 +537,40 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Magic buttons for logged-out users - gradient + weird shading */
+.magic-button {
+  background: linear-gradient(135deg, #58cc02 0%, #1cb0f6 50%, #a78bfa 100%);
+  box-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 16px rgba(88, 204, 2, 0.35),
+    0 0 24px rgba(28, 176, 246, 0.2);
+}
+
+.magic-button:hover {
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 0 20px rgba(88, 204, 2, 0.45),
+    0 0 28px rgba(28, 176, 246, 0.3);
+}
+
+.magic-button-create {
+  background: linear-gradient(135deg, #58cc02 0%, #46a302 35%, #1cb0f6 70%, #a78bfa 100%);
+  box-shadow:
+    0 4px 0 rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 0 20px rgba(88, 204, 2, 0.4),
+    0 4px 24px rgba(28, 176, 246, 0.25);
+}
+
+.magic-button-create:hover:not(:disabled) {
+  box-shadow:
+    0 5px 0 rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.1),
+    0 0 24px rgba(88, 204, 2, 0.5),
+    0 6px 28px rgba(28, 176, 246, 0.35);
+}

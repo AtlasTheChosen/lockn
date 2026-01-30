@@ -182,66 +182,67 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
-        className="max-w-3xl max-h-[90vh] overflow-y-auto"
+        className="max-w-3xl max-h-[90vh] overflow-y-auto sm:max-h-[85vh] pt-10 sm:pt-6 px-5 sm:px-6 pb-6"
         style={{ 
           backgroundColor: 'var(--bg-card)', 
           border: '1px solid var(--border-color)',
           color: 'var(--text-primary)'
         }}
       >
-        <DialogHeader className="text-center pb-2">
-          <div className="flex items-center justify-center gap-2 mb-1">
+        <DialogHeader className="text-center space-y-3 pb-4">
+          <div className="flex items-center justify-center gap-2">
             <Logo size="sm" />
             <span className="font-display text-xl font-semibold" style={{ color: 'var(--accent-green)' }}>
               LockN
             </span>
           </div>
-          <DialogTitle className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+          <DialogTitle className="text-2xl sm:text-3xl font-bold leading-tight" style={{ color: 'var(--text-primary)' }}>
             Upgrade to Premium
           </DialogTitle>
-          <DialogDescription className="text-base" style={{ color: 'var(--text-secondary)' }}>
+          <DialogDescription className="text-base leading-relaxed max-w-md mx-auto" style={{ color: 'var(--text-secondary)' }}>
             Unlimited AI generations, unlimited stacks, and advanced features
           </DialogDescription>
-          <p className="text-sm font-semibold mt-1" style={{ color: 'var(--accent-green)' }}>
-            Just $4.99/month - Cancel anytime
+          <p className="text-sm font-semibold" style={{ color: 'var(--accent-green)' }}>
+            Just $4.99/month — Cancel anytime
           </p>
         </DialogHeader>
 
-        <div className="grid md:grid-cols-2 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-2 min-w-0">
           {/* Free Plan */}
           <Card 
+            className="min-w-0 flex flex-col"
             style={{ 
               backgroundColor: 'var(--bg-card)', 
               border: '2px solid var(--border-color)',
               boxShadow: 'var(--shadow-sm)'
             }}
           >
-            <CardHeader className="pb-3">
-              <CardTitle className="text-xl" style={{ color: 'var(--text-primary)' }}>Free</CardTitle>
-              <CardDescription className="text-sm" style={{ color: 'var(--text-secondary)' }}>Perfect to get started</CardDescription>
+            <CardHeader className="pb-4 space-y-2">
+              <CardTitle className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Free</CardTitle>
+              <CardDescription className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>Perfect to get started</CardDescription>
               <div className="pt-2">
                 <span className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>$0</span>
                 <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>/month</span>
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 pt-0">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                  <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Up to 3 stacks total</span>
+            <CardContent className="space-y-4 pt-0 flex-1 flex flex-col">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>Up to 3 stacks total</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                  <span className="text-sm" style={{ color: 'var(--text-primary)' }}>5-card stacks only</span>
+                <div className="flex items-start gap-3">
+                  <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>5-card stacks only</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                  <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Tests, streaks, and social features</span>
+                <div className="flex items-start gap-3">
+                  <Check className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>Tests, streaks, and social features</span>
                 </div>
               </div>
               <Button 
                 variant="outline" 
-                className="w-full opacity-60 cursor-not-allowed"
+                className="w-full opacity-60 cursor-not-allowed mt-auto"
                 disabled
                 style={{ 
                   borderColor: 'var(--border-color)',
@@ -255,35 +256,37 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
 
           {/* Premium Plan */}
           <Card 
-            className="relative"
+            className="relative min-w-0 flex flex-col"
             style={{ 
               backgroundColor: 'var(--bg-card)', 
               border: '3px solid var(--accent-green)',
               boxShadow: 'var(--shadow-md)'
             }}
           >
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
               <Badge 
+                className="whitespace-nowrap"
                 style={{ 
                   backgroundColor: 'var(--accent-green)', 
                   color: 'white',
-                  padding: '0.5rem 1rem'
+                  padding: '0.375rem 0.75rem',
+                  fontSize: '0.75rem'
                 }}
               >
                 Most Popular
               </Badge>
             </div>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Crown className="h-5 w-5" style={{ color: 'var(--accent-green)' }} />
-                <CardTitle className="text-xl" style={{ color: 'var(--text-primary)' }}>Premium</CardTitle>
+            <CardHeader className="pb-4 pt-6 space-y-3">
+              <div className="flex items-center gap-2">
+                <Crown className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
+                <CardTitle className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Premium</CardTitle>
               </div>
-              <CardDescription className="text-sm mb-3" style={{ color: 'var(--text-secondary)' }}>
+              <CardDescription className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Choose your billing cycle below, then proceed to checkout
               </CardDescription>
               
-              {/* Billing Interval Toggle - Always visible for user selection */}
-              <div className="flex items-center justify-center gap-3 p-2 bg-[var(--bg-secondary)] rounded-lg mb-3">
+              {/* Billing Interval Toggle */}
+              <div className="flex items-stretch gap-2 sm:gap-3 p-3 bg-[var(--bg-secondary)] rounded-xl">
                 <button
                   onClick={() => {
                     // #region agent log
@@ -291,7 +294,7 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                     // #endregion
                     setBillingInterval('monthly');
                   }}
-                  className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all flex-1 ${
+                  className={`flex-1 min-w-0 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
                     billingInterval === 'monthly'
                       ? 'bg-[var(--accent-green)] text-white shadow-md'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
@@ -306,68 +309,72 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                     // #endregion
                     setBillingInterval('annual');
                   }}
-                  className={`px-5 py-2.5 rounded-lg font-semibold text-sm transition-all relative flex-1 ${
+                  className={`flex-1 min-w-0 py-3 px-4 rounded-lg font-semibold text-sm transition-all relative ${
                     billingInterval === 'annual'
                       ? 'bg-[var(--accent-green)] text-white shadow-md'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
                   }`}
                 >
-                  Annual
-                  <span className="absolute -top-1 -right-1 bg-[var(--accent-orange)] text-white text-xs px-1.5 py-0.5 rounded-full font-bold">
+                  <span className="block">Annual</span>
+                  <span className="absolute -top-1.5 -right-1 sm:top-0.5 sm:right-1 bg-[var(--accent-orange)] text-white text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full font-bold leading-none whitespace-nowrap">
                     Save 17%
                   </span>
                 </button>
               </div>
 
               {/* Dynamic Pricing Display */}
-              <div className="pt-2 text-center border-t border-[var(--border-color)] pb-3">
+              <div className="pt-4 text-center border-t border-[var(--border-color)] space-y-1">
                 {billingInterval === 'monthly' ? (
                   <>
-                    <span className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>$4.99</span>
-                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>/month</span>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
-                      Billed monthly • Cancel anytime
+                    <div>
+                      <span className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>$4.99</span>
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>/month</span>
+                    </div>
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
+                      Billed monthly — Cancel anytime
                     </p>
                   </>
                 ) : (
                   <>
-                    <span className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>$49.90</span>
-                    <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>/year</span>
-                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                    <div>
+                      <span className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>$49.90</span>
+                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>/year</span>
+                    </div>
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                       Just $4.16/month (billed annually)
                     </p>
-                    <p className="text-xs mt-0.5 font-semibold" style={{ color: 'var(--accent-green)' }}>
+                    <p className="text-xs font-semibold leading-relaxed" style={{ color: 'var(--accent-green)' }}>
                       Save $10.88 per year!
                     </p>
                   </>
                 )}
               </div>
             </CardHeader>
-            <CardContent className="space-y-3 pt-0">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Infinity className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Unlimited AI generations</span>
+            <CardContent className="space-y-4 pt-0 flex-1 flex flex-col">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <Infinity className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="text-sm font-semibold leading-relaxed" style={{ color: 'var(--text-primary)' }}>Unlimited AI generations</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Infinity className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Unlimited stacks</span>
+                <div className="flex items-start gap-3">
+                  <Infinity className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="text-sm font-semibold leading-relaxed" style={{ color: 'var(--text-primary)' }}>Unlimited stacks</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>10, 25, or 50 card stacks</span>
+                <div className="flex items-start gap-3">
+                  <Zap className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="text-sm font-semibold leading-relaxed" style={{ color: 'var(--text-primary)' }}>10, 25, or 50 card stacks</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Archive className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                  <span className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Archive completed stacks</span>
+                <div className="flex items-start gap-3">
+                  <Archive className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="text-sm font-semibold leading-relaxed" style={{ color: 'var(--text-primary)' }}>Archive completed stacks</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Headphones className="h-4 w-4 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                  <span className="text-sm" style={{ color: 'var(--text-primary)' }}>Priority support</span>
+                <div className="flex items-start gap-3">
+                  <Headphones className="h-4 w-4 flex-shrink-0 mt-0.5" style={{ color: 'var(--accent-green)' }} />
+                  <span className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>Priority support</span>
                 </div>
               </div>
               <Button
-                className="w-full font-bold text-sm py-2"
+                className="w-full font-bold text-base py-3 mt-auto"
                 onClick={handleCheckout}
                 disabled={loading}
                 style={{ 
@@ -388,7 +395,7 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                   </>
                 )}
               </Button>
-              <p className="text-xs text-center" style={{ color: 'var(--text-muted)' }}>
+              <p className="text-xs text-center leading-relaxed" style={{ color: 'var(--text-muted)' }}>
                 Cancel anytime. No questions asked.
               </p>
             </CardContent>
