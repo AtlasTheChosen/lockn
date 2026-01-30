@@ -106,6 +106,14 @@ export default function AccountSettingsPage() {
   const [targetBillingInterval, setTargetBillingInterval] = useState<'monthly' | 'annual' | null>(null);
   const [showManageSubscription, setShowManageSubscription] = useState(false);
 
+  // Email change state (with OTP verification)
+  const [newEmail, setNewEmail] = useState('');
+  const [emailOtp, setEmailOtp] = useState('');
+  const [emailChangeStep, setEmailChangeStep] = useState<'idle' | 'sent' | 'verified'>('idle');
+  const [sendingEmailCode, setSendingEmailCode] = useState(false);
+  const [verifyingEmailCode, setVerifyingEmailCode] = useState(false);
+  const [emailChangeError, setEmailChangeError] = useState<string | null>(null);
+
   const loadData = useCallback(async () => {
     if (!sessionUser) return;
     
@@ -392,6 +400,69 @@ export default function AccountSettingsPage() {
     }
   };
 
+  const handleSendEmailChangeCode = async () => {
+    if (!sessionUser || !newEmail.trim()) return;
+    const trimmed = newEmail.trim().toLowerCase();
+    if (trimmed === sessionUser.email?.toLowerCase()) {
+      setEmailChangeError('New email is the same as your current email.');
+      return;
+    }
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRe.test(trimmed)) {
+      setEmailChangeError('Please enter a valid email address.');
+      return;
+    }
+    setEmailChangeError(null);
+    setSendingEmailCode(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ email: trimmed });
+      if (error) throw error;
+      setEmailChangeStep('sent');
+      setSaveMessage({ type: 'success', text: `Verification code sent to ${trimmed}. Check your inbox.` });
+      setTimeout(() => setSaveMessage(null), 5000);
+    } catch (err: any) {
+      setEmailChangeError(err.message || 'Failed to send verification code.');
+    } finally {
+      setSendingEmailCode(false);
+    }
+  };
+
+  const handleVerifyEmailChange = async () => {
+    if (!sessionUser || !newEmail.trim() || !emailOtp.trim()) return;
+    const verifiedEmail = newEmail.trim().toLowerCase();
+    setEmailChangeError(null);
+    setVerifyingEmailCode(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.verifyOtp({
+        token: emailOtp.trim(),
+        type: 'email_change',
+        email: verifiedEmail,
+      });
+      if (error) throw error;
+      await supabase.from('user_profiles').update({ email: verifiedEmail }).eq('id', sessionUser.id);
+      setEmailChangeStep('verified');
+      setNewEmail('');
+      setEmailOtp('');
+      setSaveMessage({ type: 'success', text: 'Email updated successfully! You can sign in with your new email.' });
+      loadData();
+      setTimeout(() => setSaveMessage(null), 5000);
+      setEmailChangeStep('idle');
+    } catch (err: any) {
+      setEmailChangeError(err.message || 'Invalid or expired code. Try again or request a new code.');
+    } finally {
+      setVerifyingEmailCode(false);
+    }
+  };
+
+  const handleCancelEmailChange = () => {
+    setEmailChangeStep('idle');
+    setNewEmail('');
+    setEmailOtp('');
+    setEmailChangeError(null);
+  };
+
   const handleSaveAccessibility = async () => {
     if (!sessionUser) return;
 
@@ -529,6 +600,17 @@ export default function AccountSettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {saveMessage && (
+                <div
+                  className={`p-3 rounded-lg ${
+                    saveMessage.type === 'success'
+                      ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                      : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                  }`}
+                >
+                  {saveMessage.text}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email-display" className="text-slate-300">Email</Label>
                 <Input
@@ -538,7 +620,73 @@ export default function AccountSettingsPage() {
                   disabled
                   className="bg-slate-700/50 border-slate-600 text-slate-400 cursor-not-allowed"
                 />
-                <p className="text-xs text-slate-500">Email cannot be changed</p>
+                {emailChangeStep === 'idle' && (
+                  <div className="space-y-2 pt-2">
+                    <Label htmlFor="new-email" className="text-slate-300 text-sm">Change email</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      <Input
+                        id="new-email"
+                        type="email"
+                        placeholder="New email address"
+                        value={newEmail}
+                        onChange={(e) => { setNewEmail(e.target.value); setEmailChangeError(null); }}
+                        className="flex-1 min-w-[200px] bg-slate-700/50 border-slate-600 text-white"
+                      />
+                      <Button
+                        onClick={handleSendEmailChangeCode}
+                        disabled={sendingEmailCode || !newEmail.trim()}
+                        className="bg-[#58cc02] text-white hover:bg-[#4ab001]"
+                      >
+                        {sendingEmailCode ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          'Send verification code'
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-500">We&apos;ll send a code to your new email. Enter it below to confirm.</p>
+                  </div>
+                )}
+                {emailChangeStep === 'sent' && (
+                  <div className="space-y-2 pt-2 rounded-lg p-4 bg-slate-700/50 border border-slate-600">
+                    <Label htmlFor="email-otp" className="text-slate-300 text-sm">Verification code sent to {newEmail}</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      <Input
+                        id="email-otp"
+                        type="text"
+                        placeholder="Enter code from email"
+                        value={emailOtp}
+                        onChange={(e) => { setEmailOtp(e.target.value); setEmailChangeError(null); }}
+                        className="flex-1 min-w-[140px] bg-slate-700 border-slate-600 text-white font-mono text-lg"
+                        maxLength={32}
+                      />
+                      <Button
+                        onClick={handleVerifyEmailChange}
+                        disabled={verifyingEmailCode || emailOtp.length < 4}
+                        className="bg-[#58cc02] text-white hover:bg-[#4ab001]"
+                      >
+                        {verifyingEmailCode ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Verifying...
+                          </>
+                        ) : (
+                          'Verify'
+                        )}
+                      </Button>
+                      <Button variant="outline" onClick={handleCancelEmailChange} className="border-slate-600 text-slate-400">
+                        Cancel
+                      </Button>
+                    </div>
+                    <p className="text-xs text-slate-500">Check your inbox (and spam) for the code.</p>
+                  </div>
+                )}
+                {emailChangeError && (
+                  <p className="text-sm text-red-400">{emailChangeError}</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="display-name-display" className="text-slate-300">Display Name</Label>

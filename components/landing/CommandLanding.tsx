@@ -272,8 +272,16 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 type="button"
                 onClick={() => handleSubmit()}
                 disabled={!searchValue.trim() || !selectedLanguage}
-                className="w-full sm:w-auto text-white font-bold rounded-2xl px-8 py-4 min-h-[56px] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-[0.98]"
-                style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
+                className="w-full sm:w-auto text-white font-bold rounded-2xl px-8 py-4 min-h-[56px] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-[0.98] touch-manipulation"
+                style={{
+                  backgroundColor: 'var(--accent-green)',
+                  boxShadow: '0 4px 0 var(--accent-green-dark)',
+                  WebkitTapHighlightColor: 'transparent',
+                  WebkitAppearance: 'none',
+                  appearance: 'none',
+                  transform: 'translateZ(0)',
+                  backfaceVisibility: 'hidden' as const,
+                }}
               >
                 Create Magic! 🎨
               </button>

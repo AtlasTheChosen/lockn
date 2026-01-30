@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Flame, Trophy, Clock, Snowflake, ChevronRight, ChevronLeft, X, Sparkles, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -86,7 +87,10 @@ export default function StreakTutorial({ onComplete, onSkip }: StreakTutorialPro
     }
   };
 
-  return (
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const modal = (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -237,6 +241,9 @@ export default function StreakTutorial({ onComplete, onSkip }: StreakTutorialPro
       </div>
     </motion.div>
   );
+
+  if (!mounted) return null;
+  return createPortal(modal, document.body);
 }
 
 

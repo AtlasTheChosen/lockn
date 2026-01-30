@@ -579,14 +579,14 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
       )}
 
       {/* Section Header with Create Button */}
-      <div className="flex justify-between items-center mb-4 animate-fade-in stagger-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-4 animate-fade-in stagger-4">
+        <div className="flex items-center gap-3 min-w-0">
           <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[var(--text-primary)]">
             Your Learning Stacks
           </h2>
           {!isPremium ? (
             <>
-              <span className="text-sm font-medium text-[var(--text-primary)]">
+              <span className="text-sm font-medium text-[var(--text-primary)] shrink-0">
                 {stacks.filter(s => !pendingDeletions.has(s.id)).length}/{FREE_TIER_LIMITS.MAX_TOTAL_STACKS}
               </span>
               {stacks.filter(s => !pendingDeletions.has(s.id)).length >= FREE_TIER_LIMITS.MAX_TOTAL_STACKS && (
@@ -597,7 +597,7 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
             </>
           ) : (
             <>
-              <span className="text-sm font-medium text-[var(--text-primary)]">
+              <span className="text-sm font-medium text-[var(--text-primary)] shrink-0">
                 {stacks.filter(s => !pendingDeletions.has(s.id)).length}/∞
               </span>
               <span className="text-xs text-[var(--text-muted)] opacity-70">
@@ -608,7 +608,7 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
         </div>
         <button
           onClick={() => router.push('/')}
-          className="bg-[#58cc02] text-white font-extrabold rounded-xl px-6 py-3 shadow-[0_4px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200"
+          className="bg-[#58cc02] text-white font-extrabold rounded-xl px-6 py-3 shadow-[0_4px_0_#46a302] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#46a302] active:translate-y-0 active:shadow-[0_2px_0_#46a302] transition-all duration-200 shrink-0 ml-auto"
         >
           + Create New Stack
         </button>

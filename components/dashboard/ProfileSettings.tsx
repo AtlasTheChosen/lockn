@@ -23,6 +23,8 @@ import { createClient } from '@/lib/supabase/client';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+const MAX_LANGUAGES = 3;
+
 const AVAILABLE_LANGUAGES = [
   { code: 'es', name: 'Spanish', emoji: '🇪🇸' },
   { code: 'fr', name: 'French', emoji: '🇫🇷' },
@@ -58,7 +60,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   const [originalAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(0));
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || getAvatarUrl(0));
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [languagesLearning, setLanguagesLearning] = useState<string[]>(profile.languages_learning || []);
+  const [languagesLearning, setLanguagesLearning] = useState<string[]>((profile.languages_learning || []).slice(0, MAX_LANGUAGES));
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('');
@@ -94,7 +96,7 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
   }, [profile.avatar_url]);
 
   const handleAddLanguage = () => {
-    if (selectedLanguage && !languagesLearning.includes(selectedLanguage)) {
+    if (selectedLanguage && !languagesLearning.includes(selectedLanguage) && languagesLearning.length < MAX_LANGUAGES) {
       setLanguagesLearning([...languagesLearning, selectedLanguage]);
       setSelectedLanguage('');
     }
@@ -189,9 +191,9 @@ export default function ProfileSettings({ profile, accessToken, onUpdate }: Prop
         }
       }
 
-      // Build update object with all changes
+      // Build update object with all changes (cap languages at MAX_LANGUAGES)
       const updateData: any = {
-        languages_learning: languagesLearning,
+        languages_learning: languagesLearning.slice(0, MAX_LANGUAGES),
       };
 
       // Include display name if it changed
@@ -424,7 +426,7 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
           <Globe className="h-5 w-5" style={{ color: 'var(--accent-blue)' }} />
           <h3 className="font-display text-xl font-semibold" style={{ color: 'var(--text-primary)' }}>Languages I'm Learning</h3>
         </div>
-        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Show others what languages you're studying</p>
+        <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-secondary)' }}>Show others what languages you're studying (max {MAX_LANGUAGES})</p>
         
         <div className="flex gap-3 mb-4">
           <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
@@ -441,13 +443,16 @@ className={`w-12 h-12 rounded-full overflow-hidden transition-all ${
           </Select>
           <Button
             onClick={handleAddLanguage}
-            disabled={!selectedLanguage}
+            disabled={!selectedLanguage || languagesLearning.length >= MAX_LANGUAGES}
             className="text-white font-bold rounded-2xl px-6 disabled:opacity-50"
             style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
           >
             Add
           </Button>
         </div>
+        {languagesLearning.length >= MAX_LANGUAGES && (
+          <p className="text-xs font-medium mb-2" style={{ color: 'var(--text-muted)' }}>Maximum {MAX_LANGUAGES} languages. Remove one to add another.</p>
+        )}
 
         {languagesLearning.length > 0 ? (
           <div className="flex flex-wrap gap-2">
