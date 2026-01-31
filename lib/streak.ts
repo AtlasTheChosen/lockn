@@ -181,6 +181,33 @@ export function getStreakTimeRemaining(currentStreak: number = 0, hasMetTodayGoa
   return { hours, minutes, seconds, totalMs: diffMs };
 }
 
+/**
+ * Get time remaining until a stored deadline (same shape as getStreakTimeRemaining).
+ * Use this when we have a stored display_deadline (e.g. from DB) so the countdown
+ * shows time until that deadline, not a recomputed "tomorrow" deadline.
+ */
+export function getTimeRemainingUntilDeadline(deadline: string | Date | null): {
+  hours: number;
+  minutes: number;
+  seconds: number;
+  totalMs: number;
+} {
+  if (!deadline) {
+    return { hours: 0, minutes: 0, seconds: 0, totalMs: 0 };
+  }
+  const deadlineDate = new Date(deadline);
+  const now = new Date();
+  const diffMs = deadlineDate.getTime() - now.getTime();
+  if (diffMs <= 0) {
+    return { hours: 0, minutes: 0, seconds: 0, totalMs: 0 };
+  }
+  const totalSeconds = Math.floor(diffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return { hours, minutes, seconds, totalMs: diffMs };
+}
+
 // ============================================================
 // STREAK SYSTEM V2 - TIMEZONE-AWARE FUNCTIONS
 // ============================================================

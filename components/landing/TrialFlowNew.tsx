@@ -81,7 +81,8 @@ export default function TrialFlow({ scenario, cards, onComplete, onBack }: Trial
       const targetKey = `${currentIndex}-target`;
       if (!wordTranslations[targetKey]) {
         const targetLang = localStorage.getItem('lockn-trial-language') || 'Spanish';
-        getWordTranslations(currentCard.targetPhrase, targetLang, 'English').then(translations => {
+        const nativeLang = localStorage.getItem('lockn-trial-native-language') || 'English';
+        getWordTranslations(currentCard.targetPhrase, targetLang, nativeLang).then(translations => {
           setWordTranslations((prev: Record<string, any>) => ({
             ...prev,
             [targetKey]: translations
@@ -105,13 +106,15 @@ export default function TrialFlow({ scenario, cards, onComplete, onBack }: Trial
     setIsLoadingBreakdown(true);
     try {
       const targetLang = localStorage.getItem('lockn-trial-language') || 'Spanish';
+      const nativeLang = localStorage.getItem('lockn-trial-native-language') || 'English';
       const response = await fetch('/api/phrase-breakdown', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phrase: currentCard.targetPhrase,
           translation: currentCard.nativeTranslation,
-          language: targetLang,
+          targetLanguage: targetLang,
+          nativeLanguage: nativeLang,
         }),
       });
       if (response.ok) {

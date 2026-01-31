@@ -6,11 +6,13 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import { LogOut, Snowflake, Flame, ChevronDown, User, Settings, Home, LayoutDashboard, Trophy, Shield } from 'lucide-react';
+import { LogOut, Snowflake, Flame, ChevronDown, User, Settings, Home, LayoutDashboard, Trophy, Shield, Globe } from 'lucide-react';
 import Logo from '@/components/ui/Logo';
 import AuthModal from '@/components/auth/AuthModal';
 import { NotificationBell } from '@/components/notifications';
 import ThemeToggle from '@/components/dashboard/ThemeToggle';
+import { useTranslation, SUPPORTED_LOCALES, getLocaleDisplayName, type LocaleCode } from '@/contexts/LocaleContext';
+import { getFlagUrlByCode } from '@/lib/constants';
 
 interface TopNavProps {
   streak?: number;
@@ -23,14 +25,14 @@ interface TopNavProps {
   dataLoaded?: boolean;
 }
 
-const navLinks = [
-  { href: '/', label: 'Home', icon: Home, requiresAuth: false },
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requiresAuth: true },
-  { href: '/leaderboard', label: 'Leaderboards', icon: Trophy, requiresAuth: true },
+const navLinkKeys = [
+  { href: '/', labelKey: 'nav.home', icon: Home, requiresAuth: false },
+  { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, requiresAuth: true },
+  { href: '/leaderboard', labelKey: 'nav.leaderboards', icon: Trophy, requiresAuth: true },
 ];
 
 // Animated Streak Badge Component
-function StreakBadge({ count, isFrozen }: { count: number; isFrozen: boolean }) {
+function StreakBadge({ count, isFrozen, streakLabel, streakFrozenLabel }: { count: number; isFrozen: boolean; streakLabel: string; streakFrozenLabel: string }) {
   return (
     <motion.div
       className={cn(
@@ -45,7 +47,7 @@ function StreakBadge({ count, isFrozen }: { count: number; isFrozen: boolean }) 
       }}
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      title={isFrozen ? `${count} day streak (frozen)` : `${count} day streak`}
+      title={isFrozen ? `${count} ${streakFrozenLabel}` : `${count} ${streakLabel}`}
     >
       {/* Pulse glow effect - hidden on mobile for performance */}
       <motion.div
@@ -90,10 +92,16 @@ function UserAvatar({
   displayName,
   avatarUrl,
   onLogout,
+  profileLabel,
+  settingsLabel,
+  logOutLabel,
 }: {
   displayName: string;
   avatarUrl?: string;
   onLogout: () => void;
+  profileLabel: string;
+  settingsLabel: string;
+  logOutLabel: string;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -161,7 +169,7 @@ function UserAvatar({
                   onClick={() => setIsOpen(false)}
                 >
                   <User className="h-4 w-4" />
-                  <span className="font-medium">Profile</span>
+                  <span className="font-medium">{profileLabel}</span>
                 </Link>
                 <Link
                   href="/account"
@@ -173,7 +181,7 @@ function UserAvatar({
                   onClick={() => setIsOpen(false)}
                 >
                   <Settings className="h-4 w-4" />
-                  <span className="font-medium">Settings</span>
+                  <span className="font-medium">{settingsLabel}</span>
                 </Link>
                 <hr className="my-2 border-[var(--border-color)]" />
                 <button
@@ -189,7 +197,7 @@ function UserAvatar({
                   )}
                 >
                   <LogOut className="h-4 w-4" />
-                  <span className="font-medium">Log out</span>
+                  <span className="font-medium">{logOutLabel}</span>
                 </button>
               </div>
             </motion.div>
@@ -212,8 +220,10 @@ export default function TopNav({
 }: TopNavProps) {
   const pathname = usePathname();
   const supabase = createClient();
+  const { t, locale, setLocale } = useTranslation();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('signup');
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -251,7 +261,8 @@ export default function TopNav({
 
       {/* Nav Links - Labels hidden on small screens, shown on lg+ */}
       <nav className="flex gap-1 lg:gap-2">
-        {navLinks.map((link) => {
+        {navLinkKeys.map((link) => {
+          const label = t(link.labelKey);
           const isActive = pathname === link.href || (link.href !== '/' && pathname.startsWith(link.href));
 
           if (!isLoggedIn && link.requiresAuth) {
@@ -266,7 +277,7 @@ export default function TopNav({
                   'p-2.5 lg:px-5 lg:py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2',
                   'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
                 )}
-                title={link.label}
+                title={label}
               >
                 <link.icon 
                   className="flex-shrink-0" 
@@ -278,13 +289,13 @@ export default function TopNav({
                     display: 'block'
                   }}
                 />
-                <span className="hidden lg:inline font-bold text-base">{link.label}</span>
+                <span className="hidden lg:inline font-bold text-base">{label}</span>
               </button>
             );
           }
 
           return (
-            <Link key={link.href} href={link.href} title={link.label}>
+            <Link key={link.href} href={link.href} title={label}>
               <motion.div 
                 className="relative p-2.5 lg:px-5 lg:py-3 flex items-center justify-center gap-2" 
                 whileHover={{ scale: 1.02 }} 
@@ -323,7 +334,7 @@ export default function TopNav({
                     isActive ? 'text-[#58cc02]' : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   )}
                 >
-                  {link.label}
+                  {label}
                 </span>
               </motion.div>
             </Link>
@@ -332,7 +343,7 @@ export default function TopNav({
 
         {/* Admin Link - only shown for admins */}
         {isLoggedIn && isAdmin && (
-          <Link href="/admin" title="Admin">
+          <Link href="/admin" title={t('nav.admin')}>
             <motion.div 
               className="relative p-2.5 lg:px-5 lg:py-3 flex items-center justify-center gap-2" 
               whileHover={{ scale: 1.02 }} 
@@ -369,7 +380,7 @@ export default function TopNav({
                   pathname === '/admin' ? 'text-red-500' : 'text-red-400 hover:text-red-500'
                 )}
               >
-                Admin
+                {t('nav.admin')}
               </span>
             </motion.div>
           </Link>
@@ -382,6 +393,55 @@ export default function TopNav({
           {/* Theme Toggle */}
           <ThemeToggle size="sm" />
 
+          {/* Language selector */}
+          <div className="relative">
+            <button
+              onClick={() => setLangMenuOpen(!langMenuOpen)}
+              className={cn(
+                'p-2.5 rounded-xl transition-all duration-200',
+                'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
+              )}
+              title={t('account.language')}
+              aria-label={t('account.language')}
+            >
+              <Globe className="h-5 w-5 sm:h-5 sm:w-5" />
+            </button>
+            <AnimatePresence>
+              {langMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)} aria-hidden="true" />
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="absolute right-0 top-full mt-2 w-48 max-h-[70vh] overflow-y-auto rounded-xl z-50 bg-[var(--bg-card)] border-2 border-[var(--border-color)] shadow-lg p-2"
+                  >
+                    {SUPPORTED_LOCALES.map((loc) => (
+                      <button
+                        key={loc}
+                        onClick={() => {
+                          setLocale(loc);
+                          setLangMenuOpen(false);
+                        }}
+                        className={cn(
+                          'w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                          locale === loc
+                            ? 'bg-[var(--bg-secondary)] text-[#58cc02]'
+                            : 'text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <img src={getFlagUrlByCode(loc, 20)} alt="" className="rounded-sm w-5 h-[15px] object-cover flex-shrink-0" />
+                          {t(`languages.${loc}`) || getLocaleDisplayName(loc)}
+                        </span>
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+
           {/* Streak Badge - hidden on mobile to save space */}
           <div className="hidden sm:block">
             {!dataLoaded ? (
@@ -390,7 +450,7 @@ export default function TopNav({
                 style={{ minWidth: '50px', height: '32px' }}
               />
             ) : (
-              <StreakBadge count={streak} isFrozen={streakFrozen} />
+              <StreakBadge count={streak} isFrozen={streakFrozen} streakLabel={t('nav.streak')} streakFrozenLabel={t('nav.streakFrozen')} />
             )}
           </div>
 
@@ -398,12 +458,68 @@ export default function TopNav({
           {userId && <NotificationBell userId={userId} />}
 
           {/* User Avatar with Dropdown */}
-          <UserAvatar displayName={displayName} avatarUrl={avatarUrl} onLogout={handleLogout} />
+          <UserAvatar
+            displayName={displayName}
+            avatarUrl={avatarUrl}
+            onLogout={handleLogout}
+            profileLabel={t('nav.profile')}
+            settingsLabel={t('nav.settings')}
+            logOutLabel={t('nav.logOut')}
+          />
         </div>
       ) : (
         <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
           {/* Theme Toggle */}
           <ThemeToggle size="sm" />
+
+          {/* Language selector */}
+          <div className="relative">
+            <button
+              onClick={() => setLangMenuOpen(!langMenuOpen)}
+              className={cn(
+                'p-2.5 rounded-xl transition-all duration-200',
+                'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
+              )}
+              title={t('account.language')}
+              aria-label={t('account.language')}
+            >
+              <Globe className="h-5 w-5 sm:h-5 sm:w-5" />
+            </button>
+            <AnimatePresence>
+              {langMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setLangMenuOpen(false)} aria-hidden="true" />
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="absolute right-0 top-full mt-2 w-48 max-h-[70vh] overflow-y-auto rounded-xl z-50 bg-[var(--bg-card)] border-2 border-[var(--border-color)] shadow-lg p-2"
+                  >
+                    {SUPPORTED_LOCALES.map((loc) => (
+                      <button
+                        key={loc}
+                        onClick={() => {
+                          setLocale(loc);
+                          setLangMenuOpen(false);
+                        }}
+                        className={cn(
+                          'w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                          locale === loc
+                            ? 'bg-[var(--bg-secondary)] text-[#58cc02]'
+                            : 'text-[var(--text-primary)] hover:bg-[var(--bg-secondary)]'
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <img src={getFlagUrlByCode(loc, 20)} alt="" className="rounded-sm w-5 h-[15px] object-cover flex-shrink-0" />
+                          {t(`languages.${loc}`) || getLocaleDisplayName(loc)}
+                        </span>
+                      </button>
+                    ))}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
 
           {/* Sign In - hidden on smaller screens */}
           <button
@@ -413,7 +529,7 @@ export default function TopNav({
             }}
             className="hidden lg:block px-5 py-2.5 rounded-xl font-bold text-base text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-secondary)] transition-all duration-200"
           >
-            Sign In
+            {t('nav.signIn')}
           </button>
           <motion.button
             onClick={() => {
@@ -425,7 +541,7 @@ export default function TopNav({
             whileHover={{ y: -2 }}
             whileTap={{ y: 2, boxShadow: '0 0px 0 #46a302' }}
           >
-            Sign Up
+            {t('nav.signUp')}
           </motion.button>
         </div>
       )}

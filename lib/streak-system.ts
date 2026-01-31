@@ -331,10 +331,7 @@ export async function processCardMasteryChange(
     if (!stats.streak_frozen) {
       currentStreak += 1;
       streakIncremented = true;
-      
-      if (currentStreak > longestStreak) {
-        longestStreak = currentStreak;
-      }
+      // Do NOT set longest_streak here; it is locked in only at midnight rollover (dashboard new-day logic)
     }
     
     // Calculate new deadlines (now includes countdownStartsAt)
@@ -343,7 +340,7 @@ export async function processCardMasteryChange(
     updateData = {
       ...updateData,
       current_streak: currentStreak,
-      longest_streak: longestStreak,
+      // longest_streak unchanged until day locks in at midnight (set on rollover in dashboard)
       // Keep cards_mastered_today at actual count (don't reset to 0) for revert tracking
       streak_awarded_today: true, // Mark that today's streak has been earned
       streak_countdown_starts: countdownStartsAt.toISOString(), // When cards become locked (midnight)
@@ -518,10 +515,7 @@ export async function processTestCompletionCards(
     if (!stats.streak_frozen) {
       currentStreak += 1;
       streakIncremented = true;
-      
-      if (currentStreak > longestStreak) {
-        longestStreak = currentStreak;
-      }
+      // Do NOT set longest_streak here; locked in only at midnight rollover
     }
     
     // Calculate new deadlines
@@ -530,7 +524,6 @@ export async function processTestCompletionCards(
     updateData = {
       ...updateData,
       current_streak: currentStreak,
-      longest_streak: longestStreak,
       streak_awarded_today: true,
       streak_countdown_starts: countdownStartsAt.toISOString(),
       display_deadline: displayDeadline.toISOString(),

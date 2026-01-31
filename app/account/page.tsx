@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useSession } from '@/hooks/use-session';
+import { useTranslation, SUPPORTED_LOCALES, getLocaleDisplayName } from '@/contexts/LocaleContext';
+import { getFlagUrlByCode } from '@/lib/constants';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,6 +55,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export default function AccountSettingsPage() {
   const router = useRouter();
+  const { t, locale, setLocale } = useTranslation();
   const { user: sessionUser, profile: sessionProfile, accessToken: sessionAccessToken, loading: sessionLoading } = useSession();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -584,7 +587,7 @@ export default function AccountSettingsPage() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <h1 className="text-3xl font-bold text-white">Account Settings</h1>
+          <h1 className="text-3xl font-bold text-white">{t('account.title')}</h1>
         </div>
 
         <div className="space-y-6">
@@ -593,7 +596,7 @@ export default function AccountSettingsPage() {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Mail className="h-5 w-5" />
-                Account Information
+                {t('account.accountInformation')}
               </CardTitle>
               <CardDescription className="text-slate-400">
                 Your account details
@@ -689,11 +692,11 @@ export default function AccountSettingsPage() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="display-name-display" className="text-slate-300">Display Name</Label>
+                <Label htmlFor="display-name-display" className="text-slate-300">{t('account.displayName')}</Label>
                 <Input
                   id="display-name-display"
                   type="text"
-                  value={profile?.display_name || 'Not set'}
+                  value={profile?.display_name || t('account.notSet')}
                   disabled
                   className="bg-slate-700/50 border-slate-600 text-slate-400 cursor-not-allowed"
                 />
@@ -705,9 +708,41 @@ export default function AccountSettingsPage() {
                 </p>
               </div>
               <div className="flex justify-between items-center py-2 border-t border-slate-700 pt-4">
-                <span className="text-slate-400">Account Created</span>
+                <span className="text-slate-400">{t('account.accountCreated')}</span>
                 <span className="text-white">{formatDate(profile?.created_at || null)}</span>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Language */}
+          <Card className="bg-slate-800 border-slate-700">
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                {t('account.language')}
+              </CardTitle>
+              <CardDescription className="text-slate-400">
+                {t('account.languageDescription')}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Select
+                value={locale}
+                onValueChange={(value) => setLocale(value)}
+              >
+                <SelectTrigger className="w-full max-w-xs bg-slate-700/50 border-slate-600 text-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SUPPORTED_LOCALES.map((loc) => (
+                    <SelectItem key={loc} value={loc} className="text-white">
+                      <span className="flex items-center gap-2">
+                        <img src={getFlagUrlByCode(loc, 20)} alt="" className="rounded-sm w-5 h-[15px] object-cover flex-shrink-0" />
+                        {t(`languages.${loc}`) || getLocaleDisplayName(loc)}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
 
@@ -716,17 +751,17 @@ export default function AccountSettingsPage() {
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Mail className="h-5 w-5" />
-                Notifications
+                {t('account.notifications')}
               </CardTitle>
               <CardDescription className="text-slate-400">
-                Manage your notification preferences
+                {t('account.notificationsDescription')}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between rounded-lg p-4 bg-slate-700/50">
                 <div>
-                  <Label className="text-slate-300 font-semibold">Email Notifications</Label>
-                  <p className="text-sm text-slate-400">Receive updates via email</p>
+                  <Label className="text-slate-300 font-semibold">{t('account.emailNotifications')}</Label>
+                  <p className="text-sm text-slate-400">{t('account.emailNotificationsDescription')}</p>
                 </div>
                 <Switch
                   checked={notificationPrefs.email}
@@ -738,8 +773,8 @@ export default function AccountSettingsPage() {
               
               <div className="flex items-center justify-between rounded-lg p-4 bg-slate-700/50">
                 <div>
-                  <Label className="text-slate-300 font-semibold">Friend Requests</Label>
-                  <p className="text-sm text-slate-400">Get notified of new friend requests</p>
+                  <Label className="text-slate-300 font-semibold">{t('account.friendRequests')}</Label>
+                  <p className="text-sm text-slate-400">{t('account.friendRequestsDescription')}</p>
                 </div>
                 <Switch
                   checked={notificationPrefs.friend_requests}
@@ -771,12 +806,12 @@ export default function AccountSettingsPage() {
                 {savingNotifications ? (
                   <>
                     <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                    Saving...
+                    {t('account.saving')}
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4 mr-2" />
-                    Save Notification Preferences
+                    {t('account.saveNotificationPreferences')}
                   </>
                 )}
               </Button>

@@ -16,6 +16,7 @@ import { Check, Crown, Zap, Infinity, Archive, Headphones, Loader2 } from 'lucid
 import Logo from '@/components/ui/Logo';
 import { createClient } from '@/lib/supabase/client';
 import { loadStripe } from '@stripe/stripe-js';
+import { useTranslation } from '@/contexts/LocaleContext';
 
 interface PremiumModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ interface PremiumModalProps {
 }
 
 export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [supabase, setSupabase] = useState<any>(null);
@@ -43,17 +45,9 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
     setLoading(true);
 
     try {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:36',message:'handleCheckout started',data:{hasSupabase:!!supabase,billingInterval},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
-      // #endregion
-
       const {
         data: { user },
       } = await supabase.auth.getUser();
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:45',message:'User fetched',data:{hasUser:!!user,userId:user?.id},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
 
       if (!user) {
         router.push('/');
@@ -62,10 +56,6 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
 
       const monthlyPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_MONTHLY || '';
       const annualPriceId = process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_ANNUAL || '';
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:65',message:'Price ID selection',data:{billingInterval,monthlyPriceId,annualPriceId,hasMonthly:!!monthlyPriceId,hasAnnual:!!annualPriceId},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
-      // #endregion
 
       // Check if annual is selected but annual price ID is missing
       if (billingInterval === 'annual' && !annualPriceId) {
@@ -77,10 +67,6 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
 
       // Select the appropriate price ID
       const priceId = billingInterval === 'annual' ? annualPriceId : monthlyPriceId;
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:75',message:'Selected price ID',data:{billingInterval,selectedPriceId:priceId,hasPriceId:!!priceId},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
-      // #endregion
 
       if (!priceId) {
         console.error(`Stripe ${billingInterval} price ID is not configured`);
@@ -88,14 +74,6 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
         setLoading(false);
         return;
       }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:65',message:'Fetching checkout session',data:{priceId,userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:85',message:'Sending checkout request',data:{priceId,billingInterval,userId:user.id},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'I'})}).catch(()=>{});
-      // #endregion
 
       const res = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
@@ -106,10 +84,6 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
           billingInterval, // Pass billing interval for logging/debugging
         }),
       });
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:78',message:'Checkout API response',data:{status:res.status,ok:res.ok},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
@@ -122,10 +96,6 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
       const data = await res.json();
       const { sessionId, error } = data;
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:90',message:'Checkout session data',data:{hasSessionId:!!sessionId,hasError:!!error,error},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'C'})}).catch(()=>{});
-      // #endregion
-
       if (error || !sessionId) {
         console.error('No session ID returned:', error || 'Missing sessionId');
         alert(`Failed to create checkout session: ${error || 'Missing session ID'}`);
@@ -134,10 +104,6 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
       }
 
       const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:100',message:'Stripe key check',data:{hasStripeKey:!!stripeKey},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
 
       if (!stripeKey) {
         console.error('Stripe publishable key is not configured');
@@ -146,18 +112,9 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
         return;
       }
 
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:110',message:'Loading Stripe and redirecting',data:{sessionId},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
-
       const stripe = await loadStripe(stripeKey);
       if (stripe && sessionId) {
         const { error: redirectError } = await stripe.redirectToCheckout({ sessionId });
-        
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:115',message:'Stripe redirect result',data:{hasRedirectError:!!redirectError,redirectError:redirectError?.message},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'D'})}).catch(()=>{});
-        // #endregion
-
         if (redirectError) {
           console.error('Stripe redirect error:', redirectError);
           alert(`Failed to redirect to checkout: ${redirectError.message}`);
@@ -170,9 +127,6 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
         setLoading(false);
       }
     } catch (error: any) {
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:125',message:'Checkout exception caught',data:{error:error?.message,stack:error?.stack},timestamp:Date.now(),sessionId:'debug-session',runId:'pre-fix',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       console.error('Checkout error:', error);
       alert(`An error occurred: ${error?.message || 'Unknown error'}`);
       setLoading(false);
@@ -218,7 +172,7 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
             }}
           >
             <CardHeader className="pb-4 space-y-2">
-              <CardTitle className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Free</CardTitle>
+              <CardTitle className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.free')}</CardTitle>
               <CardDescription className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>Perfect to get started</CardDescription>
               <div className="pt-2">
                 <span className="text-3xl font-bold" style={{ color: 'var(--text-primary)' }}>$0</span>
@@ -249,7 +203,7 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                   color: 'var(--text-muted)'
                 }}
               >
-                Current Plan
+                {t('pricing.currentPlan')}
               </Button>
             </CardContent>
           </Card>
@@ -279,7 +233,7 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
             <CardHeader className="pb-4 pt-6 space-y-3">
               <div className="flex items-center gap-2">
                 <Crown className="h-5 w-5 flex-shrink-0" style={{ color: 'var(--accent-green)' }} />
-                <CardTitle className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>Premium</CardTitle>
+                <CardTitle className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>{t('dashboard.premium')}</CardTitle>
               </div>
               <CardDescription className="text-sm leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                 Choose your billing cycle below, then proceed to checkout
@@ -288,34 +242,24 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
               {/* Billing Interval Toggle */}
               <div className="flex items-stretch gap-2 sm:gap-3 p-3 bg-[var(--bg-secondary)] rounded-xl">
                 <button
-                  onClick={() => {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:267',message:'Monthly button clicked',data:{currentInterval:billingInterval},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'J'})}).catch(()=>{});
-                    // #endregion
-                    setBillingInterval('monthly');
-                  }}
+                  onClick={() => setBillingInterval('monthly')}
                   className={`flex-1 min-w-0 py-3 px-4 rounded-lg font-semibold text-sm transition-all ${
                     billingInterval === 'monthly'
                       ? 'bg-[var(--accent-green)] text-white shadow-md'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
                   }`}
                 >
-                  Monthly
+                  {t('pricing.monthly')}
                 </button>
                 <button
-                  onClick={() => {
-                    // #region agent log
-                    fetch('http://127.0.0.1:7242/ingest/daacd478-8ee6-47a0-816c-26f9a01d7524',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PremiumModal.tsx:280',message:'Annual button clicked',data:{currentInterval:billingInterval},timestamp:Date.now(),sessionId:'debug-session',runId:'annual-fix',hypothesisId:'J'})}).catch(()=>{});
-                    // #endregion
-                    setBillingInterval('annual');
-                  }}
+                  onClick={() => setBillingInterval('annual')}
                   className={`flex-1 min-w-0 py-3 px-4 rounded-lg font-semibold text-sm transition-all relative ${
                     billingInterval === 'annual'
                       ? 'bg-[var(--accent-green)] text-white shadow-md'
                       : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-card)]'
                   }`}
                 >
-                  <span className="block">Annual</span>
+                  <span className="block">{t('pricing.annual')}</span>
                   <span className="absolute -top-1.5 -right-1 sm:top-0.5 sm:right-1 bg-[var(--accent-orange)] text-white text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full font-bold leading-none whitespace-nowrap">
                     Save 17%
                   </span>
@@ -386,12 +330,12 @@ export default function PremiumModal({ isOpen, onClose }: PremiumModalProps) {
                 {loading ? (
                   <>
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Processing...
+                    {t('common.loading')}
                   </>
                 ) : (
                   <>
                     <Crown className="h-4 w-4 mr-2" />
-                    Upgrade to Premium
+                    {t('premium.getPremium')}
                   </>
                 )}
               </Button>

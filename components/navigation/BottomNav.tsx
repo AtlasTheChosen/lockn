@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import { Home, LayoutDashboard, Trophy, LogOut, UserPlus, Flame, Snowflake } from 'lucide-react';
 import AuthModal from '@/components/auth/AuthModal';
+import { useTranslation } from '@/contexts/LocaleContext';
 
 interface BottomNavProps {
   streak?: number;
@@ -16,10 +17,10 @@ interface BottomNavProps {
   dataLoaded?: boolean;
 }
 
-const navItems = [
-  { href: '/', label: 'Home', icon: Home, requiresAuth: false },
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, requiresAuth: true },
-  { href: '/leaderboard', label: 'Ranks', icon: Trophy, requiresAuth: true },
+const navItemKeys = [
+  { href: '/', labelKey: 'nav.home', icon: Home, requiresAuth: false },
+  { href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard, requiresAuth: true },
+  { href: '/leaderboard', labelKey: 'nav.ranks', icon: Trophy, requiresAuth: true },
 ];
 
 // Compact Streak Badge
@@ -102,6 +103,7 @@ function CompactStreakBadge({ count, isFrozen, isActive }: { count: number; isFr
 }
 
 export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn = false, dataLoaded = false }: BottomNavProps) {
+  const { t } = useTranslation();
   const pathname = usePathname();
   const supabase = createClient();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -149,7 +151,8 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
           )}
 
           {/* Nav Items */}
-          {navItems.map((item) => {
+          {navItemKeys.map((item) => {
+            const label = t(item.labelKey);
             const isActive = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
             const Icon = item.icon;
 
@@ -165,7 +168,7 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
                     whileTap={{ scale: 0.9 }}
                   >
                     <Icon className="h-6 w-6 text-[var(--text-secondary)]" />
-                    <span className="mt-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">{item.label}</span>
+                    <span className="mt-0.5 text-[10px] font-semibold text-[var(--text-secondary)]">{label}</span>
                   </motion.div>
                 </button>
               );
@@ -211,7 +214,7 @@ export default function BottomNav({ streak = 0, streakFrozen = false, isLoggedIn
                       isActive ? 'text-[#58cc02]' : 'text-[var(--text-secondary)]'
                     )}
                   >
-                    {item.label}
+                    {label}
                   </span>
                 </motion.div>
               </Link>

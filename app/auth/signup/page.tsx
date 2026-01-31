@@ -35,6 +35,7 @@ export default function SignupPage() {
       const trialScenario = localStorage.getItem('lockn-trial-scenario');
       const trialLanguage = localStorage.getItem('lockn-trial-language') || 'Spanish';
       const trialLevel = localStorage.getItem('lockn-trial-level') || 'B1';
+      const trialNativeLanguage = localStorage.getItem('lockn-trial-native-language') || 'English';
       const trialRatingsStr = localStorage.getItem('lockn-trial-ratings');
 
       if (!trialCardsStr || !trialScenario) {
@@ -58,7 +59,7 @@ export default function SignupPage() {
           user_id: userId,
           title: capitalizedTitle,
           target_language: trialLanguage,
-          native_language: 'English',
+          native_language: trialNativeLanguage,
           card_count: trialCards.length,
           cefr_level: trialLevel,
         })
@@ -97,6 +98,7 @@ export default function SignupPage() {
       localStorage.removeItem('lockn-trial-scenario');
       localStorage.removeItem('lockn-trial-language');
       localStorage.removeItem('lockn-trial-level');
+      localStorage.removeItem('lockn-trial-native-language');
       localStorage.removeItem('lockn-trial-ratings');
 
       console.log('[Signup] Trial data migrated successfully:', stack.id);

@@ -12,10 +12,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { X, Loader2, Sparkles, MessageSquare, AlertTriangle, CreditCard, RefreshCw, Crown } from 'lucide-react';
 import PremiumModal from './PremiumModal';
-import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript, getFlagUrlByCode } from '@/lib/constants';
+import { SUPPORTED_LANGUAGES, CEFR_LEVELS, LANGUAGE_SCRIPTS, hasScriptOptions, getDefaultScript, getFlagUrlByCode, getLocaleDisplayName } from '@/lib/constants';
 import { checkContentAppropriateness } from '@/lib/content-filter';
 import { DEBUG } from '@/lib/debug';
 import { toast } from 'sonner';
+import { useLocale } from '@/contexts/LocaleContext';
 
 const CARD_COUNT_OPTIONS = [5, 10, 25, 50] as const;
 type CardCount = typeof CARD_COUNT_OPTIONS[number];
@@ -48,6 +49,8 @@ export default function StackGenerationModal({ isOpen, onClose, userId, isPremiu
   const [contentWarning, setContentWarning] = useState<string | null>(null);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const router = useRouter();
+  const { locale } = useLocale();
+  const nativeLanguage = getLocaleDisplayName(locale);
   const supabase = createClient();
   
   // Get current language name for script options check
@@ -238,7 +241,7 @@ export default function StackGenerationModal({ isOpen, onClose, userId, isPremiu
         body: JSON.stringify({
           scenario: scenario.trim(),
           targetLanguage: targetLanguageName,
-          nativeLanguage: 'English',
+          nativeLanguage,
           stackSize: selectedSize,
           difficulty: selectedDifficulty,
           conversationalMode,

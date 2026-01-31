@@ -51,6 +51,7 @@ export default function DashboardPage() {
       const trialScenario = localStorage.getItem('lockn-trial-scenario');
       const trialLanguage = localStorage.getItem('lockn-trial-language') || 'Spanish';
       const trialLevel = localStorage.getItem('lockn-trial-level') || 'B1';
+      const trialNativeLanguage = localStorage.getItem('lockn-trial-native-language') || 'English';
       const trialRatingsStr = localStorage.getItem('lockn-trial-ratings');
 
       if (!trialCardsStr || !trialScenario) {
@@ -74,7 +75,7 @@ export default function DashboardPage() {
           user_id: userId,
           title: capitalizedTitle,
           target_language: trialLanguage,
-          native_language: 'English',
+          native_language: trialNativeLanguage,
           card_count: trialCards.length,
           cefr_level: trialLevel,
         })
@@ -112,6 +113,7 @@ export default function DashboardPage() {
       localStorage.removeItem('lockn-trial-scenario');
       localStorage.removeItem('lockn-trial-language');
       localStorage.removeItem('lockn-trial-level');
+      localStorage.removeItem('lockn-trial-native-language');
       localStorage.removeItem('lockn-trial-ratings');
 
       console.log('[Dashboard] Trial data migrated successfully:', stack.id);
@@ -344,10 +346,17 @@ export default function DashboardPage() {
         
         if (needsReset) {
           const yesterdayCards = stats.cards_mastered_today || 0;
-          
+          const currentStreak = stats.current_streak ?? 0;
+          const longestStreak = stats.longest_streak ?? 0;
+
+          // Lock in longest_streak only when the day rolls over (midnight passed and they met yesterday's goal)
+          const lockInLongest = yesterdayCards >= STREAK_DAILY_REQUIREMENT
+            ? Math.max(longestStreak, currentStreak)
+            : longestStreak;
+
           const updates = yesterdayCards < STREAK_DAILY_REQUIREMENT
-            ? { current_streak: 0, cards_mastered_today: 0, last_mastery_date: today, streak_awarded_today: false }
-            : { cards_mastered_today: 0, last_mastery_date: today, streak_awarded_today: false };
+            ? { current_streak: 0, cards_mastered_today: 0, last_mastery_date: today, streak_awarded_today: false, longest_streak: lockInLongest }
+            : { cards_mastered_today: 0, last_mastery_date: today, streak_awarded_today: false, longest_streak: lockInLongest };
           
           await fetch(`${supabaseUrl}/rest/v1/user_stats?user_id=eq.${userId}`, {
             method: 'PATCH',

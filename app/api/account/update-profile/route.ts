@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { containsInappropriateContent } from '@/lib/content-filter';
+import { SUPPORTED_UI_LOCALES } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
   try {
-    const { displayName, username, notificationPrefs } = await request.json();
+    const { displayName, username, notificationPrefs, preferredUiLanguage } = await request.json();
 
     const supabase = await createClient();
     const {
@@ -101,6 +102,24 @@ export async function POST(request: NextRequest) {
         );
       }
       updates.notification_prefs = notificationPrefs;
+    }
+
+    // Update preferred UI language (i18n)
+    if (preferredUiLanguage !== undefined) {
+      if (preferredUiLanguage !== null && typeof preferredUiLanguage !== 'string') {
+        return NextResponse.json(
+          { error: 'Preferred UI language must be a string or null' },
+          { status: 400 }
+        );
+      }
+      const locale = preferredUiLanguage === null || preferredUiLanguage === '' ? null : preferredUiLanguage.trim().toLowerCase();
+      if (locale !== null && !SUPPORTED_UI_LOCALES.includes(locale)) {
+        return NextResponse.json(
+          { error: `Unsupported locale. Supported: ${SUPPORTED_UI_LOCALES.join(', ')}` },
+          { status: 400 }
+        );
+      }
+      updates.preferred_ui_language = locale;
     }
 
     if (Object.keys(updates).length === 0) {

@@ -10,6 +10,7 @@ import { checkContentAppropriateness } from '@/lib/content-filter';
 import { createClient } from '@/lib/supabase/client';
 import AuthModal from '@/components/auth/AuthModal';
 import PremiumModal from '@/components/dashboard/PremiumModal';
+import { useTranslation } from '@/contexts/LocaleContext';
 
 interface CommandLandingProps {
   onStartTrial: (scenario: string, language: string, level: string, cardCount?: number, scriptPreference?: string) => void;
@@ -18,18 +19,19 @@ interface CommandLandingProps {
 const ALL_CARD_COUNT_OPTIONS = [5, 10, 25, 50] as const;
 type CardCount = typeof ALL_CARD_COUNT_OPTIONS[number];
 
-const SUGGESTIONS = [
-  { text: 'ordering pizza in Rome', emoji: '🍕' },
-  { text: 'job interview small talk', emoji: '💼' },
-  { text: 'gym conversation starters', emoji: '🏋️' },
-  { text: 'planning a birthday party', emoji: '🎉' },
-  { text: 'checking into a hotel', emoji: '✈️' },
-  { text: 'complimenting someone', emoji: '💃' },
-  { text: 'talking to a taxi driver', emoji: '🚕' },
-  { text: 'making coffee shop orders', emoji: '☕' },
+const SUGGESTIONS: { key: string; emoji: string; scenarioText: string }[] = [
+  { key: 'landing.suggestionPizza', emoji: '🍕', scenarioText: 'ordering pizza in Rome' },
+  { key: 'landing.suggestionInterview', emoji: '💼', scenarioText: 'job interview small talk' },
+  { key: 'landing.suggestionGym', emoji: '🏋️', scenarioText: 'gym conversation starters' },
+  { key: 'landing.suggestionParty', emoji: '🎉', scenarioText: 'planning a birthday party' },
+  { key: 'landing.suggestionHotel', emoji: '✈️', scenarioText: 'checking into a hotel' },
+  { key: 'landing.suggestionCompliment', emoji: '💃', scenarioText: 'complimenting someone' },
+  { key: 'landing.suggestionTaxi', emoji: '🚕', scenarioText: 'talking to a taxi driver' },
+  { key: 'landing.suggestionCoffee', emoji: '☕', scenarioText: 'making coffee shop orders' },
 ];
 
 export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
+  const { t } = useTranslation();
   const [searchValue, setSearchValue] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('Spanish');
   const [selectedLevel, setSelectedLevel] = useState<string>('B2');
@@ -108,7 +110,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
     if (value.trim()) {
       const contentCheck = checkContentAppropriateness(value);
       if (!contentCheck.isAppropriate) {
-        setContentWarning('This content may contain inappropriate language.');
+        setContentWarning(t('landing.contentWarning'));
       } else {
         setContentWarning(null);
       }
@@ -188,14 +190,14 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
         {!isLoggedIn && (
           <div className="md:hidden absolute top-2 left-1/2 transform -translate-x-1/2 z-50">
             <button
-              onClick={() => {
-                setAuthModalMode('login');
-                setShowAuthModal(true);
-              }}
-              className="text-sm font-normal transition-all active:opacity-70"
-              style={{ color: 'var(--text-muted)' }}
+                onClick={() => {
+                  setAuthModalMode('login');
+                  setShowAuthModal(true);
+                }}
+                className="text-sm font-normal transition-all active:opacity-70"
+                style={{ color: 'var(--text-muted)' }}
             >
-              Sign In
+              {t('nav.signIn')}
             </button>
           </div>
         )}
@@ -208,10 +210,10 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
             className="text-center mb-6 sm:mb-8 pt-4 md:pt-0"
           >
             <p className="text-base sm:text-lg mb-3 sm:mb-4 font-medium animate-fade-in" style={{ color: 'var(--text-secondary)' }}>
-              Welcome!
+              {t('landing.welcome')}
             </p>
             <h1 className="font-display text-3xl sm:text-4xl md:text-5xl font-semibold leading-tight gradient-text-warm animate-fade-in stagger-1 mb-5 sm:mb-6 md:mb-8 pb-2 md:pb-4">
-              What subject would you like to turn into language learning flashcards?
+              {t('landing.heading')}
             </h1>
             <div className="flex justify-center mb-4 sm:mb-6">
               <button
@@ -225,7 +227,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                   boxShadow: '0 2px 8px rgba(255, 150, 0, 0.3)'
                 }}
               >
-                Learn how this works
+                {t('landing.learnHow')}
               </button>
             </div>
           </motion.div>
@@ -239,7 +241,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
           style={{ backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-md)' }}
         >
           <h3 className="font-display text-2xl font-semibold mb-6 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
-            ✨ Create Your Learning Stack
+            ✨ {t('landing.createStack')}
           </h3>
           
           <div>
@@ -257,7 +259,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                       handleSubmit();
                     }
                   }}
-                  placeholder="Try: 'ordering tapas in Barcelona'..."
+                  placeholder={t('landing.placeholderExample')}
                   className="w-full rounded-2xl pl-12 pr-4 py-4 h-14 sm:h-auto text-base sm:text-lg font-medium focus:outline-none transition-all"
                   style={{ 
                     backgroundColor: 'var(--bg-secondary)', 
@@ -270,7 +272,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 type="button"
                 onClick={() => handleSubmit()}
                 disabled={!searchValue.trim() || !selectedLanguage}
-                className={`w-full sm:w-auto font-bold rounded-2xl px-8 py-4 min-h-[56px] hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-[0.98] touch-manipulation text-white ${searchValue.trim() && selectedLanguage ? 'magic-button-create' : ''}`}
+                className={`w-full sm:w-auto font-bold rounded-2xl px-8 py-4 min-h-[56px] hover:-translate-y-0.5 transition-all disabled:cursor-not-allowed disabled:hover:translate-y-0 active:scale-[0.98] touch-manipulation text-white ${searchValue.trim() && selectedLanguage ? 'magic-button-create' : ''}`}
                 style={{
                   WebkitTapHighlightColor: 'transparent',
                   WebkitAppearance: 'none',
@@ -283,7 +285,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                   }),
                 }}
               >
-                Create Magic! 🎨
+                {t('landing.createMagic')}
               </button>
             </div>
 
@@ -304,13 +306,13 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
               {/* Language Selector */}
               <div>
                 <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
-                  🌍 Language
+                  🌍 {t('landing.labelLanguage')}
                 </label>
                 <Select value={selectedLanguage} onValueChange={handleLanguageChange}>
                   <SelectTrigger className="w-full rounded-2xl h-14 py-3 sm:py-4 font-semibold focus:ring-0" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}>
                     <span className="flex items-center gap-2">
                       <FlagImage name={selectedLanguage} size={20} />
-                      <span>{selectedLanguage}</span>
+                      <span>{t(`languages.${SUPPORTED_LANGUAGES.find(l => l.name === selectedLanguage)?.code ?? 'en'}`)}</span>
                     </span>
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl max-h-[50vh]" style={{ backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)' }}>
@@ -318,7 +320,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                       <SelectItem key={lang.code} value={lang.name} className="rounded-xl font-medium py-3">
                         <span className="flex items-center gap-2">
                           <FlagImage name={lang.name} size={20} />
-                          <span>{lang.name}</span>
+                          <span>{t(`languages.${lang.code}`)}</span>
                         </span>
                       </SelectItem>
                     ))}
@@ -329,18 +331,18 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
               {/* Level Selector */}
               <div>
                 <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
-                  📊 Level
+                  📊 {t('landing.labelLevel')}
                 </label>
                 <Select value={selectedLevel} onValueChange={handleLevelChange}>
                   <SelectTrigger className="w-full rounded-2xl h-14 py-3 sm:py-4 font-semibold focus:ring-0" style={{ backgroundColor: 'var(--bg-secondary)', border: '2px solid var(--border-color)', color: 'var(--text-primary)' }}>
                     <SelectValue>
-                      {selectedLevel} - {CEFR_LEVELS.find(l => l.code === selectedLevel)?.description}
+                      {t(`landing.level${selectedLevel}`)}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="rounded-2xl max-h-[50vh]" style={{ backgroundColor: 'var(--bg-card)', border: '2px solid var(--border-color)' }}>
                     {CEFR_LEVELS.map((level) => (
                       <SelectItem key={level.code} value={level.code} className="rounded-xl font-medium py-3">
-                        {level.code} - {level.description}
+                        {t(`landing.level${level.code}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -350,7 +352,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
               {/* Card Count - show for all users, but only 5 for logged-out users */}
               <div>
                 <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
-                  🎴 Cards {(!isLoggedIn || !isPremium) && <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>(5 card maximum)</span>}
+                  🎴 {t('landing.labelCards')} {(!isLoggedIn || !isPremium) && <span className="text-xs font-normal" style={{ color: 'var(--text-muted)' }}>{t('landing.cardsMax')}</span>}
                 </label>
                 <div className="flex gap-2">
                   {(isLoggedIn && isPremium ? ALL_CARD_COUNT_OPTIONS : [5 as CardCount]).map((count) => (
@@ -383,7 +385,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 {!isLoggedIn && (
                   <div className="mt-3 flex flex-col items-center justify-center gap-2 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
                     <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
-                      Sign up to create custom stacks with more card options
+                      {t('landing.signUpForMoreCards')}
                     </p>
                   </div>
                 )}
@@ -398,10 +400,10 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                         boxShadow: '0 3px 0 var(--accent-green-dark)'
                       }}
                     >
-                      Upgrade to Premium
+                      {t('landing.upgradeToPremium')}
                     </Button>
                     <p className="text-xs font-medium text-center" style={{ color: 'var(--text-muted)' }}>
-                      Unlock 10, 25, 50 card stacks
+                      {t('landing.unlockCards')}
                     </p>
                   </div>
                 )}
@@ -417,7 +419,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                 className="mt-4"
               >
                 <label className="block text-sm font-semibold mb-2 sm:mb-3" style={{ color: 'var(--text-secondary)' }}>
-                  ✍️ Writing System for {selectedLanguage}
+                  ✍️ {t('landing.writingSystemFor')} {selectedLanguage}
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {scriptOptions.map((script) => (
@@ -439,7 +441,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                   ))}
                 </div>
                 <p className="text-xs mt-2 font-medium" style={{ color: 'var(--text-muted)' }}>
-                  Phonetic romanization will always be included to help with pronunciation.
+                  {t('landing.romanizationHint')}
                 </p>
               </motion.div>
             )}
@@ -454,12 +456,12 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
           className="animate-fade-in stagger-3"
         >
           <p className="text-center font-semibold mb-4 sm:mb-6 text-sm sm:text-base" style={{ color: 'var(--text-secondary)' }}>
-            🎲 Need inspiration? Try one of these!
+            🎲 {t('landing.needInspiration')}
           </p>
           <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             {SUGGESTIONS.map((suggestion, index) => (
               <motion.div
-                key={suggestion.text}
+                key={suggestion.key}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 + index * 0.05 }}
@@ -469,7 +471,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                     e.preventDefault();
                     e.stopPropagation();
                     if (selectedLanguage) {
-                      handleSuggestionClick(suggestion.text);
+                      handleSuggestionClick(suggestion.scenarioText);
                     }
                   }}
                   disabled={!selectedLanguage}
@@ -481,7 +483,7 @@ export default function CommandLanding({ onStartTrial }: CommandLandingProps) {
                   }}
                 >
                   <span className="block text-xl sm:text-2xl mb-1">{suggestion.emoji}</span>
-                  <span className="block leading-tight">{suggestion.text}</span>
+                  <span className="block leading-tight">{t(suggestion.key)}</span>
                 </button>
               </motion.div>
             ))}

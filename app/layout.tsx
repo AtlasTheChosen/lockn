@@ -2,6 +2,7 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Quicksand, Fredoka } from 'next/font/google';
 import AuthProvider from '@/components/auth/AuthProvider';
+import { LocaleProvider } from '@/contexts/LocaleContext';
 import { Toaster } from '@/components/ui/sonner';
 
 const quicksand = Quicksand({ 
@@ -74,8 +75,10 @@ export default function RootLayout({
       </head>
       <body className={quicksand.className} suppressHydrationWarning>
         <AuthProvider>
-          {children}
-          <Toaster position="top-center" richColors />
+          <LocaleProvider>
+            {children}
+            <Toaster position="top-center" richColors />
+          </LocaleProvider>
         </AuthProvider>
       </body>
     </html>

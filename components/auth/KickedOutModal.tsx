@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { LogOut, Smartphone, AlertTriangle } from 'lucide-react';
+import { useTranslation } from '@/contexts/LocaleContext';
 
 interface KickedOutModalProps {
   isOpen: boolean;
@@ -13,6 +14,7 @@ interface KickedOutModalProps {
  * Modal shown when user is logged out because their account was accessed from another device.
  */
 export default function KickedOutModal({ isOpen, onAcknowledge }: KickedOutModalProps) {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   const handleAcknowledge = () => {
@@ -61,7 +63,7 @@ export default function KickedOutModal({ isOpen, onAcknowledge }: KickedOutModal
             className="text-2xl font-display font-bold mb-3"
             style={{ color: 'var(--text-primary)' }}
           >
-            Signed Out
+            {t('session.signedOut')}
           </h2>
 
           {/* Message */}
@@ -69,13 +71,13 @@ export default function KickedOutModal({ isOpen, onAcknowledge }: KickedOutModal
             className="text-base mb-2"
             style={{ color: 'var(--text-secondary)' }}
           >
-            Your account was signed in on another device.
+            {t('session.signedInElsewhere')}
           </p>
           <p 
             className="text-sm mb-8"
             style={{ color: 'var(--text-muted)' }}
           >
-            For security, only one device can be signed in at a time. Sign in again to continue using FlashDash on this device.
+            {t('session.oneDeviceOnly')}
           </p>
 
           {/* Action Button */}
@@ -88,7 +90,7 @@ export default function KickedOutModal({ isOpen, onAcknowledge }: KickedOutModal
             }}
           >
             <LogOut className="h-5 w-5 mr-2" />
-            Sign In Again
+            {t('session.signInAgain')}
           </Button>
 
           {/* Help text */}
@@ -96,7 +98,7 @@ export default function KickedOutModal({ isOpen, onAcknowledge }: KickedOutModal
             className="text-xs mt-4"
             style={{ color: 'var(--text-muted)' }}
           >
-            If this wasn't you, consider changing your password.
+            {t('session.changePasswordHint')}
           </p>
         </motion.div>
       </motion.div>

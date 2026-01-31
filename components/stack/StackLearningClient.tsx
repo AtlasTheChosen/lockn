@@ -332,16 +332,16 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
       // Fetch translations for target phrase
       const targetKey = `${currentCard.id}-target`;
       if (!wordTranslations[targetKey]) {
-        getWordTranslations(currentCard.target_phrase, targetLang, 'English').then(translations => {
+        getWordTranslations(currentCard.target_phrase, targetLang, stack.native_language || 'English').then(translations => {
           setWordTranslations((prev: Record<string, any>) => ({
             ...prev,
             [targetKey]: translations
           }));
-        });
+});
       }
-      
+
       }
-  }, [currentCard, stack.target_language]);
+  }, [currentCard, stack.target_language, stack.native_language]);
 
   // Pre-load cached breakdowns from cards on mount
   useEffect(() => {
@@ -402,7 +402,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
           phrase: card.target_phrase,
           translation: card.native_translation,
           targetLanguage: stack.target_language || 'Spanish',
-          nativeLanguage: 'English',
+          nativeLanguage: stack.native_language || 'English',
         }),
       });
       
@@ -1061,7 +1061,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           e.stopPropagation();
                           speak(
                             reverseMode ? currentCard.native_translation : currentCard.target_phrase,
-                            reverseMode ? 'English' : stack.target_language,
+                            reverseMode ? (stack.native_language || 'English') : stack.target_language,
                             { cardId: currentCard.id, audioUrl: currentCard.audio_url }
                           );
                         }}
@@ -1150,7 +1150,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           e.stopPropagation();
                           speak(
                             reverseMode ? currentCard.target_phrase : currentCard.native_translation,
-                            reverseMode ? stack.target_language : 'English',
+                            reverseMode ? stack.target_language : (stack.native_language || 'English'),
                             { cardId: currentCard.id, audioUrl: currentCard.audio_url }
                           );
                         }}
@@ -1200,7 +1200,7 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
                           e.stopPropagation();
                           speak(
                             reverseMode ? currentCard.native_translation : currentCard.target_phrase,
-                            reverseMode ? 'English' : stack.target_language,
+                            reverseMode ? (stack.native_language || 'English') : stack.target_language,
                             { cardId: currentCard.id, audioUrl: currentCard.audio_url }
                           );
                         }}

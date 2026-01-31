@@ -73,6 +73,7 @@ export async function GET(request: Request) {
               cards_mastered_today: 0,
               streak_deadline: null,
               display_deadline: null,
+              streak_countdown_starts: null,
               longest_streak: newLongest,
             })
             .eq('user_id', user.user_id);

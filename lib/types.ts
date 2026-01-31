@@ -18,6 +18,7 @@ export interface UserProfile {
   };
   friend_request_privacy?: FriendRequestPrivacy;
   has_seen_streak_tutorial?: boolean;
+  preferred_ui_language?: string | null;
   is_premium: boolean;
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;

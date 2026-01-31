@@ -9,9 +9,10 @@ import { AlertTriangle, HelpCircle, Calendar, Loader2, Flame, BookOpen, Zap, Cro
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
 // Weekly stats import removed - only tracking longest streak and total cards now
-import { isDeadlinePassed, STREAK_DAILY_REQUIREMENT, getStreakTimeRemaining, getTimeRemaining, isInGracePeriod } from '@/lib/streak';
+import { isDeadlinePassed, STREAK_DAILY_REQUIREMENT, getStreakTimeRemaining, getTimeRemaining, getTimeRemainingUntilDeadline, isInGracePeriod } from '@/lib/streak';
 import { checkStackDeletion, executeStackDeletion, type StackDeletionCheck } from '@/lib/streak-system';
 import { FREE_TIER_LIMITS, PREMIUM_TIER_LIMITS } from '@/lib/constants';
+import { useTranslation } from '@/contexts/LocaleContext';
 
 // Components
 import ProgressRing from './ProgressRing';
@@ -75,6 +76,7 @@ interface DashboardMainProps {
 }
 
 export default function DashboardMain({ stacks, stats, userName, isPremium = false, onUpdate, onShowTutorial }: DashboardMainProps) {
+  const { t } = useTranslation();
   const router = useRouter();
   const [deletingStackId, setDeletingStackId] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -152,10 +154,13 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
   const hasMetTodayGoal = cardsMasteredToday >= STREAK_DAILY_REQUIREMENT;
   
   // Countdown timer state for daily streak
-  // Pass currentStreak and hasMetTodayGoal to get correct deadline:
-  // - No streak + no progress = end of today (24h max)
-  // - Active streak OR met goal = end of tomorrow (48h grace)
-  const [timeRemaining, setTimeRemaining] = useState(getStreakTimeRemaining(currentStreak, hasMetTodayGoal));
+  // Use stored display_deadline when present (set when streak was earned); otherwise compute from current state.
+  // This ensures "next day" shows countdown to today's 11:59 PM (stored deadline), not tomorrow's.
+  const getInitialTimeRemaining = () =>
+    stats?.display_deadline
+      ? getTimeRemainingUntilDeadline(stats.display_deadline)
+      : getStreakTimeRemaining(currentStreak, hasMetTodayGoal);
+  const [timeRemaining, setTimeRemaining] = useState(getInitialTimeRemaining);
   
   // Countdown timer state for test deadline (find the most urgent pending test)
   const mostUrgentTest = pendingTests.length > 0 
@@ -171,15 +176,28 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
     mostUrgentTest?.test_deadline ? getTimeRemaining(mostUrgentTest.test_deadline) : null
   );
   
+  // Sync countdown when stats/display_deadline or streak state changes (e.g. stats just loaded)
+  useEffect(() => {
+    setTimeRemaining(
+      stats?.display_deadline
+        ? getTimeRemainingUntilDeadline(stats.display_deadline)
+        : getStreakTimeRemaining(currentStreak, hasMetTodayGoal)
+    );
+  }, [stats?.display_deadline, currentStreak, hasMetTodayGoal]);
+
   useEffect(() => {
     const interval = setInterval(() => {
-      setTimeRemaining(getStreakTimeRemaining(currentStreak, hasMetTodayGoal));
+      setTimeRemaining(
+        stats?.display_deadline
+          ? getTimeRemainingUntilDeadline(stats.display_deadline)
+          : getStreakTimeRemaining(currentStreak, hasMetTodayGoal)
+      );
       if (mostUrgentTest?.test_deadline) {
         setTestTimeRemaining(getTimeRemaining(mostUrgentTest.test_deadline));
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [mostUrgentTest?.test_deadline, currentStreak, hasMetTodayGoal]);
+  }, [mostUrgentTest?.test_deadline, currentStreak, hasMetTodayGoal, stats?.display_deadline]);
 
   // Format time as HH:MM:SS
   const formatTime = () => {
@@ -445,7 +463,7 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
               </p>
               <p className="text-[10px] sm:text-sm text-[var(--text-secondary)] font-semibold flex items-center justify-center gap-1">
                 <Flame className="h-3 w-3 sm:h-4 sm:w-4 text-[#ff9600]" />
-                Longest Streak
+                {t('dashboard.longestStreak')}
               </p>
             </div>
             <div className="text-center p-3 sm:p-4 rounded-2xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
@@ -535,7 +553,7 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
             </div>
             <div className="flex-1">
               <h4 className="font-display text-lg sm:text-xl font-extrabold mb-1">
-                {hasOverdue ? 'Streak Frozen! Time to Thaw!' : 'Pending Tests'}
+                {hasOverdue ? t('dashboard.streakFrozenThaw') : t('dashboard.pendingTests')}
               </h4>
               <p className="font-medium opacity-95 text-sm sm:text-base">
                 {hasOverdue 
@@ -591,7 +609,7 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
               </span>
               {stacks.filter(s => !pendingDeletions.has(s.id)).length >= FREE_TIER_LIMITS.MAX_TOTAL_STACKS && (
                 <span className="text-xs text-[var(--text-muted)] opacity-70">
-                  Upgrade to Premium to create unlimited stacks
+                  {t('dashboard.upgradeToPremium')} to create unlimited stacks
                 </span>
               )}
             </>
@@ -625,7 +643,7 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
       {/* Archive/Vault Section (Completed Stacks) */}
       <div className="mt-8 animate-fade-in stagger-4">
         <h2 className="font-display text-xl sm:text-2xl font-extrabold text-[var(--text-primary)] mb-4">
-          Archive
+          {t('dashboard.archive')}
         </h2>
         {isPremium ? (
           <ArchiveVault 
@@ -657,7 +675,7 @@ export default function DashboardMain({ stacks, stats, userName, isPremium = fal
                 className="font-extrabold rounded-xl px-6 py-3"
               >
                 <Crown className="h-4 w-4 mr-2" />
-                Upgrade to Premium
+                {t('dashboard.upgradeToPremium')}
               </Button>
             </div>
           </div>

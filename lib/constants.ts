@@ -88,6 +88,7 @@ export const QUICK_START_SCENARIOS: QuickStartScenario[] = [
 ];
 
 export const SUPPORTED_LANGUAGES = [
+  { code: 'en', name: 'English' },
   { code: 'es', name: 'Spanish' },
   { code: 'fr', name: 'French' },
   { code: 'de', name: 'German' },
@@ -100,7 +101,6 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'ru', name: 'Russian' },
   { code: 'hi', name: 'Hindi' },
   { code: 'tr', name: 'Turkish' },
-  { code: 'en', name: 'English' },
   { code: 'nl', name: 'Dutch' },
   { code: 'pl', name: 'Polish' },
   { code: 'sv', name: 'Swedish' },
@@ -113,6 +113,14 @@ export const SUPPORTED_LANGUAGES = [
   { code: 'vi', name: 'Vietnamese' },
   { code: 'id', name: 'Indonesian' },
 ];
+
+/** UI locale codes (same as learning languages). Used for app interface language. */
+export const SUPPORTED_UI_LOCALES = SUPPORTED_LANGUAGES.map((l) => l.code);
+
+/** Display name for a UI locale code (e.g. "Spanish", "English"). */
+export function getLocaleDisplayName(code: string): string {
+  return SUPPORTED_LANGUAGES.find((l) => l.code === code)?.name ?? code;
+}
 
 // Language to country code mapping for flag images
 export const LANGUAGE_COUNTRY_CODES: Record<string, string> = {

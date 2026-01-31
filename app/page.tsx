@@ -12,6 +12,8 @@ import { Loader2, AlertTriangle, X, HelpCircle } from 'lucide-react';
 import { DEBUG } from '@/lib/debug';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
+import { useLocale } from '@/contexts/LocaleContext';
+import { getLocaleDisplayName } from '@/lib/constants';
 
 type AppState = 'command' | 'loading' | 'trial' | 'conversion' | 'error';
 
@@ -44,6 +46,8 @@ export default function LandingPage() {
   const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
   const [showStreakTutorial, setShowStreakTutorial] = useState(false);
   const router = useRouter();
+  const { locale } = useLocale();
+  const nativeLanguage = getLocaleDisplayName(locale);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -71,7 +75,7 @@ export default function LandingPage() {
           body: JSON.stringify({
             scenario,
             targetLanguage: language,
-            nativeLanguage: 'English',
+            nativeLanguage,
             stackSize: cardCount || 10,
             difficulty: level,
             scriptPreference,
@@ -115,7 +119,7 @@ export default function LandingPage() {
         body: JSON.stringify({
           scenario,
           targetLanguage: language,
-          nativeLanguage: 'English',
+          nativeLanguage,
           stackSize: cardCount || 5,
           difficulty: level,
           scriptPreference,
@@ -164,6 +168,7 @@ export default function LandingPage() {
       // Save trial data to localStorage for migration to Supabase on signup
       localStorage.setItem('lockn-trial-cards', JSON.stringify(formattedCards));
       localStorage.setItem('lockn-trial-scenario', scenario);
+      localStorage.setItem('lockn-trial-native-language', nativeLanguage);
       // Clear any previous ratings when starting fresh
       localStorage.removeItem('lockn-trial-ratings');
       

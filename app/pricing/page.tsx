@@ -9,10 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Check, Crown, Sparkles, Loader2 } from 'lucide-react';
 import { loadStripe } from '@stripe/stripe-js';
+import { useTranslation } from '@/contexts/LocaleContext';
 
 export const dynamic = 'force-dynamic';
 
 export default function PricingPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState<string | null>(null);
   const [supabase, setSupabase] = useState<any>(null);
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'annual'>('monthly');
@@ -78,7 +80,7 @@ export default function PricingPage() {
               <span className="text-xl font-bold" style={{ color: 'var(--text-primary)' }}>LockN</span>
             </Link>
             <Link href="/dashboard">
-              <Button variant="ghost" style={{ color: 'var(--text-secondary)' }}>Back to Dashboard</Button>
+              <Button variant="ghost" style={{ color: 'var(--text-secondary)' }}>{t('pricing.backToDashboard')}</Button>
             </Link>
           </div>
         </div>
@@ -101,7 +103,7 @@ export default function PricingPage() {
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              Monthly
+              {t('pricing.monthly')}
             </button>
             <button
               onClick={() => setBillingInterval('annual')}
@@ -111,9 +113,9 @@ export default function PricingPage() {
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
             >
-              Annual
+              {t('pricing.annual')}
               <span className="absolute -top-1 -right-1 bg-[var(--accent-orange)] text-white text-xs px-1.5 py-0.5 rounded-full">
-                Save 17%
+                {t('pricing.savePercent').replace('{percent}', '17')}
               </span>
             </button>
           </div>
@@ -154,7 +156,7 @@ export default function PricingPage() {
                 disabled
                 style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)' }}
               >
-                Current Plan
+                {t('pricing.currentPlan')}
               </Button>
             </CardContent>
           </Card>
@@ -162,13 +164,13 @@ export default function PricingPage() {
           <Card className="border-4 relative" style={{ backgroundColor: 'var(--bg-card)', borderColor: 'var(--accent-green)' }}>
             <div className="absolute -top-4 left-1/2 -translate-x-1/2">
               <Badge className="px-4 py-1" style={{ backgroundColor: 'var(--accent-green)', color: 'white' }}>
-                Most Popular
+                {t('pricing.mostPopular')}
               </Badge>
             </div>
             <CardHeader>
               <div className="flex items-center gap-2 mb-2">
                 <Crown className="h-6 w-6" style={{ color: 'var(--accent-green)' }} />
-                <CardTitle className="text-2xl" style={{ color: 'var(--text-primary)' }}>Premium</CardTitle>
+                <CardTitle className="text-2xl" style={{ color: 'var(--text-primary)' }}>{t('pricing.premiumTier')}</CardTitle>
               </div>
               <CardDescription style={{ color: 'var(--text-secondary)' }}>Unlimited learning potential</CardDescription>
               <div className="pt-4 text-center">

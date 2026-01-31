@@ -10,11 +10,12 @@ import { createClient } from '@/lib/supabase/client';
 import Logo from '@/components/ui/Logo';
 import { getRandomAvatarId, getAvatarUrl } from '@/lib/avatars';
 import { createSession } from '@/lib/session-manager';
+import { useTranslation } from '@/contexts/LocaleContext';
 
-// Password strength calculation
+// Password strength calculation (returns i18n key for label)
 function calculatePasswordStrength(password: string): {
   score: number;
-  label: string;
+  labelKey: string;
   color: string;
 } {
   let score = 0;
@@ -24,10 +25,10 @@ function calculatePasswordStrength(password: string): {
   if (/\d/.test(password)) score++;
   if (/[^a-zA-Z0-9]/.test(password)) score++;
 
-  if (score <= 1) return { score: 1, label: 'Weak', color: 'var(--accent-red)' };
-  if (score <= 2) return { score: 2, label: 'Fair', color: 'var(--accent-orange)' };
-  if (score <= 3) return { score: 3, label: 'Good', color: 'var(--accent-blue)' };
-  return { score: 4, label: 'Strong', color: 'var(--accent-green)' };
+  if (score <= 1) return { score: 1, labelKey: 'auth.passwordWeak', color: 'var(--accent-red)' };
+  if (score <= 2) return { score: 2, labelKey: 'auth.passwordFair', color: 'var(--accent-orange)' };
+  if (score <= 3) return { score: 3, labelKey: 'auth.passwordGood', color: 'var(--accent-blue)' };
+  return { score: 4, labelKey: 'auth.passwordStrong', color: 'var(--accent-green)' };
 }
 
 // Shake animation for form errors
@@ -46,6 +47,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, initialMode = 'signup', customMessage }: AuthModalProps) {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
   const [storedMessage, setStoredMessage] = useState<string | undefined>(undefined);
   
@@ -155,6 +157,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
           const trialScenario = localStorage.getItem('lockn-trial-scenario');
           const trialLanguage = localStorage.getItem('lockn-trial-language') || 'Spanish';
           const trialLevel = localStorage.getItem('lockn-trial-level') || 'B1';
+          const trialNativeLanguage = localStorage.getItem('lockn-trial-native-language') || 'English';
           const trialRatingsStr = localStorage.getItem('lockn-trial-ratings');
 
           if (trialCardsStr && trialScenario) {
@@ -174,7 +177,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                 user_id: userId,
                 title: capitalizedTitle,
                 target_language: trialLanguage,
-                native_language: 'English',
+                native_language: trialNativeLanguage,
                 card_count: trialCards.length,
                 cefr_level: trialLevel,
               })
@@ -202,6 +205,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
               localStorage.removeItem('lockn-trial-scenario');
               localStorage.removeItem('lockn-trial-language');
               localStorage.removeItem('lockn-trial-level');
+              localStorage.removeItem('lockn-trial-native-language');
               localStorage.removeItem('lockn-trial-ratings');
               
               console.log('[AuthModal] Trial data migrated successfully:', stack.id);
@@ -236,7 +240,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
 
       if (signInError) {
         if (signInError.message.includes('Invalid login credentials')) {
-          setError('Incorrect email or password');
+          setError(t('auth.errorIncorrectCredentials'));
         } else {
           setError(signInError.message);
         }
@@ -352,32 +356,30 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
             {showResetForm ? (
               <>
                 <h2 className="font-display text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                  Reset Password
+                  {t('auth.resetPassword')}
                 </h2>
                 <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  Enter your email to receive a reset link
+                  {t('auth.resetPasswordSubtitle')}
                 </p>
               </>
             ) : resetSent ? (
               <>
                 <h2 className="font-display text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                  Check Your Email 📧
+                  {t('auth.checkEmail')}
                 </h2>
                 <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                  We sent a reset link to <span className="font-semibold" style={{ color: 'var(--accent-green)' }}>{email}</span>
+                  {t('auth.resetLinkSent')} <span className="font-semibold" style={{ color: 'var(--accent-green)' }}>{email}</span>
                 </p>
               </>
             ) : (
               <>
                 <h2 className="font-display text-2xl font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                  {mode === 'signup' ? 'Join LockN! ✨' : 'Welcome Back! 👋'}
+                  {mode === 'signup' ? t('auth.titleSignUp') : t('auth.titleLogin')}
                 </h2>
                 <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
                   {(() => {
-                    // Use storedMessage (captured when modal opened) or current customMessage prop
                     const messageToShow = storedMessage || customMessage;
-                    console.log('[AuthModal] Rendering message:', { customMessage, storedMessage, messageToShow, mode, hasCustom: !!messageToShow });
-                    return messageToShow || (mode === 'signup' ? 'Create your free account to start learning' : 'Sign in to continue your journey');
+                    return messageToShow || (mode === 'signup' ? t('auth.subtitleSignUp') : t('auth.subtitleLogin'));
                   })()}
                 </p>
               </>
@@ -393,7 +395,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
               className="w-full text-white font-bold rounded-2xl py-4"
               style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
             >
-              Back to Sign In
+              {t('auth.backToSignIn')}
             </Button>
           ) : showResetForm ? (
             <form onSubmit={handlePasswordReset} className="space-y-4">
@@ -401,7 +403,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                 <Input
                   type="email"
-                  placeholder="Email address"
+                  placeholder={t('auth.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -418,7 +420,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                 className="w-full text-white font-bold rounded-2xl py-4 hover:-translate-y-0.5 transition-all disabled:opacity-50"
                 style={{ backgroundColor: 'var(--accent-green)', boxShadow: '0 4px 0 var(--accent-green-dark)' }}
               >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : 'Send Reset Link'}
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : t('auth.sendResetLink')}
               </Button>
               <button
                 type="button"
@@ -426,7 +428,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                 className="w-full text-sm font-medium transition-colors"
                 style={{ color: 'var(--text-secondary)' }}
               >
-                ← Back to sign in
+                {t('auth.backToSignInLink')}
               </button>
             </form>
           ) : (
@@ -443,7 +445,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                   <Input
                     type="email"
-                    placeholder="Email address"
+                    placeholder={t('auth.emailPlaceholder')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -457,7 +459,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                   <Input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder={mode === 'signup' ? 'Password (6+ characters)' : 'Password'}
+                    placeholder={mode === 'signup' ? t('auth.passwordPlaceholderSignUp') : t('auth.passwordPlaceholder')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -501,7 +503,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                           ))}
                         </div>
                         <span className="text-xs font-medium" style={{ color: passwordStrength.color }}>
-                          {passwordStrength.label}
+                          {t(passwordStrength.labelKey)}
                         </span>
                       </div>
                     </motion.div>
@@ -513,7 +515,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5" style={{ color: 'var(--text-muted)' }} />
                     <Input
                       type={showPassword ? 'text' : 'password'}
-                      placeholder="Confirm password"
+                      placeholder={t('auth.confirmPasswordPlaceholder')}
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
@@ -544,10 +546,10 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                   {loading ? (
                     <>
                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      {mode === 'signup' ? 'Creating account...' : 'Signing in...'}
+                      {mode === 'signup' ? t('auth.creatingAccount') : t('auth.signingIn')}
                     </>
                   ) : (
-                    mode === 'signup' ? 'Create Account ✨' : 'Sign In'
+                    mode === 'signup' ? t('auth.createAccount') : t('auth.signInButton')
                   )}
                 </Button>
 
@@ -558,7 +560,7 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
                     className="w-full text-sm font-medium transition-colors py-2"
                     style={{ color: 'var(--text-secondary)' }}
                   >
-                    Forgot password?
+                    {t('auth.forgotPassword')}
                   </button>
                 )}
               </motion.form>
@@ -567,24 +569,24 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'signup', cus
               <p className="text-center text-sm font-medium mt-6" style={{ color: 'var(--text-secondary)' }}>
                 {mode === 'signup' ? (
                   <>
-                    Already have an account?{' '}
+                    {t('auth.alreadyHaveAccount')}{' '}
                     <button
                       onClick={() => switchMode('login')}
                       className="font-semibold hover:underline"
                       style={{ color: 'var(--accent-green)' }}
                     >
-                      Sign in
+                      {t('auth.signIn')}
                     </button>
                   </>
                 ) : (
                   <>
-                    Don't have an account?{' '}
+                    {t('auth.dontHaveAccount')}{' '}
                     <button
                       onClick={() => switchMode('signup')}
                       className="font-semibold hover:underline"
                       style={{ color: 'var(--accent-green)' }}
                     >
-                      Sign up
+                      {t('auth.signUp')}
                     </button>
                   </>
                 )}
