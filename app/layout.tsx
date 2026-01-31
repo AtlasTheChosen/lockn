@@ -4,6 +4,7 @@ import { Quicksand, Fredoka } from 'next/font/google';
 import AuthProvider from '@/components/auth/AuthProvider';
 import { LocaleProvider } from '@/contexts/LocaleContext';
 import { Toaster } from '@/components/ui/sonner';
+import { Footer } from '@/components/layout';
 
 const quicksand = Quicksand({ 
   subsets: ['latin'],
