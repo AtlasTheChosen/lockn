@@ -9,7 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
-import { getFlagUrl } from '@/lib/constants';
+import { getFlagUrlForLanguage } from '@/lib/constants';
 
 interface ArchivedStack {
   id: string;
@@ -39,12 +39,12 @@ export default function ArchiveVault({ stacks, onUpdate, className = '' }: Archi
   
   const supabase = createClient();
   
-  // Flag image component
+  // Flag image component (accepts language name or code from stack.language)
   const FlagImage = ({ name, size = 16 }: { name: string; size?: number }) => (
     <img 
-      src={getFlagUrl(name, size)} 
+      src={getFlagUrlForLanguage(name, size)} 
       alt={`${name} flag`}
-      className="inline-block rounded-sm"
+      className="inline-block rounded-sm object-cover"
       style={{ width: size, height: Math.round(size * 0.75) }}
     />
   );

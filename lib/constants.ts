@@ -246,6 +246,15 @@ export const getFlagUrlByCode = (langCode: string, size: number = 24): string =>
   return `https://flagcdn.com/w${size}/${countryCode}.png`;
 };
 
+/** Get flag URL whether value is a language name (e.g. "Spanish") or code (e.g. "es"). Use for stack/card language display. */
+export const getFlagUrlForLanguage = (value: string, size: number = 24): string => {
+  if (!value || typeof value !== 'string') return getFlagUrlByCode('en', size);
+  const trimmed = value.trim();
+  if (LANGUAGE_COUNTRY_CODES[trimmed]) return getFlagUrl(trimmed, size);
+  if (LANG_CODE_TO_COUNTRY[trimmed]) return getFlagUrlByCode(trimmed, size);
+  return getFlagUrlByCode('en', size);
+};
+
 // Legacy helper functions (for backwards compatibility)
 export const getLanguageFlag = (languageName: string): string => {
   return LANGUAGE_FLAGS[languageName] || '🌍';

@@ -76,7 +76,10 @@ export default function RootLayout({
       <body className={quicksand.className} suppressHydrationWarning>
         <AuthProvider>
           <LocaleProvider>
-            {children}
+            <div className="min-h-screen flex flex-col">
+              <div className="flex-1">{children}</div>
+              <Footer />
+            </div>
             <Toaster position="top-center" richColors />
           </LocaleProvider>
         </AuthProvider>

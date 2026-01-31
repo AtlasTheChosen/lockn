@@ -22,7 +22,7 @@ import { useSpeech, TTSProvider, VoiceGender } from '@/hooks/use-speech';
 import { Input } from '@/components/ui/input';
 import type { CardStack, Flashcard, TestNote } from '@/lib/types';
 import Confetti from 'react-confetti';
-import { CARD_RATINGS, NON_LATIN_LANGUAGES, ROMANIZATION_NAMES, getFlagUrl } from '@/lib/constants';
+import { CARD_RATINGS, NON_LATIN_LANGUAGES, ROMANIZATION_NAMES, getFlagUrlForLanguage } from '@/lib/constants';
 import { WordHoverText, getWordTranslations } from '@/components/ui/word-hover';
 import { shouldResetWeek, getWeekStartUTC, WEEKLY_CARD_CAP } from '@/lib/weekly-stats';
 import { isNewDay, getTodayDate, getTodayDateInTimezone, calculateTestDeadline, STREAK_DAILY_REQUIREMENT } from '@/lib/streak';
@@ -860,10 +860,10 @@ export default function StackLearningClient({ stack: initialStack, cards: initia
     return title.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   };
 
-  // Flag image component
+  // Flag image component (accepts language name or code)
   const FlagImage = ({ name, size = 16 }: { name: string; size?: number }) => (
     <img 
-      src={getFlagUrl(name, size)} 
+      src={getFlagUrlForLanguage(name, size)} 
       alt={`${name} flag`}
       className="inline-block rounded-sm"
       style={{ width: size, height: Math.round(size * 0.75) }}

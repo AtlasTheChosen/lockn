@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress-simple';
 import { ChevronLeft, ChevronRight, Plus, ArrowRight, Clock, Lock, Snowflake, Trash2, BookOpen } from 'lucide-react';
 import BirdMascot from './BirdMascot';
-import { getFlagUrl } from '@/lib/constants';
+import { getFlagUrlForLanguage } from '@/lib/constants';
 
 interface Stack {
   id: string;
@@ -115,12 +115,12 @@ export default function StackCarousel({ stacks, onDeleteClick, deletingStackId, 
     return title.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
   };
 
-  // Flag image component
+  // Flag image component (accepts language name or code from stack.target_language)
   const FlagImage = ({ name, size = 16 }: { name: string; size?: number }) => (
     <img 
-      src={getFlagUrl(name, size)} 
+      src={getFlagUrlForLanguage(name, size)} 
       alt={`${name} flag`}
-      className="inline-block rounded-sm"
+      className="inline-block rounded-sm object-cover"
       style={{ width: size, height: Math.round(size * 0.75) }}
     />
   );
